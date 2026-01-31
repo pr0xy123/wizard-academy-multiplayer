@@ -1460,7 +1460,7 @@
                 
                 // Body - more detailed
                 const body = new THREE.Mesh(
-                    new THREE.CapsuleGeometry(0.4, 0.8, 8, 16),
+                    new THREE.CylinderGeometry(0.4, 0.35, 1.2, 12),
                     new THREE.MeshStandardMaterial({ 
                         color: type.color,
                         roughness: 0.8,
@@ -1847,6 +1847,7 @@
         // INPUT HANDLING
         // ==========================================
         document.addEventListener('keydown', (e) => {
+            if (!e.key) return;
             keys[e.key.toLowerCase()] = true;
             
             if (!GameState.isPlaying) return;
@@ -1868,6 +1869,7 @@
         });
         
         document.addEventListener('keyup', (e) => {
+            if (!e.key) return;
             keys[e.key.toLowerCase()] = false;
         });
 
