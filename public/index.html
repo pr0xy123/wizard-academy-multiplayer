@@ -906,19 +906,24 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             
-            // Ambient light
-            scene.add(new THREE.AmbientLight(0x404040, 0.3));
+            // Brighter ambient light
+            scene.add(new THREE.AmbientLight(0x666666, 1.2));
             
-            // Torch light attached to player
-            const torchLight = new THREE.PointLight(0xffaa44, 1, 20);
+            // Torch light attached to player (brighter)
+            const torchLight = new THREE.PointLight(0xffaa44, 2.5, 25);
             torchLight.castShadow = true;
             torchLight.shadow.bias = -0.0001;
             GameState.torchLight = torchLight;
             
-            // Dungeon lighting
-            const dungeonLight = new THREE.DirectionalLight(0x6666ff, 0.2);
+            // Main dungeon lighting (much brighter)
+            const dungeonLight = new THREE.DirectionalLight(0x8888ff, 1.2);
             dungeonLight.position.set(50, 50, 50);
+            dungeonLight.castShadow = true;
             scene.add(dungeonLight);
+            
+            // Add hemisphere light for better overall illumination
+            const hemiLight = new THREE.HemisphereLight(0x8888ff, 0x443322, 0.8);
+            scene.add(hemiLight);
             
             createPlayer();
             buildDungeon();
@@ -939,117 +944,266 @@
             const color = colors[GameState.selectedClass] || colors.mage;
             
             if (GameState.selectedClass === 'warrior') {
-                // WARRIOR: Broad shoulders, heavy armor, sword
-                // Body - broader and more muscular
+                // WARRIOR: Broad shoulders, heavy armor, sword, impressive knight look
+                // Body - armored chest with plates
                 const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.8, 1.0, 0.5),
-                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.7 })
+                    new THREE.BoxGeometry(0.9, 1.1, 0.6),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.2, metalness: 0.8 })
                 );
-                body.position.y = 0.7;
+                body.position.y = 0.75;
                 body.castShadow = true;
                 playerGroup.add(body);
                 
-                // Shoulder pads
-                const leftShoulder = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.3, 0.2, 0.3),
-                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
+                // Chest plate detail
+                const chestPlate = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.85, 0.7, 0.65),
+                    new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.9 })
                 );
-                leftShoulder.position.set(-0.55, 1.1, 0);
+                chestPlate.position.y = 0.9;
+                playerGroup.add(chestPlate);
+                
+                // Massive shoulder pads (pauldrons)
+                const leftShoulder = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.25, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.95, roughness: 0.2 })
+                );
+                leftShoulder.position.set(-0.6, 1.25, 0);
+                leftShoulder.scale.set(1.2, 0.8, 1.0);
                 playerGroup.add(leftShoulder);
                 
                 const rightShoulder = leftShoulder.clone();
-                rightShoulder.position.set(0.55, 1.1, 0);
+                rightShoulder.position.set(0.6, 1.25, 0);
                 playerGroup.add(rightShoulder);
                 
-                // Head with helmet
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.25, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
-                );
-                head.position.y = 1.4;
-                playerGroup.add(head);
-                
-                // Helmet
-                const helmet = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
-                );
-                helmet.position.y = 1.6;
-                playerGroup.add(helmet);
-                
-                // Sword
-                const swordHandle = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.04, 0.04, 0.4, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
-                );
-                swordHandle.position.set(0.6, 1.0, 0);
-                playerGroup.add(swordHandle);
-                
-                const swordBlade = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.08, 1.0, 0.02),
-                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 1.0 })
-                );
-                swordBlade.position.set(0.6, 1.6, 0);
-                playerGroup.add(swordBlade);
-                
-                // Shield on back
-                const shield = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16),
-                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.7 })
-                );
-                shield.rotation.x = Math.PI / 2;
-                shield.position.set(0, 0.9, -0.3);
-                playerGroup.add(shield);
-                
-            } else if (GameState.selectedClass === 'rogue') {
-                // ROGUE: Slim, agile, dual daggers, hood
-                // Body - slim and agile
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.25, 0.3, 1.2, 8),
-                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 })
-                );
-                body.position.y = 0.6;
-                body.castShadow = true;
-                playerGroup.add(body);
+                // Shoulder spikes
+                for (let side of [-1, 1]) {
+                    const spike = new THREE.Mesh(
+                        new THREE.ConeGeometry(0.08, 0.3, 6),
+                        new THREE.MeshStandardMaterial({ color: 0x404040, metalness: 1.0 })
+                    );
+                    spike.position.set(side * 0.6, 1.5, 0);
+                    spike.rotation.z = side * Math.PI / 6;
+                    playerGroup.add(spike);
+                }
                 
                 // Head
                 const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.25, 16, 16),
+                    new THREE.SphereGeometry(0.28, 16, 16),
                     new THREE.MeshStandardMaterial({ color: 0xffccaa })
                 );
-                head.position.y = 1.3;
+                head.position.y = 1.55;
                 playerGroup.add(head);
                 
-                // Hood with pointed top
-                const hood = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.35, 0.6, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x2d5016 })
+                // Knight Helmet with visor
+                const helmet = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.32, 0.35, 0.4, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.95, roughness: 0.1 })
                 );
-                hood.position.y = 1.6;
-                playerGroup.add(hood);
+                helmet.position.y = 1.7;
+                playerGroup.add(helmet);
                 
-                // Cape
-                const cape = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.6, 0.8, 0.05),
-                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
+                // Helmet crest
+                const crest = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 0.1, 0.08),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.5 })
                 );
-                cape.position.set(0, 0.8, -0.25);
+                crest.position.set(0, 1.9, 0);
+                crest.rotation.y = Math.PI / 2;
+                playerGroup.add(crest);
+                
+                // Great Sword - bigger and more impressive
+                const swordHandle = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.8 })
+                );
+                swordHandle.position.set(0.7, 0.8, 0.2);
+                playerGroup.add(swordHandle);
+                
+                // Cross guard
+                const crossGuard = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4, 0.05, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 })
+                );
+                crossGuard.position.set(0.7, 1.05, 0.2);
+                playerGroup.add(crossGuard);
+                
+                // Blade - longer and shinier
+                const swordBlade = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.12, 1.4, 0.03),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xe8e8e8, 
+                        metalness: 1.0,
+                        roughness: 0.1,
+                        emissive: 0x4444ff,
+                        emissiveIntensity: 0.2
+                    })
+                );
+                swordBlade.position.set(0.7, 1.8, 0.2);
+                playerGroup.add(swordBlade);
+                
+                // Blade tip
+                const bladeTip = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.06, 0.15, 4),
+                    new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 1.0 })
+                );
+                bladeTip.position.set(0.7, 2.55, 0.2);
+                playerGroup.add(bladeTip);
+                
+                // Shield on back - larger with emblem
+                const shieldBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.5, 0.5, 0.12, 16),
+                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.8 })
+                );
+                shieldBase.rotation.x = Math.PI / 2;
+                shieldBase.position.set(0, 0.9, -0.4);
+                playerGroup.add(shieldBase);
+                
+                // Shield emblem
+                const emblem = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.15, 0.25, 4),
+                    new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 })
+                );
+                emblem.rotation.x = Math.PI / 2;
+                emblem.position.set(0, 0.9, -0.35);
+                playerGroup.add(emblem);
+                
+                // Red cape
+                const cape = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.7, 1.0, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.9 })
+                );
+                cape.position.set(0, 0.7, -0.5);
                 playerGroup.add(cape);
                 
-                // Left dagger
-                const dagger1 = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x404040, metalness: 0.9 })
+            } else if (GameState.selectedClass === 'rogue') {
+                // ROGUE: Slim, agile, assassin look with dual daggers
+                // Body - slim and stealthy
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.28, 0.32, 1.3, 12),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 })
                 );
-                dagger1.position.set(-0.4, 0.8, 0.2);
-                dagger1.rotation.z = Math.PI / 6;
-                playerGroup.add(dagger1);
+                body.position.y = 0.65;
+                body.castShadow = true;
+                playerGroup.add(body);
                 
-                // Right dagger
-                const dagger2 = dagger1.clone();
-                dagger2.position.set(0.4, 0.8, 0.2);
-                dagger2.rotation.z = -Math.PI / 6;
-                playerGroup.add(dagger2);
+                // Leather armor vest
+                const vest = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.33, 0.8, 12),
+                    new THREE.MeshStandardMaterial({ color: 0x3a2817, roughness: 0.9 })
+                );
+                vest.position.y = 0.8;
+                playerGroup.add(vest);
+                
+                // Belt with pouches
+                const belt = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.33, 0.05, 8, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.5 })
+                );
+                belt.rotation.x = Math.PI / 2;
+                belt.position.y = 0.4;
+                playerGroup.add(belt);
+                
+                // Pouches on belt
+                for (let i = 0; i < 3; i++) {
+                    const pouch = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.12, 0.15, 0.08),
+                        new THREE.MeshStandardMaterial({ color: 0x2a1a0a })
+                    );
+                    const angle = (i - 1) * Math.PI / 6;
+                    pouch.position.set(Math.sin(angle) * 0.35, 0.3, Math.cos(angle) * 0.35);
+                    playerGroup.add(pouch);
+                }
+                
+                // Head (partially visible)
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.26, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
+                );
+                head.position.y = 1.35;
+                playerGroup.add(head);
+                
+                // Mask over face
+                const mask = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.2, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
+                );
+                mask.position.set(0, 1.35, 0.25);
+                playerGroup.add(mask);
+                
+                // Hood - dramatic assassin style
+                const hoodBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.38, 0.32, 0.3, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
+                );
+                hoodBase.position.y = 1.5;
+                playerGroup.add(hoodBase);
+                
+                const hoodTop = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.38, 0.4, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
+                );
+                hoodTop.position.y = 1.85;
+                playerGroup.add(hoodTop);
+                
+                // Flowing cape
+                const capeTop = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.7, 0.5, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.9 })
+                );
+                capeTop.position.set(0, 1.0, -0.3);
+                playerGroup.add(capeTop);
+                
+                const capeBottom = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.6, 0.7, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.9 })
+                );
+                capeBottom.position.set(0, 0.4, -0.32);
+                capeBottom.rotation.x = 0.2;
+                playerGroup.add(capeBottom);
+                
+                // Left dagger - more detailed
+                const daggerHandle1 = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.7 })
+                );
+                daggerHandle1.position.set(-0.45, 0.9, 0.25);
+                daggerHandle1.rotation.z = Math.PI / 4;
+                playerGroup.add(daggerHandle1);
+                
+                const daggerBlade1 = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.04, 0.6, 0.01),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xd0d0d0, 
+                        metalness: 1.0,
+                        roughness: 0.2,
+                        emissive: 0x00ff00,
+                        emissiveIntensity: 0.15
+                    })
+                );
+                daggerBlade1.position.set(-0.6, 1.2, 0.25);
+                daggerBlade1.rotation.z = Math.PI / 4;
+                playerGroup.add(daggerBlade1);
+                
+                // Right dagger - mirror
+                const daggerHandle2 = daggerHandle1.clone();
+                daggerHandle2.position.set(0.45, 0.9, 0.25);
+                daggerHandle2.rotation.z = -Math.PI / 4;
+                playerGroup.add(daggerHandle2);
+                
+                const daggerBlade2 = daggerBlade1.clone();
+                daggerBlade2.position.set(0.6, 1.2, 0.25);
+                daggerBlade2.rotation.z = -Math.PI / 4;
+                playerGroup.add(daggerBlade2);
+                
+                // Throwing knives on back
+                for (let i = 0; i < 3; i++) {
+                    const knife = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.03, 0.4, 0.01),
+                        new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.9 })
+                    );
+                    knife.position.set((i - 1) * 0.15, 1.1, -0.28);
+                    playerGroup.add(knife);
+                }
                 
             } else {
                 // MAGE: Robes, staff, glowing orb
@@ -1151,29 +1305,45 @@
             const roomSize = 20;
             const wallHeight = 8;
             
-            // Floor with texture
-            const floorGeo = new THREE.PlaneGeometry(100, 100);
+            // Floor with better visibility
+            const floorGeo = new THREE.PlaneGeometry(100, 100, 20, 20);
             const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x3a3025,
-                roughness: 0.9
+                color: 0x5a4a35,
+                roughness: 0.8,
+                metalness: 0.1
             });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             scene.add(floor);
             
-            // Create walls
+            // Add visible grid lines on floor
+            const gridHelper = new THREE.GridHelper(100, 50, 0x8b7355, 0x6a5344);
+            gridHelper.material.opacity = 0.5;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+            
+            // Create visible walls with better material
             const wallMat = new THREE.MeshStandardMaterial({ 
-                color: 0x5c4033,
-                roughness: 0.8
+                color: 0x7a5f47,
+                roughness: 0.7,
+                metalness: 0.1
             });
             
-            // Outer walls
-            for (let i = -50; i <= 50; i += 10) {
+            // Outer walls - more visible
+            for (let i = -50; i <= 50; i += 5) {
                 createWall(i, -50, wallMat);
                 createWall(i, 50, wallMat);
                 createWall(-50, i, wallMat);
                 createWall(50, i, wallMat);
+            }
+            
+            // Add some interior walls for dungeon feel
+            for (let i = -40; i <= 40; i += 20) {
+                if (Math.abs(i) > 10) {
+                    createWall(i, 0, wallMat);
+                    createWall(0, i, wallMat);
+                }
             }
             
             // Inner rooms
@@ -1194,14 +1364,22 @@
 
         function createWall(x, z, material) {
             const wall = new THREE.Mesh(
-                new THREE.BoxGeometry(4, 8, 4),
+                new THREE.BoxGeometry(5, 8, 5),
                 material.clone()
             );
             wall.position.set(x, 4, z);
             wall.castShadow = true;
             wall.receiveShadow = true;
             scene.add(wall);
-            walls.push({ mesh: wall, x, z, size: 4 });
+            
+            // Add torch near walls for better visibility
+            if (Math.random() > 0.7) {
+                const wallLight = new THREE.PointLight(0xffaa44, 1.5, 12);
+                wallLight.position.set(x, 5, z);
+                scene.add(wallLight);
+            }
+            
+            walls.push({ mesh: wall, x, z, size: 5 });
         }
 
         function createRoom(cx, cz, type) {
@@ -1280,23 +1458,63 @@
                 
                 const enemy = new THREE.Group();
                 
+                // Body - more detailed
                 const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.8, 1.4, 0.6),
-                    new THREE.MeshStandardMaterial({ color: type.color })
+                    new THREE.CapsuleGeometry(0.4, 0.8, 8, 16),
+                    new THREE.MeshStandardMaterial({ 
+                        color: type.color,
+                        roughness: 0.8,
+                        metalness: 0.2
+                    })
                 );
-                body.position.y = 0.7;
+                body.position.y = 0.9;
                 body.castShadow = true;
                 enemy.add(body);
                 
+                // Head - sphere
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.35, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: type.color })
+                );
+                head.position.y = 1.6;
+                enemy.add(head);
+                
                 // Glowing eyes
-                const eyeGeo = new THREE.SphereGeometry(0.05);
+                const eyeGeo = new THREE.SphereGeometry(0.08);
                 const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
                 const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-                leftEye.position.set(0.15, 1.1, 0.25);
+                leftEye.position.set(-0.12, 1.65, 0.28);
                 const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-                rightEye.position.set(-0.15, 1.1, 0.25);
+                rightEye.position.set(0.12, 1.65, 0.28);
                 enemy.add(leftEye);
                 enemy.add(rightEye);
+                
+                // Add glow around eyes
+                const eyeLight = new THREE.PointLight(0xff0000, 0.5, 3);
+                eyeLight.position.set(0, 1.65, 0.3);
+                enemy.add(eyeLight);
+                
+                // Arms
+                const leftArm = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8),
+                    new THREE.MeshStandardMaterial({ color: type.color })
+                );
+                leftArm.position.set(-0.5, 1.0, 0);
+                leftArm.rotation.z = Math.PI / 6;
+                enemy.add(leftArm);
+                
+                const rightArm = leftArm.clone();
+                rightArm.position.set(0.5, 1.0, 0);
+                rightArm.rotation.z = -Math.PI / 6;
+                enemy.add(rightArm);
+                
+                // Weapon in hand
+                const weapon = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6),
+                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+                );
+                weapon.position.set(0.6, 0.7, 0);
+                enemy.add(weapon);
                 
                 enemy.position.set(x, 0, z);
                 enemy.userData = { ...type, active: true, id: i };
@@ -1307,22 +1525,60 @@
 
         function placeChests() {
             for (let i = 0; i < 6; i++) {
-                const chest = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 0.8, 0.6),
-                    new THREE.MeshStandardMaterial({ color: 0xff6600 })
+                const group = new THREE.Group();
+                
+                // Chest bottom
+                const chestBottom = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 0.6, 0.8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xaa6600,
+                        roughness: 0.7,
+                        metalness: 0.3
+                    })
                 );
-                chest.position.y = 0.4;
+                chestBottom.position.y = 0.3;
+                chestBottom.castShadow = true;
+                group.add(chestBottom);
+                
+                // Chest lid
+                const chestLid = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 0.4, 0.8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x995500,
+                        roughness: 0.7,
+                        metalness: 0.3
+                    })
+                );
+                chestLid.position.y = 0.8;
+                group.add(chestLid);
+                
+                // Lock/latch
+                const lock = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.2, 0.2, 0.1),
+                    new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 })
+                );
+                lock.position.set(0, 0.6, 0.41);
+                group.add(lock);
+                
+                // Glowing light around chest
+                const chestLight = new THREE.PointLight(0xffaa00, 1.5, 8);
+                chestLight.position.y = 1.2;
+                group.add(chestLight);
+                
+                // Sparkle effect
+                const sparkle = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 8, 8),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0xffff00,
+                        transparent: true,
+                        opacity: 0.6
+                    })
+                );
+                sparkle.position.y = 1.2;
+                group.add(sparkle);
                 
                 const x = (Math.random() - 0.5) * 70;
                 const z = (Math.random() - 0.5) * 70;
-                
-                const group = new THREE.Group();
-                group.add(chest);
-                
-                // Glow
-                const light = new THREE.PointLight(0xffaa00, 0.4, 5);
-                light.position.y = 1;
-                group.add(light);
                 
                 group.position.set(x, 0, z);
                 group.userData = { type: 'chest', opened: false };
@@ -1372,6 +1628,21 @@
                 if (!crystal.userData.collected) {
                     crystal.rotation.y += delta;
                     crystal.position.y = 2 + Math.sin(time + crystal.userData.floatOffset) * 0.3;
+                }
+            });
+            
+            // Animate chest sparkles
+            chests.forEach(chest => {
+                if (!chest.userData.opened && chest.children.length > 4) {
+                    const sparkle = chest.children[4]; // The sparkle sphere
+                    if (sparkle) {
+                        sparkle.rotation.y += delta * 2;
+                        sparkle.scale.set(
+                            1 + Math.sin(time * 3) * 0.3,
+                            1 + Math.sin(time * 3) * 0.3,
+                            1 + Math.sin(time * 3) * 0.3
+                        );
+                    }
                 }
             });
             
@@ -1466,7 +1737,7 @@
         }
 
         function checkCollision(x, z) {
-            const buffer = 0.8;
+            const buffer = 1.0;
             for (let wall of walls) {
                 if (Math.abs(x - wall.x) < wall.size/2 + buffer && 
                     Math.abs(z - wall.z) < wall.size/2 + buffer) {
