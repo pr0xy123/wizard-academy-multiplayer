@@ -1,0 +1,443 @@
+            // Grade progression
+            if (GameState.player.level % 2 === 0 && GameState.player.grade < 6) {
+                GameState.player.grade++;
+                showFloatingText(`📚 GRADE UP! ${Curriculum.grades[GameState.player.grade - 1].name}`, '#ffd700');
+                unlockNewSpells();
+            }
+            
+            // Stat boosts
+            GameState.player.maxHealth += 10;
+            GameState.player.health = GameState.player.maxHealth;
+            GameState.player.maxMana += 5;
+            GameState.player.mana = GameState.player.maxMana;
+            GameState.player.skillPoints++;
+            
+            showFloatingText(`⭐ LEVEL UP! ${GameState.player.level}`, '#9370db');
+            saveGame();
+        }
+
+        function unlockNewSpells() {
+            const slots = document.querySelectorAll('.spell-slot');
+            if (GameState.player.grade >= 3) {
+                slots[2].classList.remove('locked');
+                slots[2].innerHTML = '<span>⚗️</span><span class="spell-key">3</span>';
+                slots[2].title = 'Wand of Science';
+            }
+            if (GameState.player.grade >= 5) {
+                slots[3].classList.remove('locked');
+                slots[3].innerHTML = '<span>📜</span><span class="spell-key">4</span>';
+                slots[3].title = 'Tome of History';
+            }
+        }
+
+        function showFloatingText(text, color) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.textContent = text;
+            el.style.color = color;
+            el.style.left = '50%';
+            el.style.top = '40%';
+            el.style.transform = 'translate(-50%, -50%)';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        function createSpellEffect() {
+            // Create particle burst
+            const geometry = new THREE.BufferGeometry();
+            const count = 50;
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+            
+            for (let i = 0; i < count; i++) {
+                positions[i*3] = GameState.player.x;
+                positions[i*3+1] = 2;
+                positions[i*3+2] = GameState.player.z;
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.5,
+                    y: Math.random() * 0.5,
+                    z: (Math.random() - 0.5) * 0.5
+                });
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({ 
+                color: 0x00ff00, 
+                size: 0.3,
+                transparent: true
+            });
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            
+            let frame = 0;
+            function animateSpell() {
+                frame++;
+                const pos = particles.geometry.attributes.position.array;
+                for (let i = 0; i < count; i++) {
+                    pos[i*3] += velocities[i].x;
+                    pos[i*3+1] += velocities[i].y;
+                    pos[i*3+2] += velocities[i].z;
+                    velocities[i].y -= 0.01;
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+                material.opacity = 1 - (frame / 60);
+                
+                if (frame < 60) requestAnimationFrame(animateSpell);
+                else scene.remove(particles);
+            }
+            animateSpell();
+        }
+
+        function useHealthPotion() {
+            if (GameState.player.potions > 0 && GameState.player.health < GameState.player.maxHealth) {
+                GameState.player.potions--;
+                const heal = 30;
+                GameState.player.health = Math.min(GameState.player.maxHealth, GameState.player.health + heal);
+                showFloatingText(`❤️ +${heal} HP`, '#00ff00');
+                updateHUD();
+            } else if (GameState.player.potions === 0) {
+                showFloatingText('No potions!', '#888');
+            }
+        }
+
+        function gameOver() {
+            saveGame();
+            alert('💀 Game Over! Your progress has been saved. Refresh to try again!');
+            location.reload();
+        }
+
+        // ==========================================
+        // UI UPDATES
+        // ==========================================
+        function updateHUD() {
+            document.getElementById('health-text').textContent = `${GameState.player.health}/${GameState.player.maxHealth}`;
+            document.getElementById('health-fill').style.width = (GameState.player.health / GameState.player.maxHealth * 100) + '%';
+            
+            document.getElementById('mana-text').textContent = `${GameState.player.mana}/${GameState.player.maxMana}`;
+            document.getElementById('mana-fill').style.width = (GameState.player.mana / GameState.player.maxMana * 100) + '%';
+            
+            document.getElementById('xp-text').textContent = `${GameState.player.xp}/${GameState.player.xpToNext}`;
+            document.getElementById('xp-fill').style.width = (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
+            
+            document.getElementById('level-display').textContent = GameState.player.level;
+            document.getElementById('potions-count').textContent = GameState.player.potions;
+            document.getElementById('scrolls-count').textContent = GameState.player.scrolls;
+            document.getElementById('gold-count').textContent = GameState.player.gold;
+            
+            // Update grade display
+            const gradeInfo = Curriculum.grades[GameState.player.grade - 1];
+            document.getElementById('grade-display').innerHTML = `
+                <span>📚</span>
+                <span>Grade: ${gradeInfo.name}</span>
+            `;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ==========================================
+        // SAVE/LOAD SYSTEM
+        // ==========================================
+        function saveGame() {
+            const saveData = {
+                player: GameState.player,
+                dungeon: GameState.dungeon,
+                crystals: crystals.map(c => c.userData.collected),
+                chests: chests.map(c => c.userData.opened),
+                enemies: enemies.map(e => e.userData.active),
+                timestamp: Date.now()
+            };
+            localStorage.setItem('loreAndLegendsSave', JSON.stringify(saveData));
+            showFloatingText('💾 Game Saved!', '#00ff00');
+        }
+
+        function loadGame() {
+            const saveData = localStorage.getItem('loreAndLegendsSave');
+            if (!saveData) {
+                alert('No save game found!');
+                return;
+            }
+            
+            const data = JSON.parse(saveData);
+            Object.assign(GameState.player, data.player);
+            Object.assign(GameState.dungeon, data.dungeon);
+            
+            // Restore world state
+            if (data.crystals) {
+                data.crystals.forEach((collected, i) => {
+                    if (crystals[i]) {
+                        crystals[i].userData.collected = collected;
+                        crystals[i].visible = !collected;
+                        if (crystals[i].userData.light) crystals[i].userData.light.visible = !collected;
+                    }
+                });
+            }
+            
+            if (data.chests) {
+                data.chests.forEach((opened, i) => {
+                    if (chests[i]) {
+                        chests[i].userData.opened = opened;
+                        chests[i].visible = !opened;
+                    }
+                });
+            }
+            
+            if (data.enemies) {
+                data.enemies.forEach((active, i) => {
+                    if (enemies[i]) {
+                        enemies[i].userData.active = active;
+                        enemies[i].visible = active;
+                    }
+                });
+            }
+            
+            startSinglePlayer();
+            updateHUD();
+            showFloatingText('💾 Game Loaded!', '#00ff00');
+        }
+
+        // ==========================================
+        // MULTIPLAYER SYSTEM
+        // ==========================================
+        function showMultiplayer() {
+            document.getElementById('multiplayer-modal').style.display = 'block';
+        }
+
+        function joinMultiplayer() {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+            if (!GameState.selectedClass) {
+                alert('Please select a class!');
+                return;
+            }
+            
+            GameState.player.name = name;
+            GameState.isMultiplayer = true;
+            
+            const roomCode = document.getElementById('room-code').value.trim() || 'public';
+            
+            // Connect to server
+            const SERVER_URL = 'https://wizard-academy-multiplayer.onrender.com';
+            GameState.socket = io(SERVER_URL, {
+                transports: ['websocket', 'polling']
+            });
+            
+            GameState.socket.on('connect', () => {
+                console.log('Connected to multiplayer server');
+                GameState.socket.emit('join-room', roomCode, {
+                    name: GameState.player.name,
+                    class: GameState.selectedClass,
+                    level: GameState.player.level
+                });
+                
+                document.getElementById('multiplayer-modal').style.display = 'none';
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('ui-layer').style.display = 'flex';
+                document.getElementById('player-list').style.display = 'block';
+                
+                init3D();
+                GameState.isPlaying = true;
+                updateHUD();
+                
+                // Enable auto-save
+                setInterval(saveGame, 60000);
+            });
+            
+            // Handle other players
+            GameState.socket.on('player-joined', (data) => {
+                createOtherPlayer(data);
+                addChatMessage('System', `${data.name} joined the dungeon!`);
+            });
+            
+            GameState.socket.on('existing-players', (players) => {
+                players.forEach(p => createOtherPlayer(p));
+            });
+            
+            GameState.socket.on('player-moved', (data) => {
+                updateOtherPlayer(data.id, data.x, data.z);
+            });
+            
+            GameState.socket.on('player-left', (id) => {
+                removeOtherPlayer(id);
+            });
+            
+            GameState.socket.on('chat-message', (data) => {
+                addChatMessage(data.name, data.message);
+            });
+        }
+
+        function createOtherPlayer(data) {
+            const colors = { warrior: 0x8b0000, mage: 0x4a0080, rogue: 0x006400 };
+            const color = colors[data.class] || 0x888888;
+            
+            const group = new THREE.Group();
+            
+            const body = new THREE.Mesh(
+                new THREE.ConeGeometry(0.4, 1.2, 8),
+                new THREE.MeshStandardMaterial({ color: color })
+            );
+            body.position.y = 0.6;
+            group.add(body);
+            
+            const nameTag = document.createElement('div');
+            nameTag.className = 'player-nametag';
+            nameTag.textContent = data.name;
+            nameTag.id = `nametag-${data.id}`;
+            document.getElementById('ui-layer').appendChild(nameTag);
+            
+            group.position.set(data.x || 0, 0, data.z || 0);
+            scene.add(group);
+            
+            GameState.otherPlayers.set(data.id, {
+                mesh: group,
+                nameTag: nameTag,
+                data: data
+            });
+            
+            updatePlayerList();
+        }
+
+        function updateOtherPlayer(id, x, z) {
+            const player = GameState.otherPlayers.get(id);
+            if (player) {
+                player.mesh.position.set(x, 0, z);
+                
+                // Update nametag
+                const vector = new THREE.Vector3(x, 3, z);
+                vector.project(camera);
+                const x2 = (vector.x * .5 + .5) * window.innerWidth;
+                const y2 = (-(vector.y * .5) + .5) * window.innerHeight;
+                player.nameTag.style.left = `${x2}px`;
+                player.nameTag.style.top = `${y2}px`;
+            }
+        }
+
+        function removeOtherPlayer(id) {
+            const player = GameState.otherPlayers.get(id);
+            if (player) {
+                scene.remove(player.mesh);
+                player.nameTag.remove();
+                GameState.otherPlayers.delete(id);
+                updatePlayerList();
+            }
+        }
+
+        function updatePlayerList() {
+            const container = document.getElementById('player-entries');
+            container.innerHTML = '';
+            
+            // Add self
+            const selfEntry = document.createElement('div');
+            selfEntry.className = 'player-entry';
+            selfEntry.innerHTML = `<span>🟢</span> <span>${GameState.player.name} (You)</span>`;
+            container.appendChild(selfEntry);
+            
+            // Add others
+            GameState.otherPlayers.forEach((player, id) => {
+                const entry = document.createElement('div');
+                entry.className = 'player-entry';
+                entry.innerHTML = `<span>🔵</span> <span>${player.data.name}</span>`;
+                container.appendChild(entry);
+            });
+        }
+
+        function addChatMessage(name, message) {
+            // Could add a chat box here
+            console.log(`${name}: ${message}`);
+        }
+
+        // ==========================================
+        // START GAME
+        // ==========================================
+        function selectClass(className) {
+            GameState.selectedClass = className;
+            document.querySelectorAll('.class-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById(`class-${className}`).classList.add('selected');
+            
+            // Set class stats
+            if (className === 'warrior') {
+                GameState.player.maxHealth = 150;
+                GameState.player.health = 150;
+                GameState.player.maxMana = 30;
+                GameState.player.mana = 30;
+            } else if (className === 'rogue') {
+                GameState.player.maxHealth = 80;
+                GameState.player.health = 80;
+                GameState.player.maxMana = 60;
+                GameState.player.mana = 60;
+            }
+        }
+
+        function startSinglePlayer() {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+            if (!GameState.selectedClass) {
+                alert('Please select a class!');
+                return;
+            }
+            
+            GameState.player.name = name;
+            GameState.isMultiplayer = false;
+            
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'flex';
+            document.getElementById('player-name-display').textContent = name;
+            document.getElementById('class-icon').textContent = 
+                GameState.selectedClass === 'warrior' ? '⚔️' : 
+                GameState.selectedClass === 'rogue' ? '🗡️' : '🔮';
+            
+            init3D();
+            GameState.isPlaying = true;
+            updateHUD();
+            
+            // Auto-save every minute
+            setInterval(saveGame, 60000);
+            
+            // Welcome message
+            setTimeout(() => {
+                showFloatingText('Welcome to the Dungeon!', '#ffd700');
+            }, 1000);
+        }
+
+        // Button styling helper
+        const style = document.createElement('style');
+        style.textContent = `
+            .btn-fantasy {
+                background: linear-gradient(135deg, #8b6914, #4a3728);
+                border: 3px solid #ffd700;
+                color: #ffd700;
+                padding: 12px 24px;
+                font-size: 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-family: 'Cinzel', serif;
+                transition: all 0.3s;
+                margin: 5px;
+            }
+            .btn-fantasy:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+    </script>
+</body>
+</html>
