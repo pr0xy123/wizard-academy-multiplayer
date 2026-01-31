@@ -592,6 +592,23 @@
 
     <script>
         // ==========================================
+        // CONSTANTS & CONFIGURATION
+        // ==========================================
+        const CONFIG = {
+            MOVEMENT_SPEED: 0.1,
+            ROTATION_SPEED: 0.05,
+            CRYSTAL_COLLECT_DISTANCE: 2,
+            VOICE_MAX_DISTANCE: 20,
+            DRAW_EMIT_THROTTLE: 16, // ~60fps
+            SOCKET_URL: window.location.origin,
+            UPDATE_INTERVAL: 50, // Position sync rate (ms)
+            CAMERA_DISTANCE: 15,
+            CAMERA_HEIGHT: 10,
+            WORLD_SIZE: 50,
+            MAX_CRYSTALS: 6
+        };
+        
+        // ==========================================
         // GAME STATE & CONFIGURATION
         // ==========================================
         const GameState = {
@@ -609,6 +626,93 @@
             aiNarratorEnabled: true,
             adaptiveDifficulty: 1.0
         };
+        
+        // ==========================================
+        // SECURITY & UTILITIES
+        // ==========================================
+        
+        /**
+         * Sanitizes user input to prevent XSS attacks
+         * @param {string} input - Raw user input
+         * @returns {string} Sanitized text safe for DOM insertion
+         */
+        function sanitizeInput(input) {
+            if (!input) return '';
+            const div = document.createElement('div');
+            div.textContent = input;
+            return div.innerHTML;
+        }
+        
+        /**
+         * Shows error message to user
+         * @param {string} message - Error message to display
+         */
+        function showErrorMessage(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(239, 68, 68, 0.95);
+                color: white;
+                padding: 20px 40px;
+                border-radius: 15px;
+                z-index: 1000;
+                font-size: 1.1em;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                border: 2px solid #ef4444;
+            `;
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        /**
+         * Updates connection status indicator
+         * @param {string} status - 'connected', 'connecting', or 'error'
+         */
+        function updateConnectionStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            if (!statusEl) return;
+            
+            statusEl.className = '';
+            
+            switch(status) {
+                case 'connected':
+                    statusEl.className = 'status-connected';
+                    statusEl.textContent = '🟢 Connected';
+                    break;
+                case 'connecting':
+                    statusEl.className = 'status-connecting';
+                    statusEl.textContent = '🟡 Connecting...';
+                    break;
+                case 'error':
+                    statusEl.className = 'status-error';
+                    statusEl.textContent = '🔴 Error';
+                    break;
+            }
+        }
+        
+        /**
+         * Throttle function to limit call frequency
+         * @param {Function} func - Function to throttle
+         * @param {number} limit - Minimum time between calls in ms
+         * @returns {Function} Throttled function
+         */
+        function throttle(func, limit) {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
         
         // ==========================================
         // THREE.JS 3D WORLD SETUP
@@ -742,12 +846,18 @@
         // ==========================================
         // SPATIAL VOICE CHAT (WebRTC)
         // ==========================================
+        
+        /**
+         * Initializes voice chat with microphone access and spatial audio
+         * @returns {Promise<void>}
+         */
         async function initVoiceChat() {
             try {
                 GameState.localStream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
                         noiseSuppression: true,
+                        autoGainControl: true,
                         sampleRate: 44100
                     }
                 });
@@ -755,14 +865,40 @@
                 // Create audio context for spatial audio
                 GameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                console.log('Voice chat initialized');
+                // Resume audio context if suspended (browser autoplay policy)
+                if (GameState.audioContext.state === 'suspended') {
+                    await GameState.audioContext.resume();
+                }
+                
+                console.log('✅ Voice chat initialized');
+                return Promise.resolve();
             } catch (err) {
                 console.error('Voice chat error:', err);
-                alert('Could not access microphone. Voice chat disabled.');
+                
+                // Don't show alert, use our error message system
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    console.warn('Microphone access denied. Voice chat disabled.');
+                } else if (err.name === 'NotFoundError') {
+                    console.warn('No microphone found. Voice chat disabled.');
+                } else {
+                    console.warn('Could not initialize voice chat:', err.message);
+                }
+                
+                return Promise.reject(err);
             }
         }
         
+        /**
+         * Creates a WebRTC peer connection for voice chat
+         * @param {string} peerId - Remote peer ID
+         * @param {boolean} initiator - Whether this peer initiates the connection
+         * @returns {SimplePeer} Peer connection object
+         */
         function createPeerConnection(peerId, initiator = false) {
+            if (!GameState.peers) {
+                GameState.peers = new Map();
+            }
+            
             const peer = new SimplePeer({
                 initiator: initiator,
                 trickle: false,
@@ -770,33 +906,56 @@
             });
             
             peer.on('signal', data => {
-                GameState.socket.emit('signal', { to: peerId, signal: data });
+                if (GameState.socket && GameState.socket.connected) {
+                    GameState.socket.emit('signal', { to: peerId, signal: data });
+                }
             });
             
             peer.on('stream', stream => {
-                const audio = document.createElement('audio');
-                audio.srcObject = stream;
-                audio.autoplay = true;
-                
-                // Create spatial audio panner
-                const panner = GameState.audioContext.createPanner();
-                panner.panningModel = 'HRTF';
-                panner.distanceModel = 'inverse';
-                panner.refDistance = 1;
-                panner.maxDistance = 20;
-                panner.rolloffFactor = 1;
-                
-                const source = GameState.audioContext.createMediaStreamSource(stream);
-                source.connect(panner);
-                panner.connect(GameState.audioContext.destination);
-                
-                GameState.remoteStreams.set(peerId, { audio, panner });
+                try {
+                    const audio = document.createElement('audio');
+                    audio.srcObject = stream;
+                    audio.autoplay = true;
+                    
+                    // Create spatial audio panner
+                    const panner = GameState.audioContext.createPanner();
+                    panner.panningModel = 'HRTF';
+                    panner.distanceModel = 'inverse';
+                    panner.refDistance = 1;
+                    panner.maxDistance = CONFIG.VOICE_MAX_DISTANCE;
+                    panner.rolloffFactor = 1;
+                    
+                    const source = GameState.audioContext.createMediaStreamSource(stream);
+                    source.connect(panner);
+                    panner.connect(GameState.audioContext.destination);
+                    
+                    GameState.remoteStreams.set(peerId, { audio, panner, source });
+                } catch (err) {
+                    console.error('Error setting up spatial audio for peer:', peerId, err);
+                }
             });
             
+            peer.on('error', err => {
+                console.error('Peer connection error:', err);
+                // Clean up failed connection
+                GameState.peers.delete(peerId);
+            });
+            
+            peer.on('close', () => {
+                console.log('Peer connection closed:', peerId);
+                // Cleanup is handled in removeOtherPlayer
+            });
+            
+            GameState.peers.set(peerId, peer);
             return peer;
         }
         
+        /**
+         * Updates spatial audio positions for all connected players
+         */
         function updateSpatialAudio() {
+            if (!GameState.audioContext) return;
+            
             GameState.remoteStreams.forEach((stream, peerId) => {
                 const player = GameState.players.get(peerId);
                 if (player && stream.panner) {
@@ -808,8 +967,8 @@
                     stream.panner.positionX.value = dx;
                     stream.panner.positionZ.value = dz;
                     
-                    // Visual indicator for voice activity
-                    if (distance < 15) {
+                    // Visual indicator for voice activity if within range
+                    if (distance < CONFIG.VOICE_MAX_DISTANCE) {
                         showVoiceIndicator(peerId, distance);
                     }
                 }
@@ -878,9 +1037,15 @@
             ctx.strokeStyle = GameState.drawColor;
             ctx.stroke();
             
-            // Broadcast drawing to peers
-            if (GameState.socket) {
-                GameState.socket.emit('draw', { x: pos.x, y: pos.y, color: GameState.drawColor });
+            // Throttled broadcasting to prevent network flooding
+            const now = Date.now();
+            if (GameState.socket && now - GameState.lastDrawEmit > CONFIG.DRAW_EMIT_THROTTLE) {
+                GameState.socket.emit('draw', { 
+                    x: pos.x, 
+                    y: pos.y, 
+                    color: GameState.drawColor 
+                });
+                GameState.lastDrawEmit = now;
             }
         }
         
@@ -891,7 +1056,11 @@
         function setDrawColor(color) {
             GameState.drawColor = color;
             document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            // Fixed: Use passed event target instead of global event object
+            const targetBtn = document.querySelector(`.color-btn[style*="${color}"]`);
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+            }
         }
         
         function clearCanvas() {
@@ -960,22 +1129,37 @@
             },
             
             speak: function(text) {
-                const narrator = document.getElementById('ai-narrator');
-                const textEl = document.getElementById('ai-narrator-text');
-                textEl.textContent = text;
-                narrator.style.display = 'block';
-                
-                // Text-to-speech
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 0.9;
-                    utterance.pitch = 1.1;
-                    speechSynthesis.speak(utterance);
+                try {
+                    const narrator = document.getElementById('ai-narrator');
+                    const textEl = document.getElementById('ai-narrator-text');
+                    
+                    if (!narrator || !textEl) return;
+                    
+                    textEl.textContent = text;
+                    narrator.style.display = 'block';
+                    
+                    // Text-to-speech with error handling
+                    if ('speechSynthesis' in window) {
+                        // Cancel any ongoing speech
+                        speechSynthesis.cancel();
+                        
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.rate = 0.9;
+                        utterance.pitch = 1.1;
+                        
+                        utterance.onerror = (err) => {
+                            console.warn('Speech synthesis error:', err);
+                        };
+                        
+                        speechSynthesis.speak(utterance);
+                    }
+                    
+                    setTimeout(() => {
+                        narrator.style.display = 'none';
+                    }, 5000);
+                } catch (err) {
+                    console.error('AI Narrator error:', err);
                 }
-                
-                setTimeout(() => {
-                    narrator.style.display = 'none';
-                }, 5000);
             }
         };
         
@@ -1032,118 +1216,364 @@
         // ==========================================
         // MULTIPLAYER & NETWORKING
         // ==========================================
+        
+        /**
+         * Joins or creates a game room
+         */
         function joinGame() {
-            const name = document.getElementById('player-name').value.trim();
-            const room = document.getElementById('room-code').value.trim() || 'public';
+            const nameInput = document.getElementById('player-name');
+            const roomInput = document.getElementById('room-code');
             
-            if (!name) {
-                alert('Please enter your wizard name!');
+            const name = nameInput.value.trim();
+            const room = roomInput.value.trim() || 'public';
+            
+            if (!name || name.length === 0) {
+                showErrorMessage('Please enter your wizard name!');
                 return;
             }
             
-            GameState.player.name = name;
-            GameState.room = room;
+            if (name.length > 15) {
+                showErrorMessage('Wizard name must be 15 characters or less!');
+                return;
+            }
             
+            // Sanitize inputs
+            GameState.player.name = sanitizeInput(name);
+            GameState.room = sanitizeInput(room);
+            
+            updateConnectionStatus('connecting');
             document.getElementById('loading-overlay').style.display = 'flex';
             
-            // Initialize systems
-            init3D();
-            initDrawing();
-            initVoiceChat();
-            connectToServer();
+            // Initialize systems with error handling
+            try {
+                init3D();
+                initDrawing();
+                initVoiceChat().catch(err => {
+                    console.warn('Voice chat initialization failed:', err);
+                    showErrorMessage('Microphone access denied. Voice chat disabled.');
+                });
+                connectToServer();
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                showErrorMessage('Failed to initialize game. Please refresh and try again.');
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
         }
         
-        function connectToServer() {
-    // Replace this entire function with:
-    
-    const serverUrl = 'https://wizard-academy-multiplayer.onrender.com';
-    
-    GameState.socket = io(serverUrl, {
-        transports: ['websocket', 'polling'] // Helps with connection issues
-    });
-    
-    GameState.socket.on('connect', () => {
-        console.log('✅ Connected to server!');
-        document.getElementById('connection-status').className = 'status-connected';
-        document.getElementById('connection-status').textContent = '🟢 Connected';
-        
-        // Join room
-        GameState.socket.emit('join-room', GameState.room, GameState.player.name);
-        
-        // Hide loading, show game
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('ui-layer').style.display = 'block';
-        document.getElementById('loading-overlay').style.display = 'none';
-        
-        // AI narrator welcome
-        AI_Narrator.speak(AI_Narrator.generateNarration('player-joined', { 
-            name: GameState.player.name 
-        }));
-        
-        startGameLoop();
-    });
-    
-    GameState.socket.on('connect_error', (err) => {
-        console.error('Connection error:', err);
-        document.getElementById('connection-status').className = 'status-error';
-        document.getElementById('connection-status').textContent = '🔴 Error';
-    });
-    
-    // Other player joined
-    GameState.socket.on('player-joined', (data) => {
-        addChatMessage('System', `✨ ${data.name} has joined!`);
-        createOtherPlayer(data.id, data.name);
-    });
-    
-    // Existing players
-    GameState.socket.on('existing-players', (players) => {
-        players.forEach(p => createOtherPlayer(p.id, p.name, p.x, p.z));
-    });
-    
-    // Player moved
-    GameState.socket.on('player-moved', (data) => {
-        updateOtherPlayer(data.id, data.x, data.z);
-    });
-    
-    // Player left
-    GameState.socket.on('player-left', (id) => {
-        removeOtherPlayer(id);
-        addChatMessage('System', 'A wizard has left.');
-    });
-    
-    // Handle drawing from others
-    GameState.socket.on('draw', (data) => {
-        // You'll need to implement collaborative drawing
-        console.log('Remote draw:', data);
-    });
-    
-    // Chat messages
-    GameState.socket.on('chat-message', (data) => {
-        addChatMessage(data.name, data.message);
-    });
-}}
-        
-        function startGameLoop() {
-            // Movement controls
-            const keys = {};
-            window.addEventListener('keydown', (e) => {
-                keys[e.key] = true;
-                if (e.key === 'c' || e.key === 'C') openDrawing();
+        /**
+         * Creates a visual representation of another player
+         * @param {string} id - Player socket ID
+         * @param {string} name - Player name
+         * @param {number} x - X position
+         * @param {number} z - Z position
+         */
+        function createOtherPlayer(id, name, x = 0, z = 0) {
+            if (GameState.players.has(id)) return;
+            
+            const playerGeo = new THREE.ConeGeometry(0.5, 2, 8);
+            const playerMat = new THREE.MeshPhongMaterial({ 
+                color: 0x667eea // Different color for other players
             });
-            window.addEventListener('keyup', (e) => keys[e.key] = false);
+            const mesh = new THREE.Mesh(playerGeo, playerMat);
+            mesh.position.set(x, 1, z);
+            scene.add(mesh);
+            
+            GameState.players.set(id, {
+                name: sanitizeInput(name),
+                x: x,
+                z: z,
+                mesh: mesh
+            });
+            
+            console.log(`Player ${name} joined at (${x}, ${z})`);
+        }
+        
+        /**
+         * Updates position of another player
+         * @param {string} id - Player socket ID
+         * @param {number} x - New X position
+         * @param {number} z - New Z position
+         */
+        function updateOtherPlayer(id, x, z) {
+            const player = GameState.players.get(id);
+            if (player && player.mesh) {
+                player.x = x;
+                player.z = z;
+                player.mesh.position.x = x;
+                player.mesh.position.z = z;
+            }
+        }
+        
+        /**
+         * Removes a player who disconnected
+         * @param {string} id - Player socket ID
+         */
+        function removeOtherPlayer(id) {
+            const player = GameState.players.get(id);
+            if (player) {
+                if (player.mesh) {
+                    scene.remove(player.mesh);
+                }
+                GameState.players.delete(id);
+                
+                // Clean up peer connection
+                const peer = GameState.peers?.get(id);
+                if (peer) {
+                    peer.destroy();
+                    GameState.peers.delete(id);
+                }
+                
+                // Clean up audio stream
+                const stream = GameState.remoteStreams.get(id);
+                if (stream && stream.audio) {
+                    stream.audio.remove();
+                    GameState.remoteStreams.delete(id);
+                }
+                
+                console.log(`Player ${id} removed`);
+            }
+        }
+        
+        /**
+         * Connects to the game server via Socket.io
+         */
+        function connectToServer() {
+        /**
+         * Connects to the game server via Socket.io
+         */
+        function connectToServer() {
+            try {
+                const serverUrl = CONFIG.SOCKET_URL;
+                
+                GameState.socket = io(serverUrl, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionDelay: 1000,
+                    reconnectionAttempts: 5
+                });
+                
+                // Connection successful
+                GameState.socket.on('connect', () => {
+                    console.log('✅ Connected to server!');
+                    updateConnectionStatus('connected');
+                    
+                    // Join room
+                    GameState.socket.emit('join-room', GameState.room, GameState.player.name);
+                    
+                    // Hide loading, show game
+                    document.getElementById('start-screen').style.display = 'none';
+                    document.getElementById('ui-layer').style.display = 'block';
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    
+                    // AI narrator welcome
+                    AI_Narrator.speak(AI_Narrator.generateNarration('player-joined', { 
+                        name: GameState.player.name 
+                    }));
+                    
+                    startGameLoop();
+                    startPositionSync();
+                    
+                    // Start minimap updates
+                    setInterval(updateMinimap, 100);
+                });
+                
+                GameState.socket.on('connect_error', (err) => {
+                    console.error('Connection error:', err);
+                    updateConnectionStatus('error');
+                    showErrorMessage('Failed to connect to server. Please check your internet connection.');
+                });
+                
+                GameState.socket.on('disconnect', (reason) => {
+                    console.warn('Disconnected:', reason);
+                    updateConnectionStatus('error');
+                    if (reason === 'io server disconnect') {
+                        // Server disconnected, attempt to reconnect
+                        GameState.socket.connect();
+                    }
+                });
+                
+                // Other player joined
+                GameState.socket.on('player-joined', (data) => {
+                    const sanitizedName = sanitizeInput(data.name);
+                    addChatMessage('System', `✨ ${sanitizedName} has joined!`);
+                    createOtherPlayer(data.id, sanitizedName);
+                    
+                    // Initiate WebRTC connection if voice chat is enabled
+                    if (GameState.localStream) {
+                        createPeerConnection(data.id, true);
+                    }
+                });
+                
+                // Existing players (when you join a room with existing players)
+                GameState.socket.on('existing-players', (players) => {
+                    players.forEach(p => {
+                        createOtherPlayer(p.id, p.name, p.x, p.z);
+                        
+                        // Initiate WebRTC connection
+                        if (GameState.localStream) {
+                            createPeerConnection(p.id, false);
+                        }
+                    });
+                });
+                
+                // Player moved
+                GameState.socket.on('player-moved', (data) => {
+                    updateOtherPlayer(data.id, data.x, data.z);
+                    updateSpatialAudio();
+                });
+                
+                // Player left
+                GameState.socket.on('player-left', (id) => {
+                    const player = GameState.players.get(id);
+                    const playerName = player ? player.name : 'A wizard';
+                    removeOtherPlayer(id);
+                    addChatMessage('System', `${playerName} has left the academy.`);
+                });
+                
+                // Handle drawing from others
+                GameState.socket.on('draw', (data) => {
+                    if (ctx && data.x !== undefined && data.y !== undefined) {
+                        ctx.lineTo(data.x, data.y);
+                        ctx.strokeStyle = data.color || '#ff0000';
+                        ctx.stroke();
+                    }
+                });
+                
+                // Handle canvas clear from others
+                GameState.socket.on('clear-canvas', () => {
+                    if (ctx && canvas) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                });
+                
+                // Chat messages from other players
+                GameState.socket.on('chat-message', (data) => {
+                    addChatMessage(data.name, data.message);
+                });
+                
+                // Crystal collected by another player
+                GameState.socket.on('crystal-collected', (data) => {
+                    const sanitizedName = sanitizeInput(data.playerName);
+                    addChatMessage('System', `✨ ${sanitizedName} collected a crystal!`);
+                });
+                
+                // WebRTC signaling for peer-to-peer voice
+                GameState.socket.on('signal', (data) => {
+                    const peer = GameState.peers?.get(data.from);
+                    if (peer) {
+                        peer.signal(data.signal);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Socket initialization failed:', error);
+                updateConnectionStatus('error');
+                showErrorMessage('Failed to initialize connection. Please refresh and try again.');
+            }
+        }
+        
+        /**
+         * Starts periodic position synchronization with server
+         */
+        function startPositionSync() {
+            if (GameState.positionSyncInterval) {
+                clearInterval(GameState.positionSyncInterval);
+            }
+            
+            GameState.positionSyncInterval = setInterval(() => {
+                if (GameState.socket && GameState.socket.connected) {
+                    GameState.socket.emit('move', {
+                        x: GameState.player.x,
+                        z: GameState.player.z
+                    });
+                }
+            }, CONFIG.UPDATE_INTERVAL);
+        }
+        
+        /**
+         * Sets up keyboard controls for movement and actions
+         */
+        function setupKeyboardControls() {
+            const keys = {};
+            
+            window.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                
+                // Spell selection (1, 2, 3)
+                if (e.key === '1') selectSpell(0);
+                if (e.key === '2') selectSpell(1);
+                if (e.key === '3') selectSpell(2);
+                
+                // Collaborative canvas
+                if (e.key.toLowerCase() === 'c') openDrawing();
+                
+                // Close modals with ESC
+                if (e.key === 'Escape') {
+                    const drawingModal = document.getElementById('drawing-modal');
+                    if (drawingModal.style.display === 'flex') {
+                        closeDrawing();
+                    }
+                }
+                
+                // Send chat with Enter
+                if (e.key === 'Enter') {
+                    const messageInput = document.getElementById('message-input');
+                    if (document.activeElement === messageInput) {
+                        sendMessage();
+                    }
+                }
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+            
+            return keys;
+        }
+        
+        /**
+         * Starts the main game loop for movement and updates
+         */
+        function startGameLoop() {
+            const keys = setupKeyboardControls();
             
             function update() {
-                const speed = 0.1;
                 let moved = false;
                 
-                if (keys['ArrowUp'] || keys['w']) { GameState.player.z -= speed; moved = true; }
-                if (keys['ArrowDown'] || keys['s']) { GameState.player.z += speed; moved = true; }
-                if (keys['ArrowLeft'] || keys['a']) { GameState.player.x -= speed; moved = true; }
-                if (keys['ArrowRight'] || keys['d']) { GameState.player.x += speed; moved = true; }
+                // WASD and Arrow key movement
+                if (keys['arrowup'] || keys['w']) { 
+                    GameState.player.z -= CONFIG.MOVEMENT_SPEED; 
+                    moved = true; 
+                }
+                if (keys['arrowdown'] || keys['s']) { 
+                    GameState.player.z += CONFIG.MOVEMENT_SPEED; 
+                    moved = true; 
+                }
+                if (keys['arrowleft'] || keys['a']) { 
+                    GameState.player.x -= CONFIG.MOVEMENT_SPEED; 
+                    moved = true; 
+                }
+                if (keys['arrowright'] || keys['d']) { 
+                    GameState.player.x += CONFIG.MOVEMENT_SPEED; 
+                    moved = true; 
+                }
+                
+                // Boundary collision detection
+                const boundary = CONFIG.WORLD_SIZE / 2;
+                GameState.player.x = Math.max(-boundary, Math.min(boundary, GameState.player.x));
+                GameState.player.z = Math.max(-boundary, Math.min(boundary, GameState.player.z));
                 
                 if (moved && playerMesh) {
                     playerMesh.position.x = GameState.player.x;
                     playerMesh.position.z = GameState.player.z;
+                    
+                    // Update camera to follow player
+                    if (camera) {
+                        camera.position.x = GameState.player.x;
+                        camera.position.z = GameState.player.z + CONFIG.CAMERA_DISTANCE;
+                        camera.lookAt(playerMesh.position);
+                    }
+                    
                     updateSpatialAudio();
                     checkCrystalCollisions();
                 }
@@ -1160,7 +1590,7 @@
                     const dz = obj.position.z - GameState.player.z;
                     const dist = Math.sqrt(dx*dx + dz*dz);
                     
-                    if (dist < 2) {
+                    if (dist < CONFIG.CRYSTAL_COLLECT_DISTANCE) {
                         collectCrystal(obj);
                     }
                 }
@@ -1171,11 +1601,19 @@
             crystal.userData.collected = true;
             crystal.visible = false;
             
-            const colors = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'];
+            const colors = ['Red', 'Green', 'Blue', 'Yellow', 'Purple', 'Cyan'];
             const color = colors[crystal.userData.id] || 'Mystic';
             
             GameState.player.crystals++;
             GameState.player.stars += 50;
+            
+            // Notify server about crystal collection
+            if (GameState.socket) {
+                GameState.socket.emit('crystal-collected', {
+                    crystalId: crystal.userData.id,
+                    playerName: GameState.player.name
+                });
+            }
             
             AI_Narrator.speak(AI_Narrator.generateNarration('crystal-collected', {
                 player: GameState.player.name,
@@ -1288,12 +1726,22 @@
         function sendMessage() {
             const input = document.getElementById('message-input');
             const msg = input.value.trim();
-            if (msg) {
-                addChatMessage(GameState.player.name, msg);
+            if (msg && msg.length > 0) {
+                // Sanitize message before sending
+                const sanitizedMsg = sanitizeInput(msg);
+                
+                if (GameState.socket) {
+                    GameState.socket.emit('chat-message', {
+                        name: GameState.player.name,
+                        message: sanitizedMsg
+                    });
+                }
+                
+                addChatMessage(GameState.player.name, sanitizedMsg);
                 input.value = '';
                 
                 // Check for collaboration keywords
-                if (msg.includes('help') || msg.includes('together')) {
+                if (msg.toLowerCase().includes('help') || msg.toLowerCase().includes('together')) {
                     AI_Narrator.speak(AI_Narrator.generateNarration('collaboration', {}));
                 }
             }
@@ -1301,22 +1749,144 @@
         
         function addChatMessage(name, msg) {
             const container = document.getElementById('chat-messages');
+            if (!container) return;
+            
             const div = document.createElement('div');
             div.className = 'chat-message';
-            div.innerHTML = `<span class="chat-name">${name}:</span> ${msg}`;
+            
+            // Sanitize both name and message to prevent XSS
+            const sanitizedName = sanitizeInput(name);
+            const sanitizedMsg = sanitizeInput(msg);
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'chat-name';
+            nameSpan.textContent = sanitizedName + ':';
+            
+            const msgText = document.createTextNode(' ' + sanitizedMsg);
+            
+            div.appendChild(nameSpan);
+            div.appendChild(msgText);
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
         
         function leaveGame() {
             if (confirm('Leave the Academy?')) {
-                location.reload();
+                try {
+                    // Clean up socket connection
+                    if (GameState.socket) {
+                        GameState.socket.disconnect();
+                        GameState.socket = null;
+                    }
+                    
+                    // Clean up peer connections
+                    if (GameState.peers) {
+                        GameState.peers.forEach(peer => peer.destroy());
+                        GameState.peers.clear();
+                    }
+                    
+                    // Clean up audio streams
+                    if (GameState.localStream) {
+                        GameState.localStream.getTracks().forEach(track => track.stop());
+                        GameState.localStream = null;
+                    }
+                    
+                    GameState.remoteStreams.forEach(stream => {
+                        if (stream.audio) stream.audio.remove();
+                        if (stream.source) stream.source.disconnect();
+                    });
+                    GameState.remoteStreams.clear();
+                    
+                    // Clean up audio context
+                    if (GameState.audioContext) {
+                        GameState.audioContext.close();
+                        GameState.audioContext = null;
+                    }
+                    
+                    // Clear intervals
+                    if (GameState.positionSyncInterval) {
+                        clearInterval(GameState.positionSyncInterval);
+                        GameState.positionSyncInterval = null;
+                    }
+                    
+                    // Reload page to reset everything
+                    location.reload();
+                } catch (err) {
+                    console.error('Error during cleanup:', err);
+                    location.reload();
+                }
             }
         }
         
         function showVoiceIndicator(peerId, distance) {
-            // Visual indicator for who's talking
+            // Visual indicator for who's talking nearby
+            const player = GameState.players.get(peerId);
+            if (!player || !player.mesh) return;
+            
+            // Check if indicator already exists
+            let indicator = player.voiceIndicator;
+            if (!indicator) {
+                // Create new voice indicator
+                const geometry = new THREE.RingGeometry(0.6, 0.8, 16);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: 0x22c55e, 
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                indicator = new THREE.Mesh(geometry, material);
+                indicator.rotation.x = -Math.PI / 2;
+                indicator.position.y = 0.1;
+                player.mesh.add(indicator);
+                player.voiceIndicator = indicator;
+            }
+            
+            // Animate the indicator based on distance
+            const scale = 1 + Math.sin(Date.now() * 0.01) * 0.2;
+            const opacity = Math.max(0.3, 1 - (distance / CONFIG.VOICE_MAX_DISTANCE));
+            indicator.scale.set(scale, scale, 1);
+            indicator.material.opacity = opacity;
+            
+            // Auto-hide after short delay
+            if (player.voiceTimeout) clearTimeout(player.voiceTimeout);
+            player.voiceTimeout = setTimeout(() => {
+                if (indicator) {
+                    indicator.visible = false;
+                }
+            }, 200);
+            
+            indicator.visible = true;
         }
+        
+        // ==========================================
+        // PAGE INITIALIZATION
+        // ==========================================
+        
+        /**
+         * Initialize the game on page load
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🎮 Wizard Academy - Multiplayer Game Loading...');
+            
+            // Set up event listeners
+            const messageInput = document.getElementById('message-input');
+            if (messageInput) {
+                messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+            
+            // Prevent accidental page refresh
+            window.addEventListener('beforeunload', (e) => {
+                if (GameState.socket && GameState.socket.connected) {
+                    e.preventDefault();
+                    e.returnValue = 'Are you sure you want to leave the game?';
+                    return e.returnValue;
+                }
+            });
+            
+            console.log('✅ Game initialized. Ready to join!');
+        });
         
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -1325,11 +1895,6 @@
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             }
-        });
-        
-        // Enter key for chat
-        document.getElementById('message-input')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
         });
     </script>
 </body>
