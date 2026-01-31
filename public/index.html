@@ -1054,31 +1054,74 @@
         }
         
         function connectToServer() {
-            // Simulated Socket.IO connection (replace with real server)
-            GameState.socket = {
-                emit: function(event, data) {
-                    console.log('Emit:', event, data);
-                    // Broadcast to other simulated players
-                },
-                on: function(event, callback) {
-                    // Store callbacks
-                }
-            };
-            
-            // Simulate connection
-            setTimeout(() => {
-                document.getElementById('start-screen').style.display = 'none';
-                document.getElementById('ui-layer').style.display = 'block';
-                document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('connection-status').className = 'status-connected';
-                document.getElementById('connection-status').textContent = '🟢 Connected';
-                
-                AI_Narrator.speak(AI_Narrator.generateNarration('player-joined', { name: GameState.player.name }));
-                
-                // Start game loop
-                startGameLoop();
-            }, 2000);
-        }
+    // Replace this entire function with:
+    
+    const serverUrl = 'https://wizard-academy-multiplayer.onrender.com';
+    
+    GameState.socket = io(serverUrl, {
+        transports: ['websocket', 'polling'] // Helps with connection issues
+    });
+    
+    GameState.socket.on('connect', () => {
+        console.log('✅ Connected to server!');
+        document.getElementById('connection-status').className = 'status-connected';
+        document.getElementById('connection-status').textContent = '🟢 Connected';
+        
+        // Join room
+        GameState.socket.emit('join-room', GameState.room, GameState.player.name);
+        
+        // Hide loading, show game
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('ui-layer').style.display = 'block';
+        document.getElementById('loading-overlay').style.display = 'none';
+        
+        // AI narrator welcome
+        AI_Narrator.speak(AI_Narrator.generateNarration('player-joined', { 
+            name: GameState.player.name 
+        }));
+        
+        startGameLoop();
+    });
+    
+    GameState.socket.on('connect_error', (err) => {
+        console.error('Connection error:', err);
+        document.getElementById('connection-status').className = 'status-error';
+        document.getElementById('connection-status').textContent = '🔴 Error';
+    });
+    
+    // Other player joined
+    GameState.socket.on('player-joined', (data) => {
+        addChatMessage('System', `✨ ${data.name} has joined!`);
+        createOtherPlayer(data.id, data.name);
+    });
+    
+    // Existing players
+    GameState.socket.on('existing-players', (players) => {
+        players.forEach(p => createOtherPlayer(p.id, p.name, p.x, p.z));
+    });
+    
+    // Player moved
+    GameState.socket.on('player-moved', (data) => {
+        updateOtherPlayer(data.id, data.x, data.z);
+    });
+    
+    // Player left
+    GameState.socket.on('player-left', (id) => {
+        removeOtherPlayer(id);
+        addChatMessage('System', 'A wizard has left.');
+    });
+    
+    // Handle drawing from others
+    GameState.socket.on('draw', (data) => {
+        // You'll need to implement collaborative drawing
+        console.log('Remote draw:', data);
+    });
+    
+    // Chat messages
+    GameState.socket.on('chat-message', (data) => {
+        addChatMessage(data.name, data.message);
+    });
+}}
         
         function startGameLoop() {
             // Movement controls
