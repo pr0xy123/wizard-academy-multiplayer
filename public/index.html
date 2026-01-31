@@ -536,6 +536,9 @@
                     <div style="margin-top: 10px; font-size: 10px; color: #888;">
                         Press H: Heal • T: Tutor • K: Skills
                     </div>
+                    <button class="btn-fantasy" onclick="exitGame()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b0000, #4a0000);">
+                        🚪 Exit Game
+                    </button>
                 </div>
             </div>
             
@@ -935,50 +938,200 @@
             };
             const color = colors[GameState.selectedClass] || colors.mage;
             
-            // Body
-            const body = new THREE.Mesh(
-                new THREE.ConeGeometry(0.4, 1.2, 8),
-                new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 })
-            );
-            body.position.y = 0.6;
-            body.castShadow = true;
-            playerGroup.add(body);
-            
-            // Head
-            const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.25, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffccaa })
-            );
-            head.position.y = 1.3;
-            playerGroup.add(head);
-            
-            // Hat/Hood
-            const hat = new THREE.Mesh(
-                new THREE.ConeGeometry(0.35, 0.7, 8),
-                new THREE.MeshStandardMaterial({ color: color })
-            );
-            hat.position.y = 1.7;
-            playerGroup.add(hat);
-            
-            // Staff/Wand
-            const staff = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.03, 0.03, 1.8, 8),
-                new THREE.MeshStandardMaterial({ color: 0x8b4513 })
-            );
-            staff.position.set(0.5, 0.9, 0.3);
-            playerGroup.add(staff);
-            
-            // Magic gem
-            const gem = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.1),
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x00ff00, 
-                    emissive: 0x00ff00,
-                    emissiveIntensity: 0.5
-                })
-            );
-            gem.position.set(0.5, 1.7, 0.3);
-            playerGroup.add(gem);
+            if (GameState.selectedClass === 'warrior') {
+                // WARRIOR: Broad shoulders, heavy armor, sword
+                // Body - broader and more muscular
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 1.0, 0.5),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.3, metalness: 0.7 })
+                );
+                body.position.y = 0.7;
+                body.castShadow = true;
+                playerGroup.add(body);
+                
+                // Shoulder pads
+                const leftShoulder = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.2, 0.3),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
+                );
+                leftShoulder.position.set(-0.55, 1.1, 0);
+                playerGroup.add(leftShoulder);
+                
+                const rightShoulder = leftShoulder.clone();
+                rightShoulder.position.set(0.55, 1.1, 0);
+                playerGroup.add(rightShoulder);
+                
+                // Head with helmet
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.25, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
+                );
+                head.position.y = 1.4;
+                playerGroup.add(head);
+                
+                // Helmet
+                const helmet = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
+                );
+                helmet.position.y = 1.6;
+                playerGroup.add(helmet);
+                
+                // Sword
+                const swordHandle = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.04, 0.04, 0.4, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+                );
+                swordHandle.position.set(0.6, 1.0, 0);
+                playerGroup.add(swordHandle);
+                
+                const swordBlade = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.08, 1.0, 0.02),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 1.0 })
+                );
+                swordBlade.position.set(0.6, 1.6, 0);
+                playerGroup.add(swordBlade);
+                
+                // Shield on back
+                const shield = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16),
+                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.7 })
+                );
+                shield.rotation.x = Math.PI / 2;
+                shield.position.set(0, 0.9, -0.3);
+                playerGroup.add(shield);
+                
+            } else if (GameState.selectedClass === 'rogue') {
+                // ROGUE: Slim, agile, dual daggers, hood
+                // Body - slim and agile
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.25, 0.3, 1.2, 8),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 })
+                );
+                body.position.y = 0.6;
+                body.castShadow = true;
+                playerGroup.add(body);
+                
+                // Head
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.25, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
+                );
+                head.position.y = 1.3;
+                playerGroup.add(head);
+                
+                // Hood with pointed top
+                const hood = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.35, 0.6, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x2d5016 })
+                );
+                hood.position.y = 1.6;
+                playerGroup.add(hood);
+                
+                // Cape
+                const cape = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.6, 0.8, 0.05),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
+                );
+                cape.position.set(0, 0.8, -0.25);
+                playerGroup.add(cape);
+                
+                // Left dagger
+                const dagger1 = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x404040, metalness: 0.9 })
+                );
+                dagger1.position.set(-0.4, 0.8, 0.2);
+                dagger1.rotation.z = Math.PI / 6;
+                playerGroup.add(dagger1);
+                
+                // Right dagger
+                const dagger2 = dagger1.clone();
+                dagger2.position.set(0.4, 0.8, 0.2);
+                dagger2.rotation.z = -Math.PI / 6;
+                playerGroup.add(dagger2);
+                
+            } else {
+                // MAGE: Robes, staff, glowing orb
+                // Body - flowing robes
+                const body = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.5, 1.3, 8),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 })
+                );
+                body.position.y = 0.65;
+                body.castShadow = true;
+                playerGroup.add(body);
+                
+                // Head
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.25, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
+                );
+                head.position.y = 1.4;
+                playerGroup.add(head);
+                
+                // Wizard hat - tall and pointed
+                const hatBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16),
+                    new THREE.MeshStandardMaterial({ color: color })
+                );
+                hatBase.position.y = 1.6;
+                playerGroup.add(hatBase);
+                
+                const hatCone = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.3, 0.9, 8),
+                    new THREE.MeshStandardMaterial({ color: color })
+                );
+                hatCone.position.y = 2.1;
+                playerGroup.add(hatCone);
+                
+                // Stars on hat
+                for (let i = 0; i < 3; i++) {
+                    const star = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.03, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.5 })
+                    );
+                    star.position.set(Math.sin(i * 2) * 0.25, 1.8 + i * 0.15, Math.cos(i * 2) * 0.25);
+                    playerGroup.add(star);
+                }
+                
+                // Staff - taller and more ornate
+                const staff = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.04, 0.04, 2.0, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+                );
+                staff.position.set(0.5, 1.0, 0.3);
+                playerGroup.add(staff);
+                
+                // Glowing orb on staff
+                const orb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 16, 16),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x9370db, 
+                        emissive: 0x9370db,
+                        emissiveIntensity: 0.8,
+                        transparent: true,
+                        opacity: 0.8
+                    })
+                );
+                orb.position.set(0.5, 2.0, 0.3);
+                playerGroup.add(orb);
+                
+                // Orbiting particles around staff
+                const particleOrbit = new THREE.Group();
+                for (let i = 0; i < 4; i++) {
+                    const particle = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.04, 8, 8),
+                        new THREE.MeshBasicMaterial({ color: 0x00ffff })
+                    );
+                    const angle = (i / 4) * Math.PI * 2;
+                    particle.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
+                    particleOrbit.add(particle);
+                }
+                particleOrbit.position.set(0.5, 2.0, 0.3);
+                playerGroup.add(particleOrbit);
+                GameState.staffParticles = particleOrbit;
+            }
             
             // Attach torch light
             GameState.torchLight.position.set(0, 2, 0);
@@ -1226,6 +1379,11 @@
             particles.forEach(p => {
                 p.rotation.y += delta * 0.1;
             });
+            
+            // Animate staff particles for mage
+            if (GameState.staffParticles) {
+                GameState.staffParticles.rotation.y += delta * 2;
+            }
             
             // Animate enemies
             enemies.forEach((enemy, i) => {
@@ -2048,12 +2206,53 @@
             
             const group = new THREE.Group();
             
-            const body = new THREE.Mesh(
-                new THREE.ConeGeometry(0.4, 1.2, 8),
-                new THREE.MeshStandardMaterial({ color: color })
-            );
-            body.position.y = 0.6;
-            group.add(body);
+            // Create simplified version based on class
+            if (data.class === 'warrior') {
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.7, 1.0, 0.5),
+                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.5 })
+                );
+                body.position.y = 0.6;
+                group.add(body);
+                
+                // Sword indicator
+                const sword = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.06, 0.8, 0.02),
+                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0 })
+                );
+                sword.position.set(0.5, 1.2, 0);
+                group.add(sword);
+            } else if (data.class === 'rogue') {
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.25, 0.3, 1.2, 8),
+                    new THREE.MeshStandardMaterial({ color: color })
+                );
+                body.position.y = 0.6;
+                group.add(body);
+                
+                // Hood
+                const hood = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.3, 0.5, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x2d5016 })
+                );
+                hood.position.y = 1.4;
+                group.add(hood);
+            } else {
+                const body = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.4, 1.2, 8),
+                    new THREE.MeshStandardMaterial({ color: color })
+                );
+                body.position.y = 0.6;
+                group.add(body);
+                
+                // Staff
+                const staff = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+                );
+                staff.position.set(0.4, 1.0, 0.2);
+                group.add(staff);
+            }
             
             const nameTag = document.createElement('div');
             nameTag.className = 'player-nametag';
@@ -2178,6 +2377,13 @@
             setTimeout(() => {
                 showFloatingText('Welcome to the Dungeon!', '#ffd700');
             }, 1000);
+        }
+
+        function exitGame() {
+            if (confirm('Are you sure you want to exit? Your progress has been auto-saved.')) {
+                saveGame();
+                location.reload();
+            }
         }
 
         // Button styling helper
