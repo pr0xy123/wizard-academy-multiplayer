@@ -897,8 +897,8 @@
         function init3D() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0502);
-            scene.fog = new THREE.FogExp2(0x0a0502, 0.03);
+            scene.background = new THREE.Color(0x1a1520);
+            scene.fog = new THREE.FogExp2(0x1a1520, 0.015);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
