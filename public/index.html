@@ -15,8 +15,16 @@
         body {
             font-family: 'Nunito', sans-serif;
             overflow: hidden;
-            background: #0a0a1a;
+            background: linear-gradient(135deg, #1a0033 0%, #0f0f3d 25%, #1a0033 50%, #2d1b4e 75%, #1a0033 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             color: white;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
         #game-canvas {
@@ -65,15 +73,28 @@
         }
         
         .stat-pill {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
             padding: 10px 20px;
             border-radius: 25px;
             display: flex;
             align-items: center;
             gap: 8px;
             font-weight: bold;
-            font-size: 1.1em;
-            border: 2px solid rgba(255,255,255,0.2);
+            font-size: 1.2em;
+            border: 2px solid rgba(255,215,0,0.4);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), inset 0 0 10px rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            animation: statGlow 2s ease-in-out infinite;
+        }
+        
+        .stat-pill:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+        }
+        
+        @keyframes statGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.6), inset 0 0 10px rgba(255,255,255,0.2); }
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255,255,255,0.3); }
         }
         
         .voice-indicator {
@@ -128,19 +149,26 @@
         
         .title-3d {
             font-family: 'Fredoka', sans-serif;
-            font-size: 4em;
-            background: linear-gradient(135deg, #667eea, #f093fb, #ffd700);
+            font-size: 4.5em;
+            background: linear-gradient(135deg, #667eea, #f093fb, #ffd700, #4ade80, #667eea);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 60px rgba(102, 126, 234, 0.5);
+            filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
             margin-bottom: 20px;
-            animation: titleFloat 3s ease-in-out infinite;
+            animation: titleFloat 3s ease-in-out infinite, titleShift 5s ease infinite;
         }
         
         @keyframes titleFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-15px) scale(1.05); }
+        }
+        
+        @keyframes titleShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
         .subtitle {
@@ -275,29 +303,44 @@
         }
         
         .spell-slot {
-            width: 60px;
-            height: 60px;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(102, 126, 234, 0.5);
-            border-radius: 15px;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border: 3px solid rgba(102, 126, 234, 0.8);
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8em;
+            font-size: 2em;
             cursor: pointer;
             transition: all 0.3s;
             position: relative;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.5);
+            animation: spellIdle 3s ease-in-out infinite;
+        }
+        
+        @keyframes spellIdle {
+            0%, 100% { box-shadow: 0 5px 15px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 5px 25px rgba(102, 126, 234, 0.8); }
         }
         
         .spell-slot:hover {
-            transform: scale(1.1);
+            transform: scale(1.15) rotate(5deg);
             border-color: #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 0 0 50px rgba(255, 215, 0, 0.6);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.4), rgba(255, 140, 0, 0.4));
         }
         
         .spell-slot.active {
             border-color: #ffd700;
-            background: rgba(255, 215, 0, 0.2);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.5), rgba(255, 140, 0, 0.5));
+            box-shadow: 0 0 30px rgba(255, 215, 0, 1), inset 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: spellActive 1s ease-in-out infinite;
+        }
+        
+        @keyframes spellActive {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
         
         .spell-key {
@@ -422,6 +465,158 @@
         
         @keyframes spin { to { transform: rotate(360deg); } }
         
+        #achievement-popup {
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #ffd700, #ffed4e, #ffd700);
+            padding: 25px 40px;
+            border-radius: 20px;
+            border: 4px solid #ff8c00;
+            box-shadow: 0 10px 50px rgba(255, 215, 0, 0.8), inset 0 0 20px rgba(255,255,255,0.5);
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.5em;
+            color: #1a0033;
+            font-weight: bold;
+            z-index: 1000;
+            text-align: center;
+            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: achievementShine 2s ease-in-out infinite;
+        }
+        
+        #achievement-popup.show {
+            top: 120px;
+        }
+        
+        @keyframes achievementShine {
+            0%, 100% { box-shadow: 0 10px 50px rgba(255, 215, 0, 0.8), inset 0 0 20px rgba(255,255,255,0.5); }
+            50% { box-shadow: 0 15px 70px rgba(255, 140, 0, 1), inset 0 0 30px rgba(255,255,255,0.8); }
+        }
+        
+        .achievement-icon {
+            font-size: 2em;
+            display: inline-block;
+            animation: bounce 0.6s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        #tutorial-hint {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95), rgba(118, 75, 162, 0.95));
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 3px solid #ffd700;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.8);
+            font-size: 1.2em;
+            color: white;
+            text-align: center;
+            max-width: 500px;
+            z-index: 150;
+            animation: hintPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes hintPulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+        
+        .floating-icon {
+            position: absolute;
+            font-size: 2em;
+            pointer-events: none;
+            animation: floatUp 2s ease-out forwards;
+            z-index: 500;
+        }
+        
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+        }
+        
+        #progress-bar-container {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 20px;
+            border: 2px solid #667eea;
+        }
+        
+        #progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        #progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e, #10b981);
+            border-radius: 15px;
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            animation: progressShine 2s infinite;
+        }
+        
+        @keyframes progressShine {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+        
+        #progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            font-family: 'Fredoka', sans-serif;
+        }
+        
+        .sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: sparkleAnim 1s ease-out forwards;
+        }
+        
+        @keyframes sparkleAnim {
+            0% { opacity: 1; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; }
+            100% { opacity: 0; transform: scale(1) rotate(180deg) translate(50px, 50px); }
+        }
+        
         @media (max-width: 768px) {
             .title-3d { font-size: 2.5em; }
             .feature-grid { grid-template-columns: 1fr; }
@@ -511,6 +706,29 @@
         </div>
     </div>
     
+    <!-- Achievement Popup -->
+    <div id="achievement-popup">
+        <span class="achievement-icon">🏆</span>
+        <span id="achievement-text">Achievement Unlocked!</span>
+    </div>
+    
+    <!-- Tutorial Hint -->
+    <div id="tutorial-hint" style="display: none;">
+        <div style="font-size: 1.5em; margin-bottom: 10px;">💡</div>
+        <div id="hint-text">Use WASD or Arrow Keys to move around!</div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div id="progress-bar-container" style="display: none;">
+        <div style="font-family: 'Fredoka', sans-serif; margin-bottom: 10px; text-align: center; color: #ffd700;">
+            <span id="level-text">Level 1</span> - <span id="xp-text">0 / 100 XP</span>
+        </div>
+        <div id="progress-bar">
+            <div id="progress-fill"></div>
+            <div id="progress-text">0%</div>
+        </div>
+    </div>
+    
     <!-- UI Layer -->
     <div id="ui-layer" style="display: none;">
         <!-- HUD Top -->
@@ -586,14 +804,27 @@
         // GAME STATE & CONFIGURATION
         // ==========================================
         const GameState = {
-            player: { name: '', x: 0, z: 0, rotation: 0, stars: 0, crystals: 0 },
+            player: { name: '', x: 0, z: 0, rotation: 0, stars: 0, crystals: 0, level: 1, xp: 0 },
             players: new Map(),
             room: null,
             socket: null,
             selectedSpell: 0,
             drawColor: '#ff0000',
             isDrawing: false,
-            lastMoveTime: 0
+            lastMoveTime: 0,
+            achievements: new Set(),
+            tutorialStep: 0,
+            totalDistance: 0
+        };
+        
+        const ACHIEVEMENTS = {
+            firstMove: { name: '🚶 First Steps', desc: 'Moved for the first time!' },
+            firstCrystal: { name: '💎 Crystal Collector', desc: 'Collected your first crystal!' },
+            explorer: { name: '🗺️ Explorer', desc: 'Traveled 100 units!' },
+            socialButterfly: { name: '🦋 Social Butterfly', desc: 'Met another wizard!' },
+            artist: { name: '🎨 Budding Artist', desc: 'Used the drawing canvas!' },
+            allCrystals: { name: '👑 Master Wizard', desc: 'Collected all 6 crystals!' },
+            speedster: { name: '⚡ Speedster', desc: 'Collected 3 crystals in under 2 minutes!' }
         };
 
         // YOUR RENDER SERVER URL
@@ -706,6 +937,25 @@
             scene.add(particles);
             
             animate();
+        }
+        
+        function selectSpell(index) {
+            GameState.selectedSpell = index;
+            
+            // Update UI
+            document.querySelectorAll('.spell-slot').forEach((slot, i) => {
+                if (i === index) {
+                    slot.classList.add('active');
+                } else {
+                    slot.classList.remove('active');
+                }
+            });
+            
+            // Show feedback
+            const spellNames = ['Math Missile 🧮', 'Word Shield 📚', 'Memory Blast 🧠'];
+            if (index < 3) {
+                createFloatingText(spellNames[index], playerMesh.position);
+            }
         }
         
         function animate() {
@@ -883,6 +1133,98 @@
         function updatePlayerCount() {
             const count = GameState.players.size + 1;
             document.getElementById('hud-players').textContent = count;
+            
+            // Check for social achievement
+            if (count > 1 && !GameState.achievements.has('socialButterfly')) {
+                unlockAchievement('socialButterfly');
+            }
+        }
+        
+        function unlockAchievement(achievementId) {
+            if (GameState.achievements.has(achievementId)) return;
+            
+            GameState.achievements.add(achievementId);
+            const achievement = ACHIEVEMENTS[achievementId];
+            
+            const popup = document.getElementById('achievement-popup');
+            document.getElementById('achievement-text').innerHTML = 
+                `${achievement.name}<br><span style="font-size: 0.6em; font-weight: normal;">${achievement.desc}</span>`;
+            
+            popup.classList.add('show');
+            createConfetti();
+            
+            // Play celebration animation
+            setTimeout(() => {
+                popup.classList.remove('show');
+            }, 4000);
+            
+            // Award XP
+            addXP(50);
+        }
+        
+        function addXP(amount) {
+            GameState.player.xp += amount;
+            const xpNeeded = GameState.player.level * 100;
+            
+            if (GameState.player.xp >= xpNeeded) {
+                GameState.player.level++;
+                GameState.player.xp = 0;
+                showLevelUp();
+            }
+            
+            updateProgressBar();
+        }
+        
+        function updateProgressBar() {
+            const xpNeeded = GameState.player.level * 100;
+            const percentage = (GameState.player.xp / xpNeeded) * 100;
+            
+            document.getElementById('progress-fill').style.width = percentage + '%';
+            document.getElementById('progress-text').textContent = Math.floor(percentage) + '%';
+            document.getElementById('level-text').textContent = `Level ${GameState.player.level}`;
+            document.getElementById('xp-text').textContent = `${GameState.player.xp} / ${xpNeeded} XP`;
+        }
+        
+        function showLevelUp() {
+            const popup = document.getElementById('achievement-popup');
+            document.getElementById('achievement-text').innerHTML = 
+                `<span style="font-size: 1.5em;">🎉 LEVEL UP! 🎉</span><br>You are now Level ${GameState.player.level}!`;
+            
+            popup.classList.add('show');
+            createConfetti();
+            createConfetti();
+            
+            setTimeout(() => {
+                popup.classList.remove('show');
+            }, 4000);
+        }
+        
+        function createConfetti() {
+            const emojis = ['✨', '⭐', '🎉', '💫', '🌟', '💥', '🎊'];
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                    const confetti = document.createElement('div');
+                    confetti.textContent = emoji;
+                    confetti.className = 'floating-icon';
+                    confetti.style.left = (Math.random() * window.innerWidth) + 'px';
+                    confetti.style.top = (window.innerHeight * 0.3 + Math.random() * 200) + 'px';
+                    confetti.style.animationDelay = Math.random() + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 2000);
+                }, i * 50);
+            }
+        }
+        
+        function showTutorialHint(text, duration = 5000) {
+            const hint = document.getElementById('tutorial-hint');
+            document.getElementById('hint-text').textContent = text;
+            hint.style.display = 'block';
+            
+            setTimeout(() => {
+                hint.style.display = 'none';
+            }, duration);
         }
         
         // ==========================================
@@ -890,11 +1232,28 @@
         // ==========================================
         function startGameLoop() {
             const keys = {};
+            let hasMovedOnce = false;
+            
             window.addEventListener('keydown', (e) => {
                 keys[e.key] = true;
-                if (e.key.toLowerCase() === 'c') openDrawing();
+                if (e.key.toLowerCase() === 'c') {
+                    openDrawing();
+                    if (!GameState.achievements.has('artist')) {
+                        unlockAchievement('artist');
+                    }
+                }
+                
+                // Number keys for spell selection
+                if (e.key >= '1' && e.key <= '3') {
+                    selectSpell(parseInt(e.key) - 1);
+                }
             });
             window.addEventListener('keyup', (e) => keys[e.key] = false);
+            
+            // Show initial tutorial hint
+            setTimeout(() => showTutorialHint('🎮 Use WASD or Arrow Keys to start exploring!', 7000), 2000);
+            setTimeout(() => showTutorialHint('💎 Collect all 6 colorful crystals to win!', 7000), 10000);
+            setTimeout(() => document.getElementById('progress-bar-container').style.display = 'block', 3000);
             
             function update() {
                 const speed = 0.15;
@@ -908,9 +1267,24 @@
                 if (keys['ArrowRight'] || keys['d'] || keys['D']) { dx += speed; moved = true; }
                 
                 if (moved && playerMesh) {
+                    // First move achievement
+                    if (!hasMovedOnce) {
+                        hasMovedOnce = true;
+                        unlockAchievement('firstMove');
+                        addXP(10);
+                    }
+                    
                     // Apply movement
                     GameState.player.x += dx;
                     GameState.player.z += dz;
+                    
+                    // Track distance for explorer achievement
+                    const distance = Math.sqrt(dx*dx + dz*dz);
+                    GameState.totalDistance += distance;
+                    
+                    if (GameState.totalDistance > 100 && !GameState.achievements.has('explorer')) {
+                        unlockAchievement('explorer');
+                    }
                     
                     // Boundary check
                     GameState.player.x = Math.max(-45, Math.min(45, GameState.player.x));
@@ -965,16 +1339,80 @@
                 GameState.socket.emit('crystal-collected', { crystalId: crystal.userData.id });
             }
             
-            addChatMessage('System', `💎 You collected the ${crystal.userData.color} Crystal!`);
+            addChatMessage('System', `💎 You collected the ${crystal.userData.color} Crystal! +50 Stars!`);
+            
+            // Show floating text
+            createFloatingText('+50 ⭐', playerMesh.position);
+            createFloatingText('💎', playerMesh.position);
             
             updateHUD();
             createParticleExplosion(crystal.position);
+            createSparkles(crystal.position);
             
-            // Check win condition
+            // Add XP and check achievements
+            addXP(30);
+            
+            if (GameState.player.crystals === 1) {
+                unlockAchievement('firstCrystal');
+            }
+            
             if (GameState.player.crystals >= 6) {
+                unlockAchievement('allCrystals');
                 setTimeout(() => {
-                    alert('🏆 Congratulations! You collected all crystals and became a Master Wizard!');
-                }, 500);
+                    showVictoryScreen();
+                }, 1000);
+            }
+        }
+        
+        function createFloatingText(text, position) {
+            const elem = document.createElement('div');
+            elem.className = 'floating-icon';
+            elem.textContent = text;
+            elem.style.fontSize = '3em';
+            elem.style.fontWeight = 'bold';
+            elem.style.color = '#ffd700';
+            elem.style.textShadow = '0 0 10px rgba(255, 215, 0, 1)';
+            
+            // Project 3D position to screen
+            const vector = new THREE.Vector3(position.x, position.y + 2, position.z);
+            vector.project(camera);
+            const x = (vector.x * .5 + .5) * window.innerWidth;
+            const y = (-(vector.y * .5) + .5) * window.innerHeight;
+            
+            elem.style.left = x + 'px';
+            elem.style.top = y + 'px';
+            
+            document.body.appendChild(elem);
+            setTimeout(() => elem.remove(), 2000);
+        }
+        
+        function createSparkles(position) {
+            for (let i = 0; i < 20; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = (window.innerWidth / 2) + 'px';
+                sparkle.style.top = (window.innerHeight / 2) + 'px';
+                sparkle.style.animationDelay = (i * 0.05) + 's';
+                document.body.appendChild(sparkle);
+                
+                setTimeout(() => sparkle.remove(), 1000);
+            }
+        }
+        
+        function showVictoryScreen() {
+            const popup = document.getElementById('achievement-popup');
+            popup.style.fontSize = '2em';
+            popup.style.padding = '40px';
+            document.getElementById('achievement-text').innerHTML = 
+                `<div style="font-size: 2em; margin-bottom: 15px;">🎉🏆🎉</div>
+                <div style="font-size: 1.2em;">CONGRATULATIONS!</div>
+                <div style="font-size: 0.8em; margin-top: 10px;">You are now a MASTER WIZARD!</div>
+                <div style="font-size: 0.6em; margin-top: 10px;">Level ${GameState.player.level} • ${GameState.player.stars} Stars</div>`;
+            
+            popup.classList.add('show');
+            
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => createConfetti(), i * 300);
             }
         }
         
