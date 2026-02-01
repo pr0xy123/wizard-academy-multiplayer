@@ -809,47 +809,34 @@
                         // Create animation mixer for the character model
                         animationMixer = new THREE.AnimationMixer(model);
                         
-                        // Store all animation actions
-                        GameState.animations = {};
+                        // List all available animations
                         gltf.animations.forEach((clip, index) => {
-                            console.log(`  - Animation ${index}: ${clip.name}`);
-                            const action = animationMixer.clipAction(clip);
-                            GameState.animations[clip.name] = action;
-                            
-                            // Also store by index for easier access
-                            GameState.animations[`clip${index}`] = action;
+                            console.log(`  - Animation ${index}: ${clip.name} (duration: ${clip.duration}s)`);
                         });
                         
-                        // Typically: 0=Idle, 1=Walk, 2=Run, 3=Jump
-                        // Start with idle (first animation)
-                        if (GameState.animations.clip0) {
-                            GameState.animations.clip0.play();
-                            GameState.currentAnimation = GameState.animations.clip0;
-                            console.log('✓ Playing idle animation');
-                        }
+                        // Use the second animation (usually walking) or first if only one
+                        const walkIndex = gltf.animations.length > 1 ? 1 : 0;
+                        GameState.walkAction = animationMixer.clipAction(gltf.animations[walkIndex]);
+                        GameState.walkAction.timeScale = 1.0; // Normal speed
+                        
+                        console.log(`✓ Using animation ${walkIndex} for walking`);
                     }
                 },
                 undefined,
                 (error) => {
-                    console.warn('Animation loading failed (character will use simple bobbing):', error);
+                    console.warn('Animation loading failed:', error);
                 }
             );
         }
         
         // Switch between animations based on movement
         function updateCharacterAnimation(isMoving) {
-            if (!GameState.animations || !animationMixer) return;
+            if (!GameState.walkAction) return;
             
-            // Determine target animation (0=idle, 1=walk)
-            const targetAnim = isMoving ? GameState.animations.clip1 : GameState.animations.clip0;
-            
-            if (targetAnim && GameState.currentAnimation !== targetAnim) {
-                // Smoothly transition between animations
-                if (GameState.currentAnimation) {
-                    GameState.currentAnimation.fadeOut(0.2);
-                }
-                targetAnim.reset().fadeIn(0.2).play();
-                GameState.currentAnimation = targetAnim;
+            if (isMoving && !GameState.walkAction.isRunning()) {
+                GameState.walkAction.play();
+            } else if (!isMoving && GameState.walkAction.isRunning()) {
+                GameState.walkAction.stop();
             }
         }
 
