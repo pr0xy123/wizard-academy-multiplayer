@@ -2163,7 +2163,12 @@
             if (!checkCollision(newX, newZ)) {
                 GameState.player.x = newX;
                 GameState.player.z = newZ;
-                GameState.playerMesh.position.set(newX, 0, newZ);
+                
+                // Update base position (without Y)
+                if (GameState.playerMesh) {
+                    GameState.playerMesh.position.x = newX;
+                    GameState.playerMesh.position.z = newZ;
+                }
                 
                 // Broadcast position in multiplayer (throttled)
                 if (GameState.isMultiplayer && GameState.socket && GameState.socket.connected) {
@@ -2175,14 +2180,16 @@
                 }
             }
             
-            // Animate walking
+            // Animate walking - this runs AFTER position update
             if (moved && (dx !== 0 || dz !== 0)) {
                 // Subtle bobbing when walking
-                playerGroup.position.y = Math.sin(Date.now() * 0.01) * 0.05;
-                
-                // Rotate entire playerGroup to face movement direction
-                const moveAngle = Math.atan2(dx, dz);
-                playerGroup.rotation.y = moveAngle;
+                if (GameState.playerMesh) {
+                    GameState.playerMesh.position.y = Math.sin(Date.now() * 0.01) * 0.05;
+                    
+                    // Rotate entire playerGroup to face movement direction
+                    const moveAngle = Math.atan2(dx, dz);
+                    GameState.playerMesh.rotation.y = moveAngle;
+                }
                 
                 // Update character animation
                 updateCharacterAnimation({ 
@@ -2191,8 +2198,10 @@
                 });
             } else {
                 // When idle, face the camera direction
-                playerGroup.position.y = 0;
-                playerGroup.rotation.y = cameraAngle;
+                if (GameState.playerMesh) {
+                    GameState.playerMesh.position.y = 0;
+                    GameState.playerMesh.rotation.y = cameraAngle;
+                }
                 updateCharacterAnimation({ moving: false });
             }
         }
