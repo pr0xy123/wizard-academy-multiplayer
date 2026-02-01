@@ -905,20 +905,18 @@
         
         // Character model paths
         const characterModels = {
-            warrior: '/models/characters/knight/Knight.gltf',
-            mage: '/models/characters/mage/Mage.gltf',
-            rogue: '/models/characters/rogue/Rogue.gltf',
-            ranger: '/models/characters/ranger/Ranger.gltf'
+            warrior: '/models/characters/warrior/Knight.glb',
+            mage: '/models/characters/mage/Mage.glb',
+            rogue: '/models/characters/rogue/Rogue.glb',
+            ranger: '/models/characters/ranger/Ranger.glb'
         };
         
-        // Animation paths
+        // Animation paths (KayKit uses combined animation files)
         const animationPaths = {
-            idle: '/models/animations/Idle.gltf',
-            walk: '/models/animations/Walking.gltf',
-            run: '/models/animations/Running.gltf',
-            jump: '/models/animations/Jump.gltf',
-            attack: '/models/animations/Attack.gltf',
-            death: '/models/animations/Death.gltf'
+            basic: '/models/animations/Rig_Medium_MovementBasic.glb',
+            advanced: '/models/animations/Rig_Medium_MovementAdvanced.glb',
+            combat: '/models/animations/Rig_Medium_CombatMelee.glb',
+            general: '/models/animations/Rig_Medium_General.glb'
         };
 
         function init3D() {
