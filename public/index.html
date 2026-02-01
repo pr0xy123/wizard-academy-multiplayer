@@ -909,9 +909,10 @@
                         console.log('✓ Weapon attached to right hand');
                     } else {
                         // Fallback: attach to character at approximate hand position
-                        weapon.position.set(0.3, 1.0, 0.2);
-                        weapon.rotation.z = Math.PI / 4;
-                        weapon.scale.set(0.3, 0.3, 0.3);
+                        // Position it more prominently so it's visible
+                        weapon.position.set(0.5, 0.8, 0.3);  // Right side, mid-height, slightly forward
+                        weapon.rotation.set(0, 0, Math.PI / 6);  // Slight angle
+                        weapon.scale.set(0.6, 0.6, 0.6);  // Bigger so it's visible
                         model.add(weapon);
                         console.log('✓ Weapon attached to character (no hand bone found)');
                     }
