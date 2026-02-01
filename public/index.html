@@ -6,6 +6,7 @@
     <title>Lore & Legends Academy - Mystic Dungeons</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
@@ -893,6 +894,32 @@
         let particles = [];
         let keys = {};
         let clock = new THREE.Clock();
+        
+        // Animation and Model Loading System
+        let gltfLoader;
+        let animationMixer;
+        let currentAnimation;
+        let characterModel = null;
+        let modelAnimations = {};
+        let modelCache = {};
+        
+        // Character model paths
+        const characterModels = {
+            warrior: '/models/characters/knight/Knight.gltf',
+            mage: '/models/characters/mage/Mage.gltf',
+            rogue: '/models/characters/rogue/Rogue.gltf',
+            ranger: '/models/characters/ranger/Ranger.gltf'
+        };
+        
+        // Animation paths
+        const animationPaths = {
+            idle: '/models/animations/Idle.gltf',
+            walk: '/models/animations/Walking.gltf',
+            run: '/models/animations/Running.gltf',
+            jump: '/models/animations/Jump.gltf',
+            attack: '/models/animations/Attack.gltf',
+            death: '/models/animations/Death.gltf'
+        };
 
         function init3D() {
             const canvas = document.getElementById('render-canvas');
@@ -905,6 +932,9 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Initialize GLTF Loader
+            gltfLoader = new THREE.GLTFLoader();
             
             // Brighter ambient light
             scene.add(new THREE.AmbientLight(0x666666, 1.2));
@@ -931,10 +961,223 @@
             
             animate();
         }
+        
+        // ==========================================
+        // MODEL & ANIMATION LOADING SYSTEM
+        // ==========================================
+        
+        /**
+         * Load a character model from the KayKit Adventurers pack
+         */
+        function loadCharacterModel(className, onLoad, onError) {
+            const modelPath = characterModels[className.toLowerCase()];
+            
+            if (!modelPath) {
+                console.warn(`No model path found for class: ${className}`);
+                if (onError) onError();
+                return;
+            }
+            
+            // Check cache first
+            if (modelCache[className]) {
+                console.log(`Loading ${className} from cache`);
+                const clonedModel = modelCache[className].clone();
+                if (onLoad) onLoad(clonedModel);
+                return;
+            }
+            
+            console.log(`Loading character model: ${modelPath}`);
+            
+            gltfLoader.load(
+                modelPath,
+                (gltf) => {
+                    console.log(`Successfully loaded ${className} model`);
+                    
+                    // Cache the model
+                    modelCache[className] = gltf.scene;
+                    
+                    // Setup model
+                    const model = gltf.scene.clone();
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    // Scale and position the model
+                    model.scale.set(1.0, 1.0, 1.0);
+                    model.position.set(0, 0, 0);
+                    
+                    // Store animations if available
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        modelAnimations[className] = gltf.animations;
+                    }
+                    
+                    if (onLoad) onLoad(model);
+                },
+                (xhr) => {
+                    // Progress callback
+                    console.log(`Loading ${className}: ${(xhr.loaded / xhr.total * 100)}%`);
+                },
+                (error) => {
+                    console.error(`Error loading ${className} model:`, error);
+                    if (onError) onError(error);
+                }
+            );
+        }
+        
+        /**
+         * Load environment prop from KayKit Dungeon pack
+         */
+        function loadEnvironmentProp(propName, onLoad, onError) {
+            const propPath = `/models/environment/props/${propName}.gltf`;
+            
+            // Check cache
+            if (modelCache[propName]) {
+                const clonedProp = modelCache[propName].clone();
+                if (onLoad) onLoad(clonedProp);
+                return;
+            }
+            
+            gltfLoader.load(
+                propPath,
+                (gltf) => {
+                    modelCache[propName] = gltf.scene;
+                    
+                    const prop = gltf.scene.clone();
+                    prop.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    if (onLoad) onLoad(prop);
+                },
+                undefined,
+                (error) => {
+                    console.warn(`Could not load prop ${propName}:`, error);
+                    if (onError) onError(error);
+                }
+            );
+        }
+        
+        /**
+         * Initialize animation mixer for character
+         */
+        function setupCharacterAnimations(model, className) {
+            if (!model) return;
+            
+            // Create animation mixer
+            animationMixer = new THREE.AnimationMixer(model);
+            
+            // Load default idle animation if available
+            if (modelAnimations[className]) {
+                const idleAnim = modelAnimations[className].find(a => 
+                    a.name.toLowerCase().includes('idle')
+                );
+                
+                if (idleAnim) {
+                    const action = animationMixer.clipAction(idleAnim);
+                    action.play();
+                    currentAnimation = 'idle';
+                }
+            }
+        }
+        
+        /**
+         * Update character animation based on movement state
+         */
+        function updateCharacterAnimation(state) {
+            if (!animationMixer || !characterModel) return;
+            
+            // Determine which animation to play
+            let targetAnimation = 'idle';
+            
+            if (GameState.inCombat) {
+                targetAnimation = 'attack';
+            } else if (state.moving) {
+                targetAnimation = state.running ? 'run' : 'walk';
+            }
+            
+            // Only change if different from current
+            if (targetAnimation !== currentAnimation) {
+                // Fade out current animation
+                const oldAction = animationMixer.existingAction(currentAnimation);
+                if (oldAction) {
+                    oldAction.fadeOut(0.3);
+                }
+                
+                // Fade in new animation
+                const newAction = animationMixer.existingAction(targetAnimation);
+                if (newAction) {
+                    newAction.reset().fadeIn(0.3).play();
+                    currentAnimation = targetAnimation;
+                }
+            }
+        }
+        
+        /**
+         * Replace current player model with new character model
+         */
+        function replacePlayerModel(className) {
+            loadCharacterModel(className, (model) => {
+                // Remove old model if it exists
+                if (characterModel && playerGroup) {
+                    playerGroup.remove(characterModel);
+                }
+                
+                // Add new model
+                characterModel = model;
+                
+                if (playerGroup) {
+                    playerGroup.add(characterModel);
+                    setupCharacterAnimations(characterModel, className);
+                    
+                    console.log(`Character model replaced with ${className}`);
+                }
+            }, () => {
+                console.log(`Failed to load ${className} model, keeping default geometric character`);
+            });
+        }
 
         function createPlayer() {
             playerGroup = new THREE.Group();
             
+            // Try to load character model first
+            const className = GameState.selectedClass || 'mage';
+            console.log(`Attempting to load ${className} character model...`);
+            
+            loadCharacterModel(className, (model) => {
+                // Success! Use the 3D model
+                characterModel = model;
+                playerGroup.add(characterModel);
+                setupCharacterAnimations(characterModel, className);
+                console.log(`✓ Using 3D model for ${className}`);
+            }, () => {
+                // Fallback to geometric shapes if model fails to load
+                console.log(`✗ Model not found, using geometric character for ${className}`);
+                createGeometricPlayer();
+            });
+            
+            // Attach torch light
+            GameState.torchLight.position.set(0, 2, 0);
+            playerGroup.add(GameState.torchLight);
+            
+            scene.add(playerGroup);
+            GameState.playerMesh = playerGroup;
+            
+            // Starting position
+            GameState.player.x = 0;
+            GameState.player.z = 0;
+            playerGroup.position.set(0, 0, 0);
+        }
+        
+        /**
+         * Create geometric player character (fallback)
+         */
+        function createGeometricPlayer() {
             // Class-specific appearance
             const colors = {
                 warrior: 0x8b0000,
@@ -1298,18 +1541,6 @@
                 playerGroup.add(particleOrbit);
                 GameState.staffParticles = particleOrbit;
             }
-            
-            // Attach torch light
-            GameState.torchLight.position.set(0, 2, 0);
-            playerGroup.add(GameState.torchLight);
-            
-            scene.add(playerGroup);
-            GameState.playerMesh = playerGroup;
-            
-            // Starting position
-            GameState.player.x = 0;
-            GameState.player.z = 0;
-            playerGroup.position.set(0, 0, 0);
         }
 
         function buildDungeon() {
@@ -1663,6 +1894,11 @@
                 p.rotation.y += delta * 0.1;
             });
             
+            // Update animation mixer for character models
+            if (animationMixer) {
+                animationMixer.update(delta);
+            }
+            
             // Animate staff particles for mage
             if (GameState.staffParticles) {
                 GameState.staffParticles.rotation.y += delta * 2;
@@ -1745,6 +1981,15 @@
             // Animate walking
             if (moved) {
                 GameState.playerMesh.position.y = Math.sin(Date.now() * 0.01) * 0.05;
+                
+                // Update character animation
+                updateCharacterAnimation({ 
+                    moving: true, 
+                    running: keys['shift'] || false 
+                });
+            } else {
+                // Idle animation
+                updateCharacterAnimation({ moving: false });
             }
         }
 
@@ -2664,6 +2909,11 @@
                 GameState.player.health = 80;
                 GameState.player.maxMana = 60;
                 GameState.player.mana = 60;
+            }
+            
+            // If player already exists, replace the model
+            if (playerGroup && scene) {
+                replacePlayerModel(className);
             }
         }
 
