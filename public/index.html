@@ -905,8 +905,9 @@
         
         // Character model paths
         const characterModels = {
-            warrior: '/models/characters/warrior/Knight.glb',
+            warrior: '/models/characters/warrior/Barbarian.glb',
             mage: '/models/characters/mage/Mage.glb',
+            knight: '/models/characters/knight/Knight.glb',
             rogue: '/models/characters/rogue/Rogue.glb',
             ranger: '/models/characters/ranger/Ranger.glb'
         };
@@ -1059,6 +1060,80 @@
         }
         
         /**
+         * Load floor tile from KayKit Dungeon pack
+         */
+        function loadFloorTile(tileName, onLoad, onError) {
+            const tilePath = `/models/environment/dungeon/floors/${tileName}.gltf`;
+            const cacheKey = `floor_${tileName}`;
+            
+            // Check cache
+            if (modelCache[cacheKey]) {
+                const clonedTile = modelCache[cacheKey].clone();
+                if (onLoad) onLoad(clonedTile);
+                return;
+            }
+            
+            gltfLoader.load(
+                tilePath,
+                (gltf) => {
+                    modelCache[cacheKey] = gltf.scene;
+                    
+                    const tile = gltf.scene.clone();
+                    tile.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = false;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    if (onLoad) onLoad(tile);
+                },
+                undefined,
+                (error) => {
+                    console.warn(`Could not load floor tile ${tileName}:`, error);
+                    if (onError) onError(error);
+                }
+            );
+        }
+        
+        /**
+         * Load wall piece from KayKit Dungeon pack
+         */
+        function loadWallPiece(wallName, onLoad, onError) {
+            const wallPath = `/models/environment/dungeon/walls/${wallName}.gltf`;
+            const cacheKey = `wall_${wallName}`;
+            
+            // Check cache
+            if (modelCache[cacheKey]) {
+                const clonedWall = modelCache[cacheKey].clone();
+                if (onLoad) onLoad(clonedWall);
+                return;
+            }
+            
+            gltfLoader.load(
+                wallPath,
+                (gltf) => {
+                    modelCache[cacheKey] = gltf.scene;
+                    
+                    const wall = gltf.scene.clone();
+                    wall.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    if (onLoad) onLoad(wall);
+                },
+                undefined,
+                (error) => {
+                    console.warn(`Could not load wall ${wallName}:`, error);
+                    if (onError) onError(error);
+                }
+            );
+        }
+        
+        /**
          * Initialize animation mixer for character
          */
         function setupCharacterAnimations(model, className) {
@@ -1067,9 +1142,12 @@
             // Create animation mixer
             animationMixer = new THREE.AnimationMixer(model);
             
-            // KayKit models have built-in animations in the GLB file
+            // Try to load external animation files from KayKit
+            loadAnimationsForCharacter(className, model);
+            
+            // KayKit character models are static poses, so we check for built-in animations
             if (modelAnimations[className] && modelAnimations[className].length > 0) {
-                console.log(`Found ${modelAnimations[className].length} animations for ${className}`);
+                console.log(`Found ${modelAnimations[className].length} built-in animations for ${className}`);
                 // Play the first animation as idle
                 const firstAnim = modelAnimations[className][0];
                 const action = animationMixer.clipAction(firstAnim);
@@ -1077,21 +1155,93 @@
                 currentAnimation = 'idle';
                 console.log('✓ Playing animation:', firstAnim.name);
             } else {
-                console.log('No animations found in model, will use pose only');
+                console.log('No built-in animations found, will load external animations');
             }
+        }
+        
+        /**
+         * Load animation files from KayKit Character Animations pack
+         */
+        function loadAnimationsForCharacter(className, model) {
+            // KayKit has separate animation files - load the basic movement set
+            const animType = 'Rig_Medium_MovementBasic'; // Most characters use medium rig
+            
+            gltfLoader.load(
+                `/models/animations/${animType}.glb`,
+                (gltf) => {
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        console.log(`✓ Loaded ${gltf.animations.length} animations from ${animType}`);
+                        
+                        // Store animations
+                        if (!modelAnimations[className]) {
+                            modelAnimations[className] = [];
+                        }
+                        modelAnimations[className].push(...gltf.animations);
+                        
+                        // Apply animations to the mixer if we have one
+                        if (animationMixer && gltf.animations.length > 0) {
+                            // Play idle animation (usually first in the set)
+                            const idleAnim = gltf.animations.find(a => a.name.toLowerCase().includes('idle')) || gltf.animations[0];
+                            const action = animationMixer.clipAction(idleAnim);
+                            action.play();
+                            console.log(`✓ Playing animation: ${idleAnim.name}`);
+                        }
+                    }
+                },
+                undefined,
+                (error) => {
+                    console.log(`Could not load animations for ${className}, using static pose`);
+                }
+            );
         }
         
         /**
          * Update character animation based on movement state
          */
         function updateCharacterAnimation(state) {
-            // KayKit character models are static poses, so we'll simulate movement with rotation
-            if (characterModel && state && state.moving) {
-                // Slight bobbing effect when moving
-                const time = Date.now() * 0.01;
-                characterModel.position.y = Math.sin(time) * 0.05;
-            } else if (characterModel) {
-                characterModel.position.y = 0;
+            if (!characterModel || !animationMixer) {
+                // Fallback: simple bobbing animation for static models
+                if (characterModel && state && state.moving) {
+                    const time = Date.now() * 0.01;
+                    characterModel.position.y = Math.sin(time) * 0.05;
+                } else if (characterModel) {
+                    characterModel.position.y = 0;
+                }
+                return;
+            }
+            
+            // Determine which animation to play based on state
+            let targetAnim = 'idle';
+            if (state) {
+                if (state.attacking) targetAnim = 'attack';
+                else if (state.running) targetAnim = 'run';
+                else if (state.moving) targetAnim = 'walk';
+            }
+            
+            // Only change animation if it's different
+            if (targetAnim !== currentAnimation) {
+                playCharacterAnimation(targetAnim);
+                currentAnimation = targetAnim;
+            }
+        }
+        
+        /**
+         * Play a specific animation on the character
+         */
+        function playCharacterAnimation(animName) {
+            if (!animationMixer || !modelAnimations[GameState.selectedClass]) return;
+            
+            const animations = modelAnimations[GameState.selectedClass];
+            const anim = animations.find(a => a.name.toLowerCase().includes(animName.toLowerCase()));
+            
+            if (anim) {
+                // Fade out current animation and fade in new one
+                animationMixer.stopAllAction();
+                const action = animationMixer.clipAction(anim);
+                action.reset();
+                action.fadeIn(0.2);
+                action.play();
+                console.log(`Playing ${animName} animation:`, anim.name);
             }
         }
         
@@ -1527,50 +1677,94 @@
         }
 
         function buildDungeon() {
-            // Procedural dungeon generation
+            // Procedural dungeon generation with GLTF models
             const roomSize = 20;
             const wallHeight = 8;
             
-            // Floor with better visibility
-            const floorGeo = new THREE.PlaneGeometry(100, 100, 20, 20);
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x5a4a35,
-                roughness: 0.8,
-                metalness: 0.1
-            });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            // BUILD FLOOR USING 3D TILES
+            // Create floor grid using actual dungeon tiles
+            const floorTileSize = 2; // Each KayKit tile is about 2x2 units
+            const floorTypes = [
+                'floor_tile_large',
+                'floor_tile_small',
+                'floor_dirt_large',
+                'floor_wood_large'
+            ];
             
-            // Add visible grid lines on floor
-            const gridHelper = new THREE.GridHelper(100, 50, 0x8b7355, 0x6a5344);
-            gridHelper.material.opacity = 0.5;
-            gridHelper.material.transparent = true;
-            scene.add(gridHelper);
+            console.log('Loading dungeon floor tiles...');
+            let tilesLoaded = 0;
+            const totalFloorTiles = 50 * 50 / (floorTileSize * floorTileSize);
             
-            // Create visible walls with better material
-            const wallMat = new THREE.MeshStandardMaterial({ 
-                color: 0x7a5f47,
-                roughness: 0.7,
-                metalness: 0.1
-            });
-            
-            // Outer walls - more visible
-            for (let i = -50; i <= 50; i += 5) {
-                createWall(i, -50, wallMat);
-                createWall(i, 50, wallMat);
-                createWall(-50, i, wallMat);
-                createWall(50, i, wallMat);
-            }
-            
-            // Add some interior walls for dungeon feel
-            for (let i = -40; i <= 40; i += 20) {
-                if (Math.abs(i) > 10) {
-                    createWall(i, 0, wallMat);
-                    createWall(0, i, wallMat);
+            for (let x = -50; x <= 50; x += floorTileSize) {
+                for (let z = -50; z <= 50; z += floorTileSize) {
+                    // Vary floor tiles for visual interest
+                    const tileType = floorTypes[Math.floor(Math.random() * floorTypes.length)];
+                    
+                    loadFloorTile(tileType, (tile) => {
+                        tile.position.set(x, 0, z);
+                        tile.rotation.y = (Math.PI / 2) * Math.floor(Math.random() * 4); // Random rotation
+                        scene.add(tile);
+                        tilesLoaded++;
+                        
+                        if (tilesLoaded === 1) {
+                            console.log('✓ First floor tile loaded successfully!');
+                        }
+                    }, () => {
+                        // Fallback: create simple plane if tile fails to load
+                        const fallbackFloor = new THREE.Mesh(
+                            new THREE.PlaneGeometry(floorTileSize, floorTileSize),
+                            new THREE.MeshStandardMaterial({ 
+                                color: 0x5a4a35,
+                                roughness: 0.8,
+                                metalness: 0.1
+                            })
+                        );
+                        fallbackFloor.rotation.x = -Math.PI / 2;
+                        fallbackFloor.position.set(x, 0, z);
+                        fallbackFloor.receiveShadow = true;
+                        scene.add(fallbackFloor);
+                    });
                 }
             }
+            
+            // BUILD WALLS USING 3D MODELS
+            const wallTypes = [
+                'wall',
+                'wall_corner',
+                'wall_doorway',
+                'wall_broken',
+                'wall_window_closed'
+            ];
+            
+            console.log('Loading dungeon walls...');
+            let wallsLoaded = 0;
+            
+            // Outer walls - using actual wall models
+            for (let i = -50; i <= 50; i += 4) {
+                // North and South walls
+                const wallType1 = i % 20 === 0 ? 'wall_doorway' : (Math.random() > 0.9 ? 'wall_broken' : 'wall');
+                createWallModel(i, -50, wallType1, 0);
+                createWallModel(i, 50, wallType1, Math.PI);
+                
+                // East and West walls
+                const wallType2 = i % 20 === 0 ? 'wall_doorway' : (Math.random() > 0.9 ? 'wall_window_closed' : 'wall');
+                createWallModel(-50, i, wallType2, Math.PI / 2);
+                createWallModel(50, i, wallType2, -Math.PI / 2);
+            }
+            
+            // Interior walls for dungeon rooms
+            for (let i = -40; i <= 40; i += 20) {
+                if (Math.abs(i) > 10) {
+                    createWallModel(i, 0, Math.random() > 0.5 ? 'wall' : 'wall_broken', 0);
+                    createWallModel(0, i, Math.random() > 0.5 ? 'wall' : 'wall_broken', Math.PI / 2);
+                }
+            }
+            
+            // Corner pieces for visual interest
+            createWallModel(-50, -50, 'wall_corner', 0);
+            createWallModel(50, -50, 'wall_corner', Math.PI / 2);
+            createWallModel(50, 50, 'wall_corner', Math.PI);
+            createWallModel(-50, 50, 'wall_corner', -Math.PI / 2);
             
             // Inner rooms
             createRoom(-20, -20, 'library');
@@ -1606,6 +1800,34 @@
             }
             
             walls.push({ mesh: wall, x, z, size: 5 });
+        }
+        
+        /**
+         * Create wall using actual 3D model from KayKit Dungeon pack
+         */
+        function createWallModel(x, z, wallType, rotation) {
+            loadWallPiece(wallType, (wall) => {
+                wall.position.set(x, 0, z);
+                wall.rotation.y = rotation || 0;
+                scene.add(wall);
+                
+                // Add torch lighting for atmosphere
+                if (Math.random() > 0.7) {
+                    const wallLight = new THREE.PointLight(0xffaa44, 1.5, 12);
+                    wallLight.position.set(x, 5, z);
+                    scene.add(wallLight);
+                }
+                
+                walls.push({ mesh: wall, x, z, size: 4 });
+            }, () => {
+                // Fallback to geometric wall if model fails
+                const fallbackMat = new THREE.MeshStandardMaterial({ 
+                    color: 0x7a5f47,
+                    roughness: 0.7,
+                    metalness: 0.1
+                });
+                createWall(x, z, fallbackMat);
+            });
         }
 
         function createRoom(cx, cz, type) {
