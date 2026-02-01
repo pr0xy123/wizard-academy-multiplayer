@@ -998,14 +998,14 @@
                     if (rightHand) {
                         // Attach to actual hand bone with class-specific positioning
                         const weaponAdjustments = {
-                            warrior: { pos: [0, -0.2, 0.05], rot: [0, 0, Math.PI], scale: 1.0 },
+                            warrior: { pos: [0, -0.1, 0.08], rot: [Math.PI / 4, 0, Math.PI], scale: 0.9 },
                             mage: { pos: [0, -0.3, 0], rot: [0, 0, 0], scale: 1.2 },
                             rogue: { pos: [0, -0.15, 0.02], rot: [0, 0, Math.PI / 2], scale: 0.8 },
-                            knight: { pos: [0, -0.2, 0.05], rot: [0, 0, Math.PI], scale: 1.0 },
+                            knight: { pos: [0, -0.15, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.9 },
                             ranger: { pos: [0.15, -0.1, 0], rot: [0, Math.PI / 2, 0], scale: 1.0 }
                         };
                         
-                        const adj = weaponAdjustments[className] || { pos: [0, -0.2, 0.05], rot: [0, 0, Math.PI], scale: 0.8 };
+                        const adj = weaponAdjustments[className] || { pos: [0, -0.15, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.8 };
                         weapon.position.set(...adj.pos);
                         weapon.rotation.set(...adj.rot);
                         weapon.scale.set(adj.scale, adj.scale, adj.scale);
@@ -1080,7 +1080,7 @@
                     for (let x = -room.size; x <= room.size; x++) {
                         for (let z = -room.size; z <= room.size; z++) {
                             const floor = floorModel.clone();
-                            floor.position.set(room.x + x * 4, 0, room.z + z * 4);
+                            floor.position.set(room.x + x * 4, 0.01, room.z + z * 4);
                             scene.add(floor);
                         }
                     }
@@ -1153,9 +1153,9 @@
                             for (let offset = -1; offset <= 1; offset++) {
                                 const floor = floorModel.clone();
                                 if (Math.abs(dx) > Math.abs(dz)) {
-                                    floor.position.set(x, 0, z + offset * 4);
+                                    floor.position.set(x, 0.01, z + offset * 4);
                                 } else {
-                                    floor.position.set(x + offset * 4, 0, z);
+                                    floor.position.set(x + offset * 4, 0.01, z);
                                 }
                                 scene.add(floor);
                             }
