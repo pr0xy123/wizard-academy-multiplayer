@@ -681,13 +681,13 @@
             rogue: '/models/characters/rogue/Rogue.glb'
         };
 
-        // WEAPON MODEL PATHS - add your weapon files here
+        // WEAPON MODEL PATHS - using actual weapon files
         const weaponModels = {
-            warrior: '/models/characters/warrior/weapon.glb',      // Check character folder first
-            mage: '/models/characters/mage/weapon.glb',
-            rogue: '/models/characters/rogue/weapon.glb',
-            knight: '/models/characters/knight/weapon.glb',
-            ranger: '/models/characters/ranger/weapon.glb'
+            warrior: '/models/weapons/axe_2handed.gltf',
+            mage: '/models/weapons/staff.gltf',
+            rogue: '/models/weapons/dagger.gltf',
+            knight: '/models/weapons/sword_1handed.gltf',
+            ranger: '/models/weapons/bow.gltf'
         };
 
         function init3D() {
@@ -1001,6 +1001,8 @@
         function loadDungeonTile(type, name, callback) {
             const path = `/models/environment/dungeon/${type}s/${name}.gltf`;
             
+            console.log(`🔨 Loading ${type}:`, path);
+            
             gltfLoader.load(
                 path,
                 (gltf) => {
@@ -1011,11 +1013,15 @@
                             child.receiveShadow = true;
                         }
                     });
+                    console.log(`✓ Loaded ${type}: ${name}`);
                     callback(model);
                 },
-                undefined,
+                (progress) => {
+                    // Loading progress
+                },
                 (error) => {
-                    console.warn(`⚠️ Could not load ${name}, using fallback geometry`);
+                    console.error(`❌ Failed to load ${name}:`, error.message);
+                    console.log(`   Trying fallback geometry for ${type}`);
                     
                     // Fallback to simple geometry
                     let fallback;
