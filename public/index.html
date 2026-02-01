@@ -27,7 +27,6 @@
         #game-container { position: relative; width: 100vw; height: 100vh; }
         #render-canvas { display: block; width: 100%; height: 100%; }
         
-        /* CRT Effect */
         .crt::before {
             content: " ";
             display: block;
@@ -47,7 +46,6 @@
             z-index: 5;
         }
         
-        /* UI Layer */
         #ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -84,27 +82,12 @@
         .stat-fill { 
             height: 100%; 
             transition: width 0.3s ease;
-            position: relative;
-        }
-        
-        .stat-fill::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
         }
         
         .health-fill { background: linear-gradient(90deg, #8b0000, #dc143c); }
         .mana-fill { background: linear-gradient(90deg, #0066cc, #00ccff); }
         .xp-fill { background: linear-gradient(90deg, #4a0080, #9370db); }
         
-        /* Spell Book UI */
         .spell-book {
             position: absolute;
             bottom: 100px;
@@ -130,20 +113,17 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s;
-            position: relative;
             font-size: 24px;
         }
         
         .spell-slot:hover {
             transform: translateY(-5px) scale(1.1);
             border-color: #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
         }
         
         .spell-slot.active {
             border-color: #00ff00;
             background: linear-gradient(135deg, #1a3a1a, #0a200a);
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
         }
         
         .spell-slot.locked {
@@ -158,7 +138,6 @@
             color: #888;
         }
         
-        /* Modals */
         .modal {
             position: absolute;
             top: 50%; left: 50%;
@@ -172,7 +151,6 @@
             text-align: center;
             display: none;
             z-index: 100;
-            box-shadow: 0 0 60px rgba(0,0,0,0.8);
         }
         
         #combat-modal { border-color: #ff4444; }
@@ -216,7 +194,6 @@
             border: 4px solid #5c4033;
             border-radius: 50%;
             position: relative;
-            overflow: hidden;
         }
         
         .cauldron-liquid {
@@ -235,7 +212,6 @@
             50% { transform: scale(1.05); }
         }
         
-        /* Grade Level Indicator */
         .grade-badge {
             display: inline-flex;
             align-items: center;
@@ -249,7 +225,6 @@
             margin-top: 10px;
         }
         
-        /* Skill Tree */
         .skill-tree {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -264,7 +239,6 @@
             padding: 20px;
             cursor: pointer;
             transition: all 0.3s;
-            position: relative;
         }
         
         .skill-node:hover:not(.maxed) {
@@ -277,12 +251,6 @@
             background: rgba(0, 50, 0, 0.3);
         }
         
-        .skill-node.maxed {
-            opacity: 0.6;
-            cursor: default;
-        }
-        
-        /* Multiplayer HUD */
         .player-list {
             position: absolute;
             top: 20px;
@@ -302,9 +270,6 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         
-        .player-entry:last-child { border-bottom: none; }
-        
-        /* Floating Damage Text */
         .floating-text {
             position: absolute;
             font-weight: bold;
@@ -320,7 +285,6 @@
             100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
         }
         
-        /* Start Screen */
         #start-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -336,17 +300,11 @@
             font-size: 64px;
             background: linear-gradient(135deg, #ffd700, #ffaa00, #ffd700);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
+            -webkit-text-fill-color: transparent;
             text-shadow: 0 0 60px rgba(255, 215, 0, 0.5);
             margin-bottom: 10px;
             letter-spacing: 4px;
-            animation: titleGlow 3s ease-in-out infinite;
-        }
-        
-        @keyframes titleGlow {
-            0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.3); }
         }
         
         .class-selection {
@@ -374,15 +332,6 @@
         
         .class-icon { font-size: 48px; margin-bottom: 10px; }
         
-        /* Particle Effects Overlay */
-        #particle-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 15;
-        }
-        
-        /* Player Nametags */
         .player-nametag {
             position: absolute;
             background: rgba(0,0,0,0.7);
@@ -393,10 +342,8 @@
             pointer-events: none;
             z-index: 100;
             transform: translate(-50%, -100%);
-            margin-top: -10px;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .title { font-size: 36px; }
             .class-selection { flex-direction: column; }
@@ -410,7 +357,6 @@
         <div class="vignette"></div>
         <div id="particle-overlay"></div>
         
-        <!-- Start Screen -->
         <div id="start-screen">
             <h1 class="title">⚔️ Lore & Legends ⚔️</h1>
             <p style="font-size: 20px; color: #c0c0c0; margin-bottom: 10px;">Academy of Mystic Knowledge</p>
@@ -450,14 +396,12 @@
             <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.5); border-radius: 10px; max-width: 600px;">
                 <p style="font-size: 12px; color: #666;">
                     🎓 Educational Adventure • 📚 Grades K-5 • 🎨 Magical Learning<br>
-                    WASD = Move • Q/E = Rotate • SPACE = Interact • 1-4 = Spells
+                    WASD = Move • Q/E = Rotate Camera • SPACE = Interact • 1-4 = Spells
                 </p>
             </div>
         </div>
         
-        <!-- UI Layer -->
         <div id="ui-layer" style="display: none;">
-            <!-- Top HUD -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div class="hud-panel">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -476,7 +420,7 @@
                             <span>❤️ Health</span>
                             <span id="health-text">100/100</span>
                         </div>
-                        <div class="stat-bar"><div class="stat-fill health-fill" id="health-fill"></div></div>
+                        <div class="stat-bar"><div class="stat-fill health-fill" id="health-fill" style="width: 100%"></div></div>
                     </div>
                     
                     <div style="margin-top: 8px;">
@@ -484,7 +428,7 @@
                             <span>💧 Mana</span>
                             <span id="mana-text">50/50</span>
                         </div>
-                        <div class="stat-bar"><div class="stat-fill mana-fill" id="mana-fill"></div></div>
+                        <div class="stat-bar"><div class="stat-fill mana-fill" id="mana-fill" style="width: 100%"></div></div>
                     </div>
                     
                     <div style="margin-top: 8px;">
@@ -492,11 +436,10 @@
                             <span>⭐ XP (Level <span id="level-display">1</span>)</span>
                             <span id="xp-text">0/100</span>
                         </div>
-                        <div class="stat-bar"><div class="stat-fill xp-fill" id="xp-fill"></div></div>
+                        <div class="stat-bar"><div class="stat-fill xp-fill" id="xp-fill" style="width: 0%"></div></div>
                     </div>
                 </div>
                 
-                <!-- Multiplayer Player List -->
                 <div class="player-list" id="player-list" style="display: none;">
                     <div style="color: #00ffff; font-weight: bold; margin-bottom: 10px; text-align: center;">🌐 Online Wizards</div>
                     <div id="player-entries"></div>
@@ -519,15 +462,14 @@
                         </div>
                     </div>
                     <div style="margin-top: 10px; font-size: 10px; color: #888;">
-                        Press H: Heal • T: Tutor • K: Skills
+                        H: Heal • T: Tutor • K: Skills
                     </div>
                     <button class="btn-fantasy" onclick="exitGame()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b0000, #4a0000);">
-                        🚪 Exit Game
+                        🚪 Exit
                     </button>
                 </div>
             </div>
             
-            <!-- Spell Book -->
             <div class="spell-book">
                 <div class="spell-slot active" onclick="selectSpell(0)" title="Potion of Addition">
                     <span>➕</span>
@@ -537,17 +479,16 @@
                     <span>🔤</span>
                     <span class="spell-key">2</span>
                 </div>
-                <div class="spell-slot locked" onclick="selectSpell(2)" title="Wand of Science (Unlock Lvl 3)">
+                <div class="spell-slot locked" onclick="selectSpell(2)">
                     <span>🔒</span>
                     <span class="spell-key">3</span>
                 </div>
-                <div class="spell-slot locked" onclick="selectSpell(3)" title="Tome of History (Unlock Lvl 5)">
+                <div class="spell-slot locked" onclick="selectSpell(3)">
                     <span>🔒</span>
                     <span class="spell-key">4</span>
                 </div>
             </div>
             
-            <!-- Interaction Prompt -->
             <div id="interaction-prompt" style="position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); 
                      background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; padding: 15px 30px; 
                      border-radius: 25px; font-weight: bold; display: none; box-shadow: 0 0 30px rgba(255,215,0,0.5);">
@@ -555,170 +496,85 @@
             </div>
         </div>
         
-        <!-- Potion Brewing Modal -->
         <div id="potion-modal" class="modal">
             <h2 style="color: #00ccff; margin-bottom: 10px;">🧪 Potion Brewing</h2>
-            <p style="color: #888; margin-bottom: 20px;">Combine ingredients to cast your spell!</p>
-            
-            <div class="cauldron">
-                <div class="cauldron-liquid" id="cauldron-liquid"></div>
-            </div>
-            
-            <div id="potion-question" style="font-size: 20px; color: #ffd700; margin: 20px 0; font-weight: bold;">
-                Brew a Healing Potion: Add 3 Red Herbs + 2 Blue Crystals
-            </div>
-            
-            <div class="potion-brewing" id="ingredients-container">
-                <!-- Generated dynamically -->
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <button class="btn-fantasy" onclick="brewPotion()" style="background: linear-gradient(135deg, #00ccff, #0066cc);">
-                    ✨ Brew Potion
-                </button>
-                <button class="btn-fantasy" onclick="closeModal('potion-modal')" style="background: linear-gradient(135deg, #666, #333);">
-                    Cancel
-                </button>
+            <div class="cauldron"><div class="cauldron-liquid"></div></div>
+            <div id="potion-question" style="font-size: 20px; color: #ffd700; margin: 20px 0;"></div>
+            <div class="potion-brewing" id="ingredients-container"></div>
+            <div>
+                <button class="btn-fantasy" onclick="brewPotion()" style="background: linear-gradient(135deg, #00ccff, #0066cc);">Brew</button>
+                <button class="btn-fantasy" onclick="closeModal('potion-modal')">Cancel</button>
             </div>
         </div>
         
-        <!-- Combat Modal -->
         <div id="combat-modal" class="modal">
-            <div style="font-size: 60px; margin-bottom: 10px;" id="enemy-icon">👹</div>
-            <h2 style="color: #ff4444; margin-bottom: 5px;" id="enemy-name">Goblin Scout</h2>
-            <div style="color: #888; font-size: 14px; margin-bottom: 15px;" id="enemy-type">Level 1 Creature</div>
-            
+            <div style="font-size: 60px;" id="enemy-icon">👹</div>
+            <h2 style="color: #ff4444;" id="enemy-name">Goblin</h2>
             <div style="background: rgba(255,0,0,0.2); border-left: 4px solid #ff4444; padding: 15px; margin: 15px 0; text-align: left;">
-                <div style="color: #ffaaaa; font-size: 12px; margin-bottom: 5px;">🎯 Combat Challenge:</div>
-                <div id="combat-question" style="color: #fff; font-size: 18px; font-weight: bold;">
-                    The goblin attacks! Quick, how many fire crystals do you need to block if you have 2 and need 5 total?
-                </div>
+                <div id="combat-question" style="color: #fff; font-weight: bold;"></div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;" id="combat-answers">
-                <button class="btn-fantasy" onclick="answerCombat(0)">2 crystals</button>
-                <button class="btn-fantasy" onclick="answerCombat(1)">3 crystals</button>
-                <button class="btn-fantasy" onclick="answerCombat(2)">5 crystals</button>
-                <button class="btn-fantasy" onclick="answerCombat(3)">7 crystals</button>
-            </div>
-            
-            <div style="margin-top: 15px;">
-                <button class="btn-fantasy" onclick="askTutor()" style="background: linear-gradient(135deg, #9370db, #4a0080); font-size: 14px;">
-                    🧙‍♂️ Ask Tutor for Hint (-5 Mana)
-                </button>
-            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" id="combat-answers"></div>
+            <button class="btn-fantasy" onclick="askTutor()" style="background: linear-gradient(135deg, #9370db, #4a0080); margin-top: 15px;">Ask Tutor (-5 Mana)</button>
         </div>
         
-        <!-- AI Tutor Modal -->
         <div id="tutor-modal" class="modal">
-            <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #9370db, #4a0080); 
-                        border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px;">
-                🧙‍♂️
-            </div>
-            <h2 style="color: #9370db; margin-bottom: 10px;">Professor Arcanum</h2>
-            
-            <div style="background: rgba(147, 112, 219, 0.2); border-left: 4px solid #9370db; padding: 20px; margin: 20px 0; text-align: left; font-style: italic;">
-                <span id="tutor-message">Greetings, young apprentice! I sense you're struggling. Remember: in potion brewing, we add ingredients one at a time. If you have 2 crystals and need 5, how many more must you gather?</span>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button class="btn-fantasy" onclick="tutorExplain()" style="background: linear-gradient(135deg, #9370db, #4a0080);">
-                    📚 Explain More
-                </button>
-                <button class="btn-fantasy" onclick="tutorExample()" style="background: linear-gradient(135deg, #00ccff, #0066cc);">
-                    📝 Show Example
-                </button>
-                <button class="btn-fantasy" onclick="closeModal('tutor-modal')" style="background: linear-gradient(135deg, #666, #333);">
-                    👋 Thanks!
-                </button>
-            </div>
+            <div style="font-size: 40px;">🧙‍♂️</div>
+            <h2 style="color: #9370db;">Professor Arcanum</h2>
+            <div id="tutor-message" style="background: rgba(147, 112, 219, 0.2); padding: 20px; margin: 20px 0;"></div>
+            <button class="btn-fantasy" onclick="closeModal('tutor-modal')">Close</button>
         </div>
         
-        <!-- Skill Tree Modal -->
+        <div id="chest-modal" class="modal">
+            <h2 style="color: #ffaa00;">📦 Treasure!</h2>
+            <div id="chest-contents"></div>
+            <button class="btn-fantasy" onclick="closeModal('chest-modal')">Take</button>
+        </div>
+        
         <div id="skill-tree-modal" class="modal">
-            <h2 style="color: #00ff00; margin-bottom: 20px;">🌳 Skill Tree</h2>
-            <p style="color: #888; margin-bottom: 20px;">Spend skill points to grow stronger!</p>
-            
+            <h2 style="color: #00ff00;">Skill Tree</h2>
             <div class="skill-tree">
                 <div class="skill-node" onclick="buySkill('health')" id="skill-health">
                     <div style="font-size: 30px;">❤️</div>
-                    <div style="font-weight: bold; margin: 5px 0;">Vitality</div>
-                    <div style="font-size: 12px; color: #888;">+20 Max Health</div>
-                    <div style="color: #ffd700; margin-top: 5px;">Cost: 1 SP</div>
+                    <div>+20 HP</div>
+                    <div style="color: #ffd700;">1 SP</div>
                 </div>
-                
                 <div class="skill-node" onclick="buySkill('mana')" id="skill-mana">
                     <div style="font-size: 30px;">💧</div>
-                    <div style="font-weight: bold; margin: 5px 0;">Wisdom</div>
-                    <div style="font-size: 12px; color: #888;">+15 Max Mana</div>
-                    <div style="color: #ffd700; margin-top: 5px;">Cost: 1 SP</div>
+                    <div>+15 Mana</div>
+                    <div style="color: #ffd700;">1 SP</div>
                 </div>
-                
                 <div class="skill-node" onclick="buySkill('power')" id="skill-power">
                     <div style="font-size: 30px;">⚡</div>
-                    <div style="font-weight: bold; margin: 5px 0;">Power</div>
-                    <div style="font-size: 12px; color: #888;">+10 Spell Damage</div>
-                    <div style="color: #ffd700; margin-top: 5px;">Cost: 2 SP</div>
+                    <div>+10 Dmg</div>
+                    <div style="color: #ffd700;">2 SP</div>
                 </div>
             </div>
-            
-            <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.5); border-radius: 10px;">
-                <span style="color: #ffd700;">Available Skill Points: <span id="skill-points">0</span></span>
-            </div>
-            
-            <button class="btn-fantasy" onclick="closeModal('skill-tree-modal')" style="margin-top: 20px;">
-                Close
-            </button>
+            <div>Skill Points: <span id="skill-points">0</span></div>
+            <button class="btn-fantasy" onclick="closeModal('skill-tree-modal')" style="margin-top: 20px;">Close</button>
         </div>
         
-        <!-- Chest Modal -->
-        <div id="chest-modal" class="modal">
-            <h2 style="color: #ffaa00; margin-bottom: 20px;">📦 Treasure Chest</h2>
-            <div id="chest-contents"></div>
-            <button class="btn-fantasy" onclick="closeModal('chest-modal')" style="margin-top: 20px;">Take Loot</button>
-        </div>
-        
-        <!-- Multiplayer Modal -->
         <div id="multiplayer-modal" class="modal">
-            <h2 style="color: #00ffff; margin-bottom: 20px;">🌐 Enter the Multiplayer Realm</h2>
-            
-            <div style="margin: 20px 0;">
-                <input type="text" id="room-code" placeholder="Enter Room Code (or leave blank for public)" 
-                       style="padding: 12px 20px; font-size: 16px; border-radius: 25px; border: 2px solid #00ffff; 
-                              background: rgba(0,0,0,0.5); color: #f4e4c1; width: 100%; max-width: 300px; text-align: center;">
+            <h2 style="color: #00ffff;">Multiplayer</h2>
+            <input type="text" id="room-code" placeholder="Room Code (blank for public)" 
+                   style="padding: 12px; font-size: 16px; border-radius: 25px; border: 2px solid #00ffff; 
+                          background: rgba(0,0,0,0.5); color: #f4e4c1; width: 80%; text-align: center; margin: 20px 0;">
+            <div>
+                <button class="btn-fantasy" onclick="joinMultiplayer()" style="background: linear-gradient(135deg, #00ffff, #0066cc);">Join</button>
+                <button class="btn-fantasy" onclick="closeModal('multiplayer-modal')">Cancel</button>
             </div>
-            
-            <div style="margin: 20px 0; padding: 15px; background: rgba(0,255,255,0.1); border-radius: 10px; font-size: 14px;">
-                <p>🎮 <strong>Multiplayer Features:</strong></p>
-                <ul style="text-align: left; margin-top: 10px; padding-left: 20px;">
-                    <li>See other players exploring the dungeon</li>
-                    <li>Chat and cooperate on puzzles</li>
-                    <li>Share hints and strategies</li>
-                    <li>Race to collect crystals</li>
-                </ul>
-            </div>
-            
-            <button class="btn-fantasy" onclick="joinMultiplayer()" style="background: linear-gradient(135deg, #00ffff, #0066cc);">
-                🚀 Enter Dungeon
-            </button>
-            <button class="btn-fantasy" onclick="closeModal('multiplayer-modal')" style="background: linear-gradient(135deg, #666, #333); margin-left: 10px;">
-                Cancel
-            </button>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // GRADE-BASED CURRICULUM SYSTEM
-        // ==========================================
+        // CURRICULUM SYSTEM
         const Curriculum = {
             grades: [
-                { name: 'Kindergarten', level: 1, color: '#ff6b6b', maxNumber: 5, operations: ['count', 'add_simple'] },
-                { name: '1st Grade', level: 2, color: '#4ecdc4', maxNumber: 10, operations: ['add', 'subtract_simple'] },
-                { name: '2nd Grade', level: 3, color: '#45b7d1', maxNumber: 20, operations: ['add', 'subtract'] },
-                { name: '3rd Grade', level: 4, color: '#96ceb4', maxNumber: 100, operations: ['add', 'subtract', 'multiply_simple'] },
-                { name: '4th Grade', level: 5, color: '#feca57', maxNumber: 1000, operations: ['add', 'subtract', 'multiply', 'divide_simple'] },
-                { name: '5th Grade', level: 6, color: '#ff9ff3', maxNumber: 10000, operations: ['multiply', 'divide', 'fractions_simple'] }
+                { name: 'Kindergarten', level: 1, maxNumber: 5 },
+                { name: '1st Grade', level: 2, maxNumber: 10 },
+                { name: '2nd Grade', level: 3, maxNumber: 20 },
+                { name: '3rd Grade', level: 4, maxNumber: 100 },
+                { name: '4th Grade', level: 5, maxNumber: 1000 },
+                { name: '5th Grade', level: 6, maxNumber: 10000 }
             ],
             
             generatePotionQuestion: function(grade) {
@@ -727,7 +583,7 @@
                 
                 const templates = [
                     {
-                        setup: `Brew a Healing Potion! You have {have} 🌿 herbs and need {need} total. How many more do you need?`,
+                        setup: `Brew a potion! You have {have} herbs, need {need} total. How many more?`,
                         generate: () => {
                             const need = Math.floor(Math.random() * (max - 2)) + 3;
                             const have = Math.floor(Math.random() * (need - 1)) + 1;
@@ -735,28 +591,11 @@
                         }
                     },
                     {
-                        setup: `Mix a Mana Elixir! Add {a} 🔵 crystals + {b} 💎 diamonds. How many total?`,
+                        setup: `Mix elixir! Add {a} + {b} crystals. Total?`,
                         generate: () => {
                             const a = Math.floor(Math.random() * (max/2)) + 1;
                             const b = Math.floor(Math.random() * (max/2)) + 1;
                             return { a, b, answer: a + b };
-                        }
-                    },
-                    {
-                        setup: `Your potion bottle holds {total} ml. You already added {have} ml. How much space remains?`,
-                        generate: () => {
-                            const total = Math.floor(Math.random() * (max - 5)) + 5;
-                            const have = Math.floor(Math.random() * (total - 1)) + 1;
-                            return { total, have, answer: total - have };
-                        }
-                    },
-                    {
-                        setup: `Combine {a} red potions + {b} blue potions + {c} green potions. Total potions?`,
-                        generate: () => {
-                            const a = Math.floor(Math.random() * (max/3)) + 1;
-                            const b = Math.floor(Math.random() * (max/3)) + 1;
-                            const c = Math.floor(Math.random() * (max/3)) + 1;
-                            return { a, b, c, answer: a + b + c };
                         }
                     }
                 ];
@@ -771,94 +610,44 @@
                 const answers = [data.answer];
                 while (answers.length < 4) {
                     const wrong = data.answer + Math.floor(Math.random() * 10) - 5;
-                    if (wrong !== data.answer && wrong > 0 && !answers.includes(wrong)) {
-                        answers.push(wrong);
-                    }
+                    if (wrong > 0 && wrong !== data.answer && !answers.includes(wrong)) answers.push(wrong);
                 }
                 
-                return {
-                    question,
-                    correct: 0,
-                    answers: answers.sort(() => Math.random() - 0.5)
-                };
+                return { question, correct: 0, answers: answers.sort(() => Math.random() - 0.5) };
             },
             
             generateCombatQuestion: function(grade) {
                 const g = this.grades[Math.min(grade - 1, this.grades.length - 1)];
                 const max = g.maxNumber;
                 
-                const scenarios = [
-                    {
-                        text: `The enemy attacks with {attack} damage! Your shield blocks {block}. How much damage do you take?`,
-                        generate: () => {
-                            const attack = Math.floor(Math.random() * (max/2)) + 5;
-                            const block = Math.floor(Math.random() * Math.min(attack, max/3)) + 1;
-                            return { attack, block, answer: attack - block };
-                        }
-                    },
-                    {
-                        text: `You cast a spell dealing {a} + {b} damage! Total damage?`,
-                        generate: () => {
-                            const a = Math.floor(Math.random() * (max/2)) + 1;
-                            const b = Math.floor(Math.random() * (max/2)) + 1;
-                            return { a, b, answer: a + b };
-                        }
-                    },
-                    {
-                        text: `The monster has {total} HP. You deal {damage} damage. How much HP remains?`,
-                        generate: () => {
-                            const total = Math.floor(Math.random() * max) + 10;
-                            const damage = Math.floor(Math.random() * (total - 1)) + 1;
-                            return { total, damage, answer: total - damage };
-                        }
-                    }
-                ];
+                const a = Math.floor(Math.random() * (max/2)) + 1;
+                const b = Math.floor(Math.random() * (max/2)) + 1;
+                const answer = a + b;
                 
-                const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
-                const data = scenario.generate();
-                let question = scenario.text;
-                for (let key in data) {
-                    if (key !== 'answer') question = question.replace(`{${key}}`, data[key]);
-                }
-                
-                const answers = [data.answer];
+                const answers = [answer];
                 while (answers.length < 4) {
-                    const wrong = data.answer + Math.floor(Math.random() * 8) - 4;
-                    if (wrong >= 0 && wrong !== data.answer && !answers.includes(wrong)) {
-                        answers.push(wrong);
-                    }
+                    const wrong = answer + Math.floor(Math.random() * 8) - 4;
+                    if (wrong > 0 && wrong !== answer && !answers.includes(wrong)) answers.push(wrong);
                 }
                 
                 return {
-                    question,
+                    question: `Calculate: ${a} + ${b} = ?`,
                     correct: 0,
                     answers: answers.sort(() => Math.random() - 0.5)
                 };
             }
         };
 
-        // ==========================================
         // GAME STATE
-        // ==========================================
         const GameState = {
             player: {
-                name: '',
-                class: 'mage',
-                level: 1,
-                grade: 1,
-                xp: 0,
-                xpToNext: 100,
-                health: 100,
-                maxHealth: 100,
-                mana: 50,
-                maxMana: 50,
-                gold: 0,
-                potions: 2,
-                scrolls: 1,
-                skillPoints: 0,
-                skills: { health: 0, mana: 0, power: 0 },
-                x: 0,
-                z: 0
+                name: '', class: 'mage', level: 1, grade: 1,
+                xp: 0, xpToNext: 100,
+                health: 100, maxHealth: 100,
+                mana: 50, maxMana: 50,
+                gold: 0, potions: 2, scrolls: 1,
+                skillPoints: 0, skills: { health: 0, mana: 0, power: 0 },
+                x: 0, z: 0, rotation: 0
             },
             selectedClass: null,
             selectedSpell: 0,
@@ -869,624 +658,278 @@
             isMultiplayer: false,
             socket: null,
             otherPlayers: new Map(),
-            lastMoveTime: 0,
-            dungeon: {
-                currentRoom: 'entrance',
-                roomsExplored: 0,
-                crystalsCollected: 0
-            }
+            lastMoveTime: 0
         };
 
-        // ==========================================
-        // THREE.JS SETUP
-        // ==========================================
+        // THREE.JS VARIABLES
         let scene, camera, renderer;
-        let playerMesh, playerGroup;
+        let playerContainer; // This moves - holds everything
+        let characterModel = null; // The visible mesh
+        let animationMixer = null;
         let walls = [], enemies = [], chests = [], crystals = [];
         let particles = [];
         let keys = {};
         let clock = new THREE.Clock();
+        let cameraAngle = Math.PI;
         
-        let gltfLoader;
-        let animationMixer;
-        let currentAnimation;
-        let characterModel = null;
-        let modelAnimations = {};
-        let modelCache = {};
-        
+        const gltfLoader = new THREE.GLTFLoader();
+
+        // CHARACTER MODEL PATHS
         const characterModels = {
             warrior: '/models/characters/warrior/Barbarian.glb',
             mage: '/models/characters/mage/Mage.glb',
-            knight: '/models/characters/knight/Knight.glb',
-            rogue: '/models/characters/rogue/Rogue.glb',
-            ranger: '/models/characters/ranger/Ranger.glb'
+            rogue: '/models/characters/rogue/Rogue.glb'
         };
 
         function init3D() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x1a1520);
-            scene.fog = new THREE.FogExp2(0x1a1520, 0.015);
+            scene.fog = new THREE.FogExp2(0x1a1520, 0.02);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             
-            gltfLoader = new THREE.GLTFLoader();
+            // Lights
+            scene.add(new THREE.AmbientLight(0x404040, 1.5));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            scene.add(dirLight);
             
-            scene.add(new THREE.AmbientLight(0x666666, 1.2));
+            // Create player container (invisible parent that moves)
+            playerContainer = new THREE.Group();
+            scene.add(playerContainer);
+            GameState.playerMesh = playerContainer; // For compatibility
             
-            const torchLight = new THREE.PointLight(0xffaa44, 2.5, 25);
-            torchLight.castShadow = true;
-            torchLight.shadow.bias = -0.0001;
-            GameState.torchLight = torchLight;
+            // Create torch light attached to player
+            const torchLight = new THREE.PointLight(0xffaa44, 1, 20);
+            torchLight.position.set(0, 3, 0);
+            playerContainer.add(torchLight);
             
-            const dungeonLight = new THREE.DirectionalLight(0x8888ff, 1.2);
-            dungeonLight.position.set(50, 50, 50);
-            dungeonLight.castShadow = true;
-            scene.add(dungeonLight);
-            
-            const hemiLight = new THREE.HemisphereLight(0x8888ff, 0x443322, 0.8);
-            scene.add(hemiLight);
-            
-            createPlayer();
-            buildDungeon();
+            createCharacter();
+            buildWorld();
             initParticles();
             
             animate();
         }
-        
-        function loadCharacterModel(className, onLoad, onError) {
-            const modelPath = characterModels[className.toLowerCase()];
+
+        function createCharacter() {
+            const className = GameState.selectedClass || 'mage';
+            const modelPath = characterModels[className];
             
             if (!modelPath) {
-                console.warn(`No model path found for class: ${className}`);
-                if (onError) onError();
+                createFallbackCharacter();
                 return;
             }
             
-            if (modelCache[className]) {
-                console.log(`Loading ${className} from cache`);
-                const clonedModel = modelCache[className].clone();
-                if (onLoad) onLoad(clonedModel);
-                return;
-            }
-            
-            console.log(`Loading character model: ${modelPath}`);
+            console.log('Loading model:', modelPath);
             
             gltfLoader.load(
                 modelPath,
                 (gltf) => {
-                    console.log(`Successfully loaded ${className} model`);
-                    modelCache[className] = gltf.scene;
+                    console.log('Model loaded successfully');
+                    const model = gltf.scene;
                     
-                    const model = gltf.scene.clone();
-                    model.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
+                    // CRITICAL FIX: Properly center and orient the model
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
                     
+                    // Create a pivot group to handle positioning
+                    const pivot = new THREE.Group();
+                    
+                    // Add model to pivot (not directly to scene!)
+                    pivot.add(model);
+                    
+                    // Center the model geometry within the pivot
+                    model.position.x = -center.x;
+                    model.position.z = -center.z;
+                    model.position.y = -box.min.y; // Feet on ground
+                    
+                    // Rotate to face AWAY from camera (standard third person)
+                    // Most models import facing -Z (toward camera), so rotate 180°
+                    model.rotation.y = Math.PI;
+                    
+                    // Scale to uniform height
+                    const scale = 2.0 / size.y;
+                    pivot.scale.set(scale, scale, scale);
+                    
+                    // Add pivot to player container
+                    playerContainer.add(pivot);
+                    characterModel = pivot;
+                    
+                    // Setup animations
                     if (gltf.animations && gltf.animations.length > 0) {
-                        modelAnimations[className] = gltf.animations;
+                        animationMixer = new THREE.AnimationMixer(model);
+                        const action = animationMixer.clipAction(gltf.animations[0]);
+                        action.play();
                     }
                     
-                    if (onLoad) onLoad(model);
-                },
-                (xhr) => {
-                    console.log(`Loading ${className}: ${(xhr.loaded / xhr.total * 100)}%`);
-                },
-                (error) => {
-                    console.error(`Error loading ${className} model:`, error);
-                    if (onError) onError(error);
-                }
-            );
-        }
-
-        function createPlayer() {
-            playerGroup = new THREE.Group();
-            
-            const className = GameState.selectedClass || 'mage';
-            console.log(`Attempting to load ${className} character model...`);
-            
-            loadCharacterModel(className, (model) => {
-                characterModel = model;
-                
-                // IMPORTANT FIX: Calculate bounding box and center properly
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                // Center the model horizontally (X and Z)
-                model.position.x = -center.x;
-                model.position.z = -center.z;
-                
-                // Position feet at ground level (y = 0)
-                // The min.y of the box is the bottom of the model
-                model.position.y = -box.min.y;
-                
-                // CRITICAL FIX: Rotate 180 degrees so character faces away from camera
-                // KayKit models face towards -Z by default (towards camera), so rotate to face +Z (away)
-                model.rotation.y = Math.PI;
-                
-                // Scale to appropriate height (2.0 units)
-                const targetHeight = 2.0;
-                const scale = targetHeight / size.y;
-                model.scale.set(scale, scale, scale);
-                
-                // Add to player group
-                playerGroup.add(characterModel);
-                
-                console.log(`✓ Character model attached successfully! Height: ${size.y.toFixed(2)}`);
-                
-                // Setup animations
-                if (!modelAnimations[className]) {
-                    loadAnimationsForCharacter(className, model);
-                } else {
-                    setupCharacterAnimations(model, className);
-                }
-                
-                // Double-check: Ensure model is in the group
-                if (playerGroup.children.includes(characterModel)) {
-                    console.log('✓ Model confirmed in playerGroup');
-                }
-            }, () => {
-                console.log(`✗ Model failed to load, using geometric fallback`);
-                createGeometricPlayer();
-            });
-            
-            // Add torch light to group (it will move with player)
-            GameState.torchLight.position.set(0, 2, 0);
-            playerGroup.add(GameState.torchLight);
-            
-            scene.add(playerGroup);
-            GameState.playerMesh = playerGroup;
-            
-            // Initial position
-            playerGroup.position.set(0, 0, 0);
-        }
-        
-        function loadAnimationsForCharacter(className, model) {
-            const animType = 'Rig_Medium_MovementBasic';
-            
-            gltfLoader.load(
-                `/models/animations/${animType}.glb`,
-                (gltf) => {
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        console.log(`✓ Loaded ${gltf.animations.length} animations`);
-                        modelAnimations[className] = gltf.animations;
-                        setupCharacterAnimations(model, className);
-                    }
+                    console.log('✓ Character attached and positioned');
                 },
                 undefined,
                 (error) => {
-                    console.log(`Could not load animations, using static pose`);
+                    console.error('Model load failed, using fallback:', error);
+                    createFallbackCharacter();
                 }
             );
         }
-        
-        function setupCharacterAnimations(model, className) {
-            if (!model) return;
-            animationMixer = new THREE.AnimationMixer(model);
-            
-            if (modelAnimations[className] && modelAnimations[className].length > 0) {
-                const idleAnim = modelAnimations[className].find(a => 
-                    a.name.toLowerCase().includes('idle')) || modelAnimations[className][0];
-                
-                if (idleAnim) {
-                    const action = animationMixer.clipAction(idleAnim);
-                    action.play();
-                    currentAnimation = 'idle';
-                    console.log(`✓ Playing animation: ${idleAnim.name}`);
-                }
-            }
-        }
-        
-        function updateCharacterAnimation(state) {
-            // Update mixer if it exists
-            if (animationMixer) {
-                animationMixer.update(clock.getDelta());
-            }
-            
-            // Fallback bobbing if no animations
-            if (characterModel && state && state.moving && !animationMixer) {
-                const time = Date.now() * 0.01;
-                characterModel.position.y = -characterModel.geometry?.boundingBox?.min?.y || 0 + Math.sin(time) * 0.05;
-            }
-        }
 
-        function createGeometricPlayer() {
-            // Remove existing children except light
-            const light = GameState.torchLight;
-            while(playerGroup.children.length > 0){ 
-                playerGroup.remove(playerGroup.children[0]); 
-            }
-            playerGroup.add(light);
+        function createFallbackCharacter() {
+            // Simple colored capsule character
+            const group = new THREE.Group();
             
-            const colors = { warrior: 0x8b0000, mage: 0x4a0080, rogue: 0x006400 };
-            const color = colors[GameState.selectedClass] || colors.mage;
-            
-            // Simple geometric character facing +Z (away from camera)
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8),
-                new THREE.MeshStandardMaterial({ color: color })
-            );
-            body.position.y = 0.75;
-            body.castShadow = true;
-            playerGroup.add(body);
-            
-            const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.3, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0xffccaa })
-            );
-            head.position.y = 1.7;
-            playerGroup.add(head);
-            
-            // Face towards +Z (away from default camera behind at -Z)
-            playerGroup.rotation.y = 0;
-            
-            characterModel = playerGroup; // Reference for animations
-            console.log('✓ Geometric character created');
-        }
-
-        function buildDungeon() {
-            // Floor
-            const floorGeo = new THREE.PlaneGeometry(100, 100);
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x5a4a35,
-                roughness: 0.8,
-                metalness: 0.1
+            const geometry = new THREE.CapsuleGeometry(0.5, 2, 4, 8);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: GameState.selectedClass === 'warrior' ? 0x8b0000 : 
+                       GameState.selectedClass === 'rogue' ? 0x006400 : 0x4a0080 
             });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.y = 1.5;
+            mesh.castShadow = true;
+            
+            group.add(mesh);
+            playerContainer.add(group);
+            characterModel = group;
+            
+            console.log('✓ Fallback character created');
+        }
+
+        function buildWorld() {
+            // Floor
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(100, 100),
+                new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
+            );
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             scene.add(floor);
             
-            // Walls
-            const wallMat = new THREE.MeshStandardMaterial({ 
-                color: 0x7a5f47,
-                roughness: 0.7
-            });
-            
-            for (let i = -50; i <= 50; i += 10) {
-                createWall(i, -50, wallMat);
-                createWall(i, 50, wallMat);
-                createWall(-50, i, wallMat);
-                createWall(50, i, wallMat);
-            }
-            
-            for (let i = -30; i <= 30; i += 30) {
-                if (i !== 0) {
-                    createWall(i, 0, wallMat);
-                    createWall(0, i, wallMat);
+            // Grid walls
+            for (let x = -40; x <= 40; x += 20) {
+                for (let z = -40; z <= 40; z += 20) {
+                    if (Math.abs(x) < 5 && Math.abs(z) < 5) continue; // Clear center
+                    
+                    if (Math.random() > 0.3) {
+                        const wall = new THREE.Mesh(
+                            new THREE.BoxGeometry(4, 8, 4),
+                            new THREE.MeshStandardMaterial({ color: 0x5a5a5a })
+                        );
+                        wall.position.set(x, 4, z);
+                        scene.add(wall);
+                        walls.push({ mesh: wall, x, z, size: 4 });
+                    }
                 }
             }
             
-            createRoom(-20, -20, 'library');
-            createRoom(20, -20, 'prison');
-            createRoom(-20, 20, 'throne');
-            createRoom(20, 20, 'treasury');
-            
+            // Place items
             placeCrystals();
             placeEnemies();
             placeChests();
         }
 
-        function createWall(x, z, material) {
-            const wall = new THREE.Mesh(
-                new THREE.BoxGeometry(5, 8, 5),
-                material.clone()
-            );
-            wall.position.set(x, 4, z);
-            wall.castShadow = true;
-            wall.receiveShadow = true;
-            scene.add(wall);
-            
-            if (Math.random() > 0.7) {
-                const wallLight = new THREE.PointLight(0xffaa44, 1.5, 12);
-                wallLight.position.set(x, 5, z);
-                scene.add(wallLight);
-            }
-            
-            walls.push({ mesh: wall, x, z, size: 5 });
-        }
-
-        function createRoom(cx, cz, type) {
-            const colors = { library: 0x4a0080, prison: 0x8b0000, throne: 0xffd700, treasury: 0x00ff00 };
-            
-            const light = new THREE.PointLight(colors[type] || 0xffffff, 0.5, 15);
-            light.position.set(cx, 6, cz);
-            scene.add(light);
-            
-            const crystal = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.5),
-                new THREE.MeshStandardMaterial({
-                    color: colors[type],
-                    emissive: colors[type],
-                    emissiveIntensity: 0.5
-                })
-            );
-            crystal.position.set(cx, 3, cz);
-            crystal.userData = { type: 'room_marker', roomType: type };
-            scene.add(crystal);
-        }
-
         function placeCrystals() {
-            const positions = [
-                { x: -30, z: -30 }, { x: 30, z: -30 },
-                { x: -30, z: 30 }, { x: 30, z: 30 },
-                { x: 0, z: -40 }, { x: 0, z: 40 }
-            ];
-            
-            positions.forEach((pos, i) => {
+            for (let i = 0; i < 6; i++) {
                 const crystal = new THREE.Mesh(
-                    new THREE.OctahedronGeometry(0.8),
-                    new THREE.MeshStandardMaterial({
-                        color: 0x00ffff,
+                    new THREE.OctahedronGeometry(0.6),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x00ffff, 
                         emissive: 0x00ffff,
-                        emissiveIntensity: 0.8,
-                        transparent: true,
-                        opacity: 0.9
+                        emissiveIntensity: 0.5 
                     })
                 );
-                crystal.position.set(pos.x, 2, pos.z);
-                crystal.userData = { 
-                    id: i, 
-                    collected: false,
-                    floatOffset: Math.random() * Math.PI * 2
-                };
+                const x = (Math.random() - 0.5) * 60;
+                const z = (Math.random() - 0.5) * 60;
+                crystal.position.set(x, 1.5, z);
+                crystal.userData = { type: 'crystal', id: i, collected: false };
                 scene.add(crystal);
                 crystals.push(crystal);
-                
-                // Crystal light
-                const light = new THREE.PointLight(0x00ffff, 0.5, 8);
-                light.position.copy(crystal.position);
-                scene.add(light);
-                crystal.userData.light = light;
-            });
+            }
         }
 
         function placeEnemies() {
-            const enemyTypes = [
-                { emoji: '👹', name: 'Goblin', hp: 30, color: 0x228b22 },
-                { emoji: '👺', name: 'Orc', hp: 50, color: 0x8b0000 },
-                { emoji: '🧟', name: 'Zombie', hp: 40, color: 0x4a0080 }
-            ];
-            
-            for (let i = 0; i < 8; i++) {
-                const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-                const x = (Math.random() - 0.5) * 80;
-                const z = (Math.random() - 0.5) * 80;
-                
-                const enemy = new THREE.Group();
-                
-                // Body - more detailed
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.35, 1.2, 12),
-                    new THREE.MeshStandardMaterial({ 
-                        color: type.color,
-                        roughness: 0.8,
-                        metalness: 0.2
-                    })
+            for (let i = 0; i < 5; i++) {
+                const enemy = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.6, 2, 8),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000 })
                 );
-                body.position.y = 0.9;
-                body.castShadow = true;
-                enemy.add(body);
-                
-                // Head - sphere
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.35, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: type.color })
-                );
-                head.position.y = 1.6;
-                enemy.add(head);
-                
-                // Glowing eyes
-                const eyeGeo = new THREE.SphereGeometry(0.08);
-                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-                leftEye.position.set(-0.12, 1.65, 0.28);
-                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-                rightEye.position.set(0.12, 1.65, 0.28);
-                enemy.add(leftEye);
-                enemy.add(rightEye);
-                
-                // Add glow around eyes
-                const eyeLight = new THREE.PointLight(0xff0000, 0.5, 3);
-                eyeLight.position.set(0, 1.65, 0.3);
-                enemy.add(eyeLight);
-                
-                // Arms
-                const leftArm = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8),
-                    new THREE.MeshStandardMaterial({ color: type.color })
-                );
-                leftArm.position.set(-0.5, 1.0, 0);
-                leftArm.rotation.z = Math.PI / 6;
-                enemy.add(leftArm);
-                
-                const rightArm = leftArm.clone();
-                rightArm.position.set(0.5, 1.0, 0);
-                rightArm.rotation.z = -Math.PI / 6;
-                enemy.add(rightArm);
-                
-                // Weapon in hand
-                const weapon = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6),
-                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
-                );
-                weapon.position.set(0.6, 0.7, 0);
-                enemy.add(weapon);
-                
-                enemy.position.set(x, 0, z);
-                enemy.userData = { ...type, active: true, id: i };
+                const x = (Math.random() - 0.5) * 50;
+                const z = (Math.random() - 0.5) * 50;
+                enemy.position.set(x, 1, z);
+                enemy.userData = { 
+                    type: 'enemy', 
+                    name: ['Goblin', 'Orc', 'Troll'][Math.floor(Math.random() * 3)],
+                    hp: 30,
+                    active: true 
+                };
                 scene.add(enemy);
                 enemies.push(enemy);
             }
         }
 
         function placeChests() {
-            for (let i = 0; i < 6; i++) {
-                const group = new THREE.Group();
-                
-                // Chest bottom
-                const chestBottom = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.2, 0.6, 0.8),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xaa6600,
-                        roughness: 0.7,
-                        metalness: 0.3
-                    })
+            for (let i = 0; i < 4; i++) {
+                const chest = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.5, 1, 1),
+                    new THREE.MeshStandardMaterial({ color: 0xffaa00 })
                 );
-                chestBottom.position.y = 0.3;
-                chestBottom.castShadow = true;
-                group.add(chestBottom);
-                
-                // Chest lid
-                const chestLid = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.2, 0.4, 0.8),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x995500,
-                        roughness: 0.7,
-                        metalness: 0.3
-                    })
-                );
-                chestLid.position.y = 0.8;
-                group.add(chestLid);
-                
-                // Lock/latch
-                const lock = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.2, 0.2, 0.1),
-                    new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 })
-                );
-                lock.position.set(0, 0.6, 0.41);
-                group.add(lock);
-                
-                // Glowing light around chest
-                const chestLight = new THREE.PointLight(0xffaa00, 1.5, 8);
-                chestLight.position.y = 1.2;
-                group.add(chestLight);
-                
-                // Sparkle effect
-                const sparkle = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.15, 8, 8),
-                    new THREE.MeshBasicMaterial({ 
-                        color: 0xffff00,
-                        transparent: true,
-                        opacity: 0.6
-                    })
-                );
-                sparkle.position.y = 1.2;
-                group.add(sparkle);
-                
-                const x = (Math.random() - 0.5) * 70;
-                const z = (Math.random() - 0.5) * 70;
-                
-                group.position.set(x, 0, z);
-                group.userData = { type: 'chest', opened: false };
-                scene.add(group);
-                chests.push(group);
+                const x = (Math.random() - 0.5) * 60;
+                const z = (Math.random() - 0.5) * 60;
+                chest.position.set(x, 0.5, z);
+                chest.userData = { type: 'chest', opened: false };
+                scene.add(chest);
+                chests.push(chest);
             }
         }
 
         function initParticles() {
-            // Magic dust particles
-            const particleGeo = new THREE.BufferGeometry();
-            const particleCount = 200;
-            const positions = new Float32Array(particleCount * 3);
+            const geometry = new THREE.BufferGeometry();
+            const count = 100;
+            const positions = new Float32Array(count * 3);
             
-            for (let i = 0; i < particleCount * 3; i++) {
-                positions[i] = (Math.random() - 0.5) * 100;
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 80;
             }
             
-            particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             
-            const particleMat = new THREE.PointsMaterial({
+            const material = new THREE.PointsMaterial({
                 color: 0xffd700,
-                size: 0.15,
+                size: 0.2,
                 transparent: true,
-                opacity: 0.6,
-                blending: THREE.AdditiveBlending
+                opacity: 0.6
             });
             
-            const particleSystem = new THREE.Points(particleGeo, particleMat);
+            const particleSystem = new THREE.Points(geometry, material);
             scene.add(particleSystem);
             particles.push(particleSystem);
         }
-
-        // ==========================================
-        // GAME LOOP
-        // ==========================================
-        let cameraAngle = Math.PI;
 
         function animate() {
             requestAnimationFrame(animate);
             
             const delta = clock.getDelta();
-            const time = clock.getElapsedTime();
             
             // Animate crystals
-            crystals.forEach(crystal => {
+            crystals.forEach((crystal, i) => {
                 if (!crystal.userData.collected) {
                     crystal.rotation.y += delta;
-                    crystal.position.y = 2 + Math.sin(time + crystal.userData.floatOffset) * 0.3;
+                    crystal.position.y = 1.5 + Math.sin(clock.elapsedTime + i) * 0.3;
                 }
             });
             
-            // Animate chest sparkles
-            chests.forEach(chest => {
-                if (!chest.userData.opened && chest.children.length > 4) {
-                    const sparkle = chest.children[4]; // The sparkle sphere
-                    if (sparkle) {
-                        sparkle.rotation.y += delta * 2;
-                        sparkle.scale.set(
-                            1 + Math.sin(time * 3) * 0.3,
-                            1 + Math.sin(time * 3) * 0.3,
-                            1 + Math.sin(time * 3) * 0.3
-                        );
-                    }
-                }
-            });
-            
-            // Animate particles
-            particles.forEach(p => {
-                p.rotation.y += delta * 0.1;
-            });
-            
-            // Update animation mixer for character models
+            // Update animations
             if (animationMixer) {
                 animationMixer.update(delta);
             }
             
-            // Animate staff particles for mage
-            if (GameState.staffParticles) {
-                GameState.staffParticles.rotation.y += delta * 2;
-            }
-            
-            // Animate enemies
-            enemies.forEach((enemy, i) => {
-                if (enemy.userData.active) {
-                    enemy.rotation.y = Math.sin(time + i) * 0.2;
-                    // Bobbing animation
-                    enemy.children[0].position.y = 0.7 + Math.sin(time * 2 + i) * 0.05;
-                }
-            });
-            
-            // Update player movement
             if (GameState.isPlaying && !GameState.inCombat) {
                 updateMovement();
             }
             
-            // Update camera
             updateCamera();
-            
-            // Update wall transparency
-            updateWallTransparency();
-            
-            // Check interactions
             checkInteractions();
             
             renderer.render(scene, camera);
@@ -1497,9 +940,11 @@
             let dx = 0, dz = 0;
             let moved = false;
             
+            // Camera rotation
             if (keys['q']) cameraAngle += 0.04;
             if (keys['e']) cameraAngle -= 0.04;
             
+            // Movement relative to camera
             if (keys['w'] || keys['arrowup']) {
                 dx += Math.sin(cameraAngle) * speed;
                 dz += Math.cos(cameraAngle) * speed;
@@ -1521,60 +966,35 @@
                 moved = true;
             }
             
-            // Collision detection
-            const newX = GameState.player.x + dx;
-            const newZ = GameState.player.z + dz;
-            
-            if (!checkCollision(newX, newZ)) {
-                GameState.player.x = newX;
-                GameState.player.z = newZ;
+            if (dx !== 0 || dz !== 0) {
+                const newX = GameState.player.x + dx;
+                const newZ = GameState.player.z + dz;
                 
-                // Update base position (without Y)
-                if (GameState.playerMesh) {
-                    GameState.playerMesh.position.x = newX;
-                    GameState.playerMesh.position.z = newZ;
+                if (!checkCollision(newX, newZ)) {
+                    GameState.player.x = newX;
+                    GameState.player.z = newZ;
                     
-                    // Debug: Log first movement to verify it's working
-                    if (!GameState.firstMovementLogged) {
-                        console.log(`✓ Player movement working! Position: (${newX.toFixed(2)}, ${newZ.toFixed(2)})`);
-                        console.log('✓ Character model attached:', characterModel !== null);
-                        GameState.firstMovementLogged = true;
+                    // Move the ENTIRE container
+                    playerContainer.position.set(newX, 0, newZ);
+                    
+                    // Rotate character model to face movement direction
+                    if (characterModel) {
+                        const targetRotation = Math.atan2(dx, dz);
+                        // Smooth rotation
+                        characterModel.rotation.y = targetRotation + Math.PI; // +PI because model faces away
+                    }
+                    
+                    moved = true;
+                    
+                    // Multiplayer sync
+                    if (GameState.isMultiplayer && GameState.socket) {
+                        const now = Date.now();
+                        if (now - GameState.lastMoveTime > 50) {
+                            GameState.socket.emit('move', { x: newX, z: newZ });
+                            GameState.lastMoveTime = now;
+                        }
                     }
                 }
-                
-                // Broadcast position in multiplayer (throttled)
-                if (GameState.isMultiplayer && GameState.socket && GameState.socket.connected) {
-                    const now = Date.now();
-                    if (!GameState.lastMoveTime || now - GameState.lastMoveTime > 50) {
-                        GameState.socket.emit('move', { x: newX, z: newZ });
-                        GameState.lastMoveTime = now;
-                    }
-                }
-            }
-            
-            // Animate walking - this runs AFTER position update
-            if (moved && (dx !== 0 || dz !== 0)) {
-                // Subtle bobbing when walking
-                if (GameState.playerMesh) {
-                    GameState.playerMesh.position.y = Math.sin(Date.now() * 0.01) * 0.05;
-                    
-                    // Rotate entire playerGroup to face movement direction
-                    const moveAngle = Math.atan2(dx, dz);
-                    GameState.playerMesh.rotation.y = moveAngle;
-                }
-                
-                // Update character animation
-                updateCharacterAnimation({ 
-                    moving: true, 
-                    running: keys['shift'] || false 
-                });
-            } else {
-                // When idle, face the camera direction
-                if (GameState.playerMesh) {
-                    GameState.playerMesh.position.y = 0;
-                    GameState.playerMesh.rotation.y = cameraAngle;
-                }
-                updateCharacterAnimation({ moving: false });
             }
         }
 
@@ -1590,408 +1010,222 @@
         }
 
         function updateCamera() {
-            const dist = 7;
-            const height = 5;
-            const sideOffset = 1.5; // Over-the-shoulder offset
+            const dist = 8;
+            const height = 6;
             
-            const targetX = GameState.player.x - Math.sin(cameraAngle) * dist + Math.cos(cameraAngle) * sideOffset;
-            const targetZ = GameState.player.z - Math.cos(cameraAngle) * dist - Math.sin(cameraAngle) * sideOffset;
+            const targetX = GameState.player.x - Math.sin(cameraAngle) * dist;
+            const targetZ = GameState.player.z - Math.cos(cameraAngle) * dist;
             
             camera.position.x += (targetX - camera.position.x) * 0.1;
             camera.position.z += (targetZ - camera.position.z) * 0.1;
             camera.position.y = height;
             
-            camera.lookAt(GameState.player.x, 1.5, GameState.player.z);
+            camera.lookAt(GameState.player.x, 2, GameState.player.z);
         }
 
-        function updateWallTransparency() {
-            const playerPos = new THREE.Vector3(GameState.player.x, 2, GameState.player.z);
-            const cameraPos = camera.position;
-            
-            for (let wall of walls) {
-                const wallPos = new THREE.Vector3(wall.x, 4, wall.z);
-                const distToCamera = cameraPos.distanceTo(wallPos);
-                const distToPlayer = cameraPos.distanceTo(playerPos);
-                const distWallToPlayer = wallPos.distanceTo(playerPos);
-                
-                const isBlocking = distToCamera < distToPlayer - 1 && distWallToPlayer < distToPlayer;
-                
-                // Only update if state changed
-                if (isBlocking && wall.mesh.material.opacity !== 0.3) {
-                    wall.mesh.material.opacity = 0.3;
-                    wall.mesh.material.transparent = true;
-                } else if (!isBlocking && wall.mesh.material.opacity !== 1) {
-                    wall.mesh.material.opacity = 1;
-                    wall.mesh.material.transparent = false;
-                }
-            }
-        }
-
-        // ==========================================
-        // INTERACTION SYSTEM
-        // ==========================================
         let nearestInteractable = null;
-
+        
         function checkInteractions() {
             nearestInteractable = null;
-            let nearestDist = 4;
+            let nearestDist = 3;
             
             // Check crystals
-            for (let crystal of crystals) {
-                if (crystal.userData.collected) continue;
-                const dist = distanceTo(crystal.position);
+            crystals.forEach(crystal => {
+                if (crystal.userData.collected) return;
+                const dist = Math.hypot(crystal.position.x - GameState.player.x, crystal.position.z - GameState.player.z);
                 if (dist < nearestDist) {
                     nearestDist = dist;
                     nearestInteractable = { type: 'crystal', object: crystal };
                 }
-            }
+            });
             
             // Check enemies
-            for (let enemy of enemies) {
-                if (!enemy.userData.active) continue;
-                const dist = distanceTo(enemy.position);
+            enemies.forEach(enemy => {
+                if (!enemy.userData.active) return;
+                const dist = Math.hypot(enemy.position.x - GameState.player.x, enemy.position.z - GameState.player.z);
                 if (dist < nearestDist) {
                     nearestDist = dist;
                     nearestInteractable = { type: 'enemy', object: enemy };
                 }
-            }
+            });
             
             // Check chests
-            for (let chest of chests) {
-                if (chest.userData.opened) continue;
-                const dist = distanceTo(chest.position);
+            chests.forEach(chest => {
+                if (chest.userData.opened) return;
+                const dist = Math.hypot(chest.position.x - GameState.player.x, chest.position.z - GameState.player.z);
                 if (dist < nearestDist) {
                     nearestDist = dist;
                     nearestInteractable = { type: 'chest', object: chest };
                 }
-            }
+            });
             
-            // Show prompt
             const prompt = document.getElementById('interaction-prompt');
             if (nearestInteractable) {
                 prompt.style.display = 'block';
-                const texts = {
-                    crystal: '💎 Collect Crystal (SPACE)',
-                    enemy: '⚔️ Enter Combat (SPACE)',
-                    chest: '📦 Open Chest (SPACE)'
-                };
-                prompt.textContent = texts[nearestInteractable.type];
+                prompt.textContent = `Press SPACE to ${nearestInteractable.type === 'enemy' ? 'Fight' : nearestInteractable.type === 'crystal' ? 'Collect' : 'Open'}`;
             } else {
                 prompt.style.display = 'none';
             }
         }
 
-        function distanceTo(pos) {
-            const dx = pos.x - GameState.player.x;
-            const dz = pos.z - GameState.player.z;
-            return Math.sqrt(dx*dx + dz*dz);
-        }
-
-        // ==========================================
         // INPUT HANDLING
-        // ==========================================
         document.addEventListener('keydown', (e) => {
-            if (!e.key) return;
             keys[e.key.toLowerCase()] = true;
-            
             if (!GameState.isPlaying) return;
             
-            if (e.code === 'Space' && !GameState.inCombat) {
-                if (nearestInteractable) {
-                    handleInteraction();
-                }
+            if (e.code === 'Space' && nearestInteractable) {
+                handleInteraction();
             }
-            
-            if (e.key === '1') selectSpell(0);
-            if (e.key === '2') selectSpell(1);
-            if (e.key === '3') selectSpell(2);
-            if (e.key === '4') selectSpell(3);
-            
+            if (e.key >= '1' && e.key <= '4') selectSpell(parseInt(e.key) - 1);
             if (e.key.toLowerCase() === 'h') useHealthPotion();
             if (e.key.toLowerCase() === 't') openTutor();
             if (e.key.toLowerCase() === 'k') openSkillTree();
         });
         
         document.addEventListener('keyup', (e) => {
-            if (!e.key) return;
             keys[e.key.toLowerCase()] = false;
         });
 
         function handleInteraction() {
             if (!nearestInteractable) return;
             
-            switch(nearestInteractable.type) {
-                case 'crystal':
-                    collectCrystal(nearestInteractable.object);
-                    break;
-                case 'enemy':
-                    startCombat(nearestInteractable.object);
-                    break;
-                case 'chest':
-                    openChest(nearestInteractable.object);
-                    break;
+            if (nearestInteractable.type === 'crystal') {
+                collectCrystal(nearestInteractable.object);
+            } else if (nearestInteractable.type === 'enemy') {
+                startCombat(nearestInteractable.object);
+            } else if (nearestInteractable.type === 'chest') {
+                openChest(nearestInteractable.object);
             }
         }
 
-        // ==========================================
-        // COMBAT SYSTEM
-        // ==========================================
         function startCombat(enemy) {
             GameState.inCombat = true;
             GameState.currentEnemy = enemy;
             
-            // Generate grade-appropriate question
-            const question = Curriculum.generateCombatQuestion(GameState.player.grade);
-            GameState.currentQuestion = question;
+            const q = Curriculum.generateCombatQuestion(GameState.player.grade);
+            GameState.currentQuestion = q;
             
-            // Update modal
-            document.getElementById('enemy-icon').textContent = enemy.userData.emoji;
+            document.getElementById('enemy-icon').textContent = '👹';
             document.getElementById('enemy-name').textContent = enemy.userData.name;
-            document.getElementById('enemy-type').textContent = `Level ${GameState.player.grade} Creature`;
-            document.getElementById('combat-question').textContent = question.question;
+            document.getElementById('combat-question').textContent = q.question;
             
-            // Generate answers
             const container = document.getElementById('combat-answers');
             container.innerHTML = '';
-            question.answers.forEach((ans, idx) => {
+            q.answers.forEach((ans, idx) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn-fantasy';
                 btn.textContent = ans;
-                btn.onclick = () => answerCombat(idx);
+                btn.onclick = () => {
+                    if (idx === q.correct) {
+                        enemy.userData.hp -= 25;
+                        if (enemy.userData.hp <= 0) {
+                            enemy.userData.active = false;
+                            enemy.visible = false;
+                            addXP(50);
+                        } else {
+                            addXP(20);
+                        }
+                    } else {
+                        GameState.player.health -= 10;
+                        updateHUD();
+                    }
+                    closeModal('combat-modal');
+                    GameState.inCombat = false;
+                };
                 container.appendChild(btn);
             });
             
             document.getElementById('combat-modal').style.display = 'block';
         }
 
-        function answerCombat(answerIndex) {
-            const correct = answerIndex === GameState.currentQuestion.correct;
-            
-            if (correct) {
-                // Deal damage
-                const damage = 25 + (GameState.player.skills.power * 10);
-                GameState.currentEnemy.userData.hp -= damage;
-                
-                showFloatingText(`⚔️ ${damage} DAMAGE!`, '#00ff00');
-                createSpellEffect();
-                
-                if (GameState.currentEnemy.userData.hp <= 0) {
-                    defeatEnemy();
-                } else {
-                    addXP(20);
-                }
-            } else {
-                // Take damage
-                const damage = 15;
-                GameState.player.health -= damage;
-                showFloatingText(`💔 -${damage} HP`, '#ff0000');
-                
-                // Screen shake effect
-                document.body.style.transform = 'translate(5px, 5px)';
-                setTimeout(() => document.body.style.transform = '', 100);
-                
-                if (GameState.player.health <= 0) {
-                    gameOver();
-                }
-            }
-            
-            closeModal('combat-modal');
-            GameState.inCombat = false;
-            GameState.currentEnemy = null;
+        function collectCrystal(crystal) {
+            crystal.userData.collected = true;
+            crystal.visible = false;
+            addXP(100);
+            showFloatingText('+100 XP', '#00ffff');
+        }
+
+        function openChest(chest) {
+            chest.userData.opened = true;
+            chest.visible = false;
+            GameState.player.gold += 20;
+            document.getElementById('chest-contents').innerHTML = '<div style="font-size: 40px;">💰</div><div>+20 Gold</div>';
+            document.getElementById('chest-modal').style.display = 'block';
             updateHUD();
         }
 
-        function defeatEnemy() {
-            GameState.currentEnemy.userData.active = false;
-            GameState.currentEnemy.visible = false;
-            
-            showFloatingText('☠️ ENEMY DEFEATED!', '#ffd700');
-            addXP(50);
-            GameState.player.gold += Math.floor(Math.random() * 20) + 10;
-            
-            // Chance for potion drop
-            if (Math.random() > 0.7) {
-                GameState.player.potions++;
-                showFloatingText('🧪 Potion Found!', '#00ccff');
+        function addXP(amount) {
+            GameState.player.xp += amount;
+            if (GameState.player.xp >= GameState.player.xpToNext) {
+                GameState.player.level++;
+                GameState.player.xp -= GameState.player.xpToNext;
+                GameState.player.xpToNext = Math.floor(GameState.player.xpToNext * 1.5);
+                GameState.player.maxHealth += 10;
+                GameState.player.health = GameState.player.maxHealth;
+                GameState.player.skillPoints++;
+                showFloatingText('LEVEL UP!', '#ffd700');
+                updateHUD();
             }
+            updateHUD();
         }
 
-        // ==========================================
-        // POTION BREWING SYSTEM
-        // ==========================================
         function openPotionBrewing() {
-            const question = Curriculum.generatePotionQuestion(GameState.player.grade);
-            GameState.currentQuestion = question;
+            const q = Curriculum.generatePotionQuestion(GameState.player.grade);
+            GameState.currentQuestion = q;
+            document.getElementById('potion-question').textContent = q.question;
             
-            document.getElementById('potion-question').textContent = question.question;
-            
-            // Create ingredient buttons
             const container = document.getElementById('ingredients-container');
             container.innerHTML = '';
-            
-            question.answers.forEach((ans, idx) => {
+            q.answers.forEach((ans, idx) => {
                 const div = document.createElement('div');
                 div.className = 'ingredient';
-                div.innerHTML = `
-                    <div style="font-size: 30px;">${idx === question.correct ? '✨' : '🌿'}</div>
-                    <div style="font-weight: bold; margin-top: 5px;">${ans}</div>
-                    <div style="font-size: 12px; color: #888;">ingredients</div>
-                `;
-                div.onclick = () => selectIngredient(idx, div);
+                div.innerHTML = `<div style="font-size: 24px;">${idx === 0 ? '✨' : '🌿'}</div><div>${ans}</div>`;
+                div.onclick = () => {
+                    document.querySelectorAll('.ingredient').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                    GameState.selectedIngredient = idx;
+                };
                 container.appendChild(div);
             });
             
             document.getElementById('potion-modal').style.display = 'block';
         }
 
-        let selectedIngredient = null;
-
-        function selectIngredient(index, element) {
-            document.querySelectorAll('.ingredient').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-            selectedIngredient = index;
-        }
-
         function brewPotion() {
-            if (selectedIngredient === null) {
-                alert('Select an ingredient first!');
-                return;
-            }
-            
-            const correct = selectedIngredient === GameState.currentQuestion.correct;
-            
-            if (correct) {
+            if (GameState.selectedIngredient === GameState.currentQuestion.correct) {
                 GameState.player.potions++;
-                showFloatingText('🧪 Potion Brewed!', '#00ccff');
-                addXP(15);
+                showFloatingText('Potion Created!', '#00ccff');
             } else {
-                showFloatingText('💨 Potion Failed!', '#888');
-                GameState.player.mana = Math.max(0, GameState.player.mana - 5);
+                GameState.player.mana -= 5;
             }
-            
             closeModal('potion-modal');
-            selectedIngredient = null;
             updateHUD();
         }
 
-        // ==========================================
-        // CRYSTAL COLLECTION
-        // ==========================================
-        function collectCrystal(crystal) {
-            crystal.userData.collected = true;
-            crystal.visible = false;
-            crystal.userData.light.visible = false;
-            
-            GameState.dungeon.crystalsCollected++;
-            showFloatingText('💎 CRYSTAL FOUND!', '#00ffff');
-            addXP(100);
-            
-            // Level up check
-            if (GameState.dungeon.crystalsCollected >= 6) {
-                setTimeout(() => {
-                    alert('🏆 Congratulations! You collected all crystals and mastered the dungeon!');
-                }, 500);
-            }
-            
-            updateHUD();
-        }
-
-        // ==========================================
-        // CHEST SYSTEM
-        // ==========================================
-        function openChest(chest) {
-            chest.userData.opened = true;
-            
-            const loots = [
-                { icon: '🧪', name: 'Health Potion', effect: () => GameState.player.potions++ },
-                { icon: '💰', name: `${Math.floor(Math.random() * 30) + 20} Gold`, effect: () => GameState.player.gold += 30 },
-                { icon: '📜', name: 'Scroll of Wisdom', effect: () => GameState.player.scrolls++ },
-                { icon: '💧', name: 'Mana Crystal', effect: () => GameState.player.mana = Math.min(GameState.player.maxMana, GameState.player.mana + 20) }
-            ];
-            
-            const loot = loots[Math.floor(Math.random() * loots.length)];
-            loot.effect();
-            
-            document.getElementById('chest-contents').innerHTML = `
-                <div style="font-size: 60px; margin-bottom: 10px;">${loot.icon}</div>
-                <div style="font-size: 24px; color: #ffd700;">${loot.name}</div>
-            `;
-            
-            document.getElementById('chest-modal').style.display = 'block';
-            updateHUD();
-        }
-
-        // ==========================================
-        // AI TUTOR SYSTEM
-        // ==========================================
         function askTutor() {
             if (GameState.player.mana >= 5) {
                 GameState.player.mana -= 5;
                 openTutor();
                 updateHUD();
-            } else {
-                showFloatingText('Not enough mana!', '#ff0000');
             }
         }
 
         function openTutor() {
-            const messages = [
-                "Remember: When brewing potions, count your ingredients carefully. If you need 5 herbs and have 2, you need 3 more!",
-                "In combat, watch the enemy's health bar. Stronger spells deal more damage!",
-                "Collect crystals to gain lots of experience. They're worth the challenge!",
-                "Use your skill points wisely. Health helps you survive, Mana lets you cast more spells!",
-                "If you're low on health, use a potion! Press H to heal instantly."
-            ];
-            
-            const msg = messages[Math.floor(Math.random() * messages.length)];
-            document.getElementById('tutor-message').textContent = msg;
+            document.getElementById('tutor-message').textContent = 'Remember: Take your time counting. If you have 3 and need 7, you need 4 more!';
             document.getElementById('tutor-modal').style.display = 'block';
         }
 
-        function tutorExplain() {
-            document.getElementById('tutor-message').innerHTML = `
-                <strong>📚 Learning Tips:</strong><br><br>
-                This dungeon teaches real math skills disguised as magic!<br><br>
-                • <strong>Potion Brewing</strong> = Addition and Subtraction<br>
-                • <strong>Combat</strong> = Problem Solving<br>
-                • <strong>Crystals</strong> = Rewards for Progress<br><br>
-                Keep playing to unlock harder grades and new spells!
-            `;
-        }
-
-        function tutorExample() {
-            const examples = [
-                "Example: If you have 3 apples and get 2 more, you have 5 total. Same with potion ingredients!",
-                "Example: Enemy has 20 HP, you deal 8 damage. 20 - 8 = 12 HP remaining.",
-                "Example: You need 10 crystals total. You have 4. 10 - 4 = 6 more to find!"
-            ];
-            document.getElementById('tutor-message').textContent = examples[Math.floor(Math.random() * examples.length)];
-        }
-
-        // ==========================================
-        // SKILL TREE
-        // ==========================================
         function openSkillTree() {
             document.getElementById('skill-points').textContent = GameState.player.skillPoints;
             document.getElementById('skill-tree-modal').style.display = 'block';
         }
 
         function buySkill(skill) {
-            if (GameState.player.skillPoints <= 0) {
-                alert('Not enough skill points! Level up to earn more.');
-                return;
-            }
-            
+            if (GameState.player.skillPoints <= 0) return;
             const costs = { health: 1, mana: 1, power: 2 };
-            if (GameState.player.skillPoints < costs[skill]) {
-                alert(`Need ${costs[skill]} skill points!`);
-                return;
-            }
+            if (GameState.player.skillPoints < costs[skill]) return;
             
             GameState.player.skillPoints -= costs[skill];
-            GameState.player.skills[skill]++;
-            
-            // Apply benefits
             if (skill === 'health') {
                 GameState.player.maxHealth += 20;
                 GameState.player.health = GameState.player.maxHealth;
@@ -1999,72 +1233,25 @@
                 GameState.player.maxMana += 15;
                 GameState.player.mana = GameState.player.maxMana;
             }
-            
             document.getElementById(`skill-${skill}`).classList.add('purchased');
             updateHUD();
-            openSkillTree(); // Refresh
+            openSkillTree();
         }
 
-        // ==========================================
-        // SPELL SYSTEM
-        // ==========================================
         function selectSpell(index) {
             GameState.selectedSpell = index;
             document.querySelectorAll('.spell-slot').forEach((slot, i) => {
                 slot.classList.toggle('active', i === index);
             });
-            
-            // If potion spell selected, open brewing
-            if (index === 0) {
-                openPotionBrewing();
-            }
+            if (index === 0) openPotionBrewing();
         }
 
-        // ==========================================
-        // UTILITY FUNCTIONS
-        // ==========================================
-        function addXP(amount) {
-            GameState.player.xp += amount;
-            
-            if (GameState.player.xp >= GameState.player.xpToNext) {
-                levelUp();
-            }
-            
-            updateHUD();
-        }
-
-        function levelUp() {
-            GameState.player.level++;
-            GameState.player.xp -= GameState.player.xpToNext;
-            GameState.player.xpToNext = Math.floor(GameState.player.xpToNext * 1.5);
-            
-            if (GameState.player.level % 2 === 0 && GameState.player.grade < 6) {
-                GameState.player.grade++;
-                showFloatingText(`📚 GRADE UP! ${Curriculum.grades[GameState.player.grade - 1].name}`, '#ffd700');
-                unlockNewSpells();
-            }
-            
-            GameState.player.maxHealth += 10;
-            GameState.player.health = GameState.player.maxHealth;
-            GameState.player.maxMana += 5;
-            GameState.player.mana = GameState.player.maxMana;
-            GameState.player.skillPoints++;
-            
-            showFloatingText(`⭐ LEVEL UP! ${GameState.player.level}`, '#9370db');
-            saveGame();
-        }
-
-        function unlockNewSpells() {
-            const slots = document.querySelectorAll('.spell-slot');
-            if (GameState.player.grade >= 3) {
-                slots[2].classList.remove('locked');
-                slots[2].innerHTML = '<span>⚗️</span><span class="spell-key">3</span>';
-                slots[2].title = 'Wand of Science';
-            }
-            if (GameState.player.grade >= 5) {
-                slots[3].classList.remove('locked');
-                slots[3].innerHTML = '<span>📜</span><span class="spell-key">4</span>';
-                slots[3].title = 'Tome of History';
+        function useHealthPotion() {
+            if (GameState.player.potions > 0 && GameState.player.health < GameState.player.maxHealth) {
+                GameState.player.potions--;
+                GameState.player.health = Math.min(GameState.player.maxHealth, GameState.player.health + 30);
+                updateHUD();
+                showFloatingText('+30 HP', '#00ff00');
             }
         }
 
@@ -2075,177 +1262,54 @@
             el.style.color = color;
             el.style.left = '50%';
             el.style.top = '40%';
-            el.style.transform = 'translate(-50%, -50%)';
             document.body.appendChild(el);
             setTimeout(() => el.remove(), 1500);
         }
 
-        function createSpellEffect() {
-            // Create particle burst
-            const geometry = new THREE.BufferGeometry();
-            const count = 50;
-            const positions = new Float32Array(count * 3);
-            const velocities = [];
-            
-            for (let i = 0; i < count; i++) {
-                positions[i*3] = GameState.player.x;
-                positions[i*3+1] = 2;
-                positions[i*3+2] = GameState.player.z;
-                velocities.push({
-                    x: (Math.random() - 0.5) * 0.5,
-                    y: Math.random() * 0.5,
-                    z: (Math.random() - 0.5) * 0.5
-                });
-            }
-            
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const material = new THREE.PointsMaterial({ 
-                color: 0x00ff00, 
-                size: 0.3,
-                transparent: true
-            });
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-            
-            let frame = 0;
-            function animateSpell() {
-                frame++;
-                const pos = particles.geometry.attributes.position.array;
-                for (let i = 0; i < count; i++) {
-                    pos[i*3] += velocities[i].x;
-                    pos[i*3+1] += velocities[i].y;
-                    pos[i*3+2] += velocities[i].z;
-                    velocities[i].y -= 0.01;
-                }
-                particles.geometry.attributes.position.needsUpdate = true;
-                material.opacity = 1 - (frame / 60);
-                
-                if (frame < 60) requestAnimationFrame(animateSpell);
-                else scene.remove(particles);
-            }
-            animateSpell();
-        }
-
-        function useHealthPotion() {
-            if (GameState.player.potions > 0 && GameState.player.health < GameState.player.maxHealth) {
-                GameState.player.potions--;
-                const heal = 30;
-                GameState.player.health = Math.min(GameState.player.maxHealth, GameState.player.health + heal);
-                showFloatingText(`❤️ +${heal} HP`, '#00ff00');
-                updateHUD();
-            } else if (GameState.player.potions === 0) {
-                showFloatingText('No potions!', '#888');
-            }
-        }
-
-        function gameOver() {
-            saveGame();
-            alert('💀 Game Over! Your progress has been saved. Refresh to try again!');
-            location.reload();
-        }
-
-        // ==========================================
-        // UI UPDATES
-        // ==========================================
         function updateHUD() {
             document.getElementById('health-text').textContent = `${GameState.player.health}/${GameState.player.maxHealth}`;
             document.getElementById('health-fill').style.width = (GameState.player.health / GameState.player.maxHealth * 100) + '%';
-            
             document.getElementById('mana-text').textContent = `${GameState.player.mana}/${GameState.player.maxMana}`;
             document.getElementById('mana-fill').style.width = (GameState.player.mana / GameState.player.maxMana * 100) + '%';
-            
             document.getElementById('xp-text').textContent = `${GameState.player.xp}/${GameState.player.xpToNext}`;
             document.getElementById('xp-fill').style.width = (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
-            
             document.getElementById('level-display').textContent = GameState.player.level;
             document.getElementById('potions-count').textContent = GameState.player.potions;
             document.getElementById('scrolls-count').textContent = GameState.player.scrolls;
             document.getElementById('gold-count').textContent = GameState.player.gold;
             
-            // Update grade display
             const gradeInfo = Curriculum.grades[GameState.player.grade - 1];
-            document.getElementById('grade-display').innerHTML = `
-                <span>📚</span>
-                <span>Grade: ${gradeInfo.name}</span>
-            `;
+            document.getElementById('grade-display').innerHTML = `<span>📚</span><span>Grade: ${gradeInfo.name}</span>`;
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
         }
 
-        // ==========================================
-        // SAVE/LOAD SYSTEM
-        // ==========================================
         function saveGame() {
-            const saveData = {
+            localStorage.setItem('loreAndLegendsSave', JSON.stringify({
                 player: GameState.player,
-                dungeon: GameState.dungeon,
-                crystals: crystals.map(c => c.userData.collected),
-                chests: chests.map(c => c.userData.opened),
-                enemies: enemies.map(e => e.userData.active),
                 timestamp: Date.now()
-            };
-            localStorage.setItem('loreAndLegendsSave', JSON.stringify(saveData));
-            showFloatingText('💾 Game Saved!', '#00ff00');
+            }));
+            showFloatingText('Game Saved!', '#00ff00');
         }
 
         function loadGame() {
-            const saveData = localStorage.getItem('loreAndLegendsSave');
-            if (!saveData) {
-                alert('No save game found!');
-                return;
+            const data = localStorage.getItem('loreAndLegendsSave');
+            if (data) {
+                const save = JSON.parse(data);
+                Object.assign(GameState.player, save.player);
+                startSinglePlayer();
+                updateHUD();
+                showFloatingText('Game Loaded!', '#00ff00');
+            } else {
+                alert('No save found!');
             }
-            
-            const data = JSON.parse(saveData);
-            Object.assign(GameState.player, data.player);
-            Object.assign(GameState.dungeon, data.dungeon);
-            
-            // Restore world state
-            if (data.crystals) {
-                data.crystals.forEach((collected, i) => {
-                    if (crystals[i]) {
-                        crystals[i].userData.collected = collected;
-                        crystals[i].visible = !collected;
-                        if (crystals[i].userData.light) crystals[i].userData.light.visible = !collected;
-                    }
-                });
-            }
-            
-            if (data.chests) {
-                data.chests.forEach((opened, i) => {
-                    if (chests[i]) {
-                        chests[i].userData.opened = opened;
-                        chests[i].visible = !opened;
-                    }
-                });
-            }
-            
-            if (data.enemies) {
-                data.enemies.forEach((active, i) => {
-                    if (enemies[i]) {
-                        enemies[i].userData.active = active;
-                        enemies[i].visible = active;
-                    }
-                });
-            }
-            
-            startSinglePlayer();
-            updateHUD();
-            showFloatingText('💾 Game Loaded!', '#00ff00');
         }
 
-        // ==========================================
-        // MULTIPLAYER SYSTEM
-        // ==========================================
         function showMultiplayer() {
-            const name = document.getElementById('player-name').value.trim();
-            if (!name) {
-                alert('Please enter your name first!');
-                return;
-            }
-            if (!GameState.selectedClass) {
-                alert('Please select a class first!');
+            if (!document.getElementById('player-name').value.trim() || !GameState.selectedClass) {
+                alert('Enter name and select class!');
                 return;
             }
             document.getElementById('multiplayer-modal').style.display = 'block';
@@ -2253,33 +1317,16 @@
 
         function joinMultiplayer() {
             const name = document.getElementById('player-name').value.trim();
-            if (!name) {
-                alert('Please enter your name!');
-                return;
-            }
-            if (!GameState.selectedClass) {
-                alert('Please select a class!');
-                return;
-            }
+            const room = document.getElementById('room-code').value.trim() || 'public';
             
             GameState.player.name = name;
             GameState.isMultiplayer = true;
             
-            const roomCode = document.getElementById('room-code').value.trim() || 'public';
-            
-            // Connect to server
-            const SERVER_URL = 'https://wizard-academy-multiplayer.onrender.com';
-            GameState.socket = io(SERVER_URL, {
-                transports: ['websocket', 'polling']
-            });
-            
-            GameState.socket.on('connect', () => {
-                console.log('Connected to multiplayer server');
-                // Server expects (roomCode, playerName) format
-                GameState.socket.emit('join-room', roomCode, GameState.player.name);
-                
-                // Store player metadata locally
-                GameState.player.roomCode = roomCode;
+            // Simple WebSocket connection simulation
+            const SERVER_URL = 'wss://wizard-academy-multiplayer.onrender.com';
+            try {
+                GameState.socket = io(SERVER_URL);
+                GameState.socket.emit('join-room', room, name);
                 
                 document.getElementById('multiplayer-modal').style.display = 'none';
                 document.getElementById('start-screen').style.display = 'none';
@@ -2290,211 +1337,18 @@
                 GameState.isPlaying = true;
                 updateHUD();
                 
-                // Enable auto-save
                 setInterval(saveGame, 60000);
-            });
-            
-            // Handle other players
-            GameState.socket.on('player-joined', (data) => {
-                // Server sends: { id, name, x, z }
-                // Add default class since server doesn't track it
-                data.class = data.class || 'mage';
-                data.level = data.level || 1;
-                createOtherPlayer(data);
-                showFloatingText(`${data.name} joined!`, '#00ff00');
-            });
-            
-            GameState.socket.on('existing-players', (players) => {
-                players.forEach(p => {
-                    // Server sends: { id, name, x, z }
-                    p.class = p.class || 'mage';
-                    p.level = p.level || 1;
-                    createOtherPlayer(p);
-                });
-            });
-            
-            GameState.socket.on('player-moved', (data) => {
-                updateOtherPlayer(data.id, data.x, data.z);
-            });
-            
-            GameState.socket.on('player-left', (id) => {
-                removeOtherPlayer(id);
-            });
-            
-            GameState.socket.on('chat-message', (data) => {
-                addChatMessage(data.name, data.message);
-            });
-        }
-
-        function createOtherPlayer(data) {
-            const colors = { warrior: 0x8b0000, mage: 0x4a0080, rogue: 0x006400 };
-            const color = colors[data.class] || 0x888888;
-            
-            const group = new THREE.Group();
-            
-            // Create simplified version based on class
-            if (data.class === 'warrior') {
-                // Knight with armor
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.42, 1.0, 12),
-                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.8 })
-                );
-                body.position.y = 0.7;
-                group.add(body);
-                
-                // Helmet
-                const helmet = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.32, 0.4, 12),
-                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
-                );
-                helmet.position.y = 1.5;
-                group.add(helmet);
-                
-                // Sword on back
-                const sword = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.05, 0.03, 1.2, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.9 })
-                );
-                sword.position.set(0, 1.8, -0.3);
-                group.add(sword);
-                
-                // Shield
-                const shield = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12),
-                    new THREE.MeshStandardMaterial({ color: color, metalness: 0.7 })
-                );
-                shield.rotation.x = Math.PI / 2;
-                shield.rotation.y = Math.PI / 4;
-                shield.position.set(-0.35, 0.8, -0.25);
-                group.add(shield);
-            } else if (data.class === 'rogue') {
-                // Hooded ranger
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.28, 0.3, 1.2, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x2d5016 })
-                );
-                body.position.y = 0.7;
-                group.add(body);
-                
-                // Hood
-                const hood = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.35, 0.5, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x1a2d0d })
-                );
-                hood.position.y = 1.7;
-                group.add(hood);
-                
-                // Cloak
-                const cloak = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.6, 1.0, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x1a2d0d })
-                );
-                cloak.position.set(0, 0.5, -0.25);
-                group.add(cloak);
-                
-                // Sword on hip
-                const sword = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
-                );
-                sword.position.set(-0.35, 0.7, 0.1);
-                sword.rotation.z = Math.PI / 10;
-                group.add(sword);
-            } else {
-                const body = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.4, 1.2, 8),
-                    new THREE.MeshStandardMaterial({ color: color })
-                );
-                body.position.y = 0.6;
-                group.add(body);
-                
-                // Staff
-                const staff = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
-                );
-                staff.position.set(0.4, 1.0, 0.2);
-                group.add(staff);
-            }
-            
-            const nameTag = document.createElement('div');
-            nameTag.className = 'player-nametag';
-            nameTag.textContent = data.name;
-            nameTag.id = `nametag-${data.id}`;
-            document.getElementById('ui-layer').appendChild(nameTag);
-            
-            group.position.set(data.x || 0, 0, data.z || 0);
-            scene.add(group);
-            
-            GameState.otherPlayers.set(data.id, {
-                mesh: group,
-                nameTag: nameTag,
-                data: data
-            });
-            
-            updatePlayerList();
-        }
-
-        function updateOtherPlayer(id, x, z) {
-            const player = GameState.otherPlayers.get(id);
-            if (player) {
-                player.mesh.position.set(x, 0, z);
-                
-                // Update nametag
-                const vector = new THREE.Vector3(x, 3, z);
-                vector.project(camera);
-                const x2 = (vector.x * .5 + .5) * window.innerWidth;
-                const y2 = (-(vector.y * .5) + .5) * window.innerHeight;
-                player.nameTag.style.left = `${x2}px`;
-                player.nameTag.style.top = `${y2}px`;
+            } catch(e) {
+                alert('Multiplayer server unavailable. Starting single player.');
+                startSinglePlayer();
             }
         }
 
-        function removeOtherPlayer(id) {
-            const player = GameState.otherPlayers.get(id);
-            if (player) {
-                scene.remove(player.mesh);
-                player.nameTag.remove();
-                GameState.otherPlayers.delete(id);
-                updatePlayerList();
-            }
-        }
-
-        function updatePlayerList() {
-            const container = document.getElementById('player-entries');
-            container.innerHTML = '';
-            
-            // Add self
-            const selfEntry = document.createElement('div');
-            selfEntry.className = 'player-entry';
-            selfEntry.innerHTML = `<span>🟢</span> <span>${GameState.player.name} (You)</span>`;
-            container.appendChild(selfEntry);
-            
-            // Add others
-            GameState.otherPlayers.forEach((player, id) => {
-                const entry = document.createElement('div');
-                entry.className = 'player-entry';
-                entry.innerHTML = `<span>🔵</span> <span>${player.data.name}</span>`;
-                container.appendChild(entry);
-            });
-        }
-
-        function addChatMessage(name, message) {
-            // Could add a chat box here
-            console.log(`${name}: ${message}`);
-        }
-
-        // ==========================================
-        // START GAME
-        // ==========================================
         function selectClass(className) {
             GameState.selectedClass = className;
-            document.querySelectorAll('.class-card').forEach(card => {
-                card.classList.remove('selected');
-            });
+            document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
             document.getElementById(`class-${className}`).classList.add('selected');
             
-            // Set class stats
             if (className === 'warrior') {
                 GameState.player.maxHealth = 150;
                 GameState.player.health = 150;
@@ -2506,21 +1360,12 @@
                 GameState.player.maxMana = 60;
                 GameState.player.mana = 60;
             }
-            
-            // If player already exists, replace the model
-            if (playerGroup && scene) {
-                replacePlayerModel(className);
-            }
         }
 
         function startSinglePlayer() {
             const name = document.getElementById('player-name').value.trim();
-            if (!name) {
-                alert('Please enter your name!');
-                return;
-            }
-            if (!GameState.selectedClass) {
-                alert('Please select a class!');
+            if (!name || !GameState.selectedClass) {
+                alert('Enter name and select class!');
                 return;
             }
             
@@ -2537,46 +1382,32 @@
             init3D();
             GameState.isPlaying = true;
             updateHUD();
-            
-            // Auto-save every minute
             setInterval(saveGame, 60000);
-            
-            // Welcome message
-            setTimeout(() => {
-                showFloatingText('Welcome to the Dungeon!', '#ffd700');
-            }, 1000);
         }
 
         function exitGame() {
-            if (confirm('Are you sure you want to exit? Your progress has been auto-saved.')) {
+            if (confirm('Exit? Progress saved.')) {
                 saveGame();
                 location.reload();
             }
         }
 
-        // Button styling helper
-        const style = document.createElement('style');
-        style.textContent = `
+        const btnStyle = document.createElement('style');
+        btnStyle.textContent = `
             .btn-fantasy {
                 background: linear-gradient(135deg, #8b6914, #4a3728);
-                border: 3px solid #ffd700;
+                border: 2px solid #ffd700;
                 color: #ffd700;
-                padding: 12px 24px;
-                font-size: 16px;
+                padding: 10px 20px;
                 border-radius: 8px;
                 cursor: pointer;
                 font-family: 'Cinzel', serif;
-                transition: all 0.3s;
                 margin: 5px;
             }
-            .btn-fantasy:hover {
-                transform: scale(1.05);
-                box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-            }
+            .btn-fantasy:hover { transform: scale(1.05); }
         `;
-        document.head.appendChild(style);
+        document.head.appendChild(btnStyle);
 
-        // Window resize
         window.addEventListener('resize', () => {
             if (camera && renderer) {
                 camera.aspect = window.innerWidth / window.innerHeight;
