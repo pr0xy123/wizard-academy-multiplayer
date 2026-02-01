@@ -683,11 +683,11 @@
 
         // WEAPON MODEL PATHS - add your weapon files here
         const weaponModels = {
-            warrior: '/models/weapons/warrior_sword.glb',      // or axe
-            mage: '/models/weapons/mage_staff.glb',
-            rogue: '/models/weapons/rogue_dagger.glb',
-            knight: '/models/weapons/knight_sword.glb',
-            ranger: '/models/weapons/ranger_bow.glb'
+            warrior: '/models/characters/warrior/weapon.glb',      // Check character folder first
+            mage: '/models/characters/mage/weapon.glb',
+            rogue: '/models/characters/rogue/weapon.glb',
+            knight: '/models/characters/knight/weapon.glb',
+            ranger: '/models/characters/ranger/weapon.glb'
         };
 
         function init3D() {
@@ -916,36 +916,124 @@
         }
 
         function buildWorld() {
-            // Floor
-            const floor = new THREE.Mesh(
-                new THREE.PlaneGeometry(100, 100),
-                new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
-            );
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            console.log('🏰 Building dungeon...');
             
-            // Grid walls
-            for (let x = -40; x <= 40; x += 20) {
-                for (let z = -40; z <= 40; z += 20) {
-                    if (Math.abs(x) < 5 && Math.abs(z) < 5) continue; // Clear center
-                    
-                    if (Math.random() > 0.3) {
-                        const wall = new THREE.Mesh(
-                            new THREE.BoxGeometry(4, 8, 4),
-                            new THREE.MeshStandardMaterial({ color: 0x5a5a5a })
-                        );
-                        wall.position.set(x, 4, z);
-                        scene.add(wall);
-                        walls.push({ mesh: wall, x, z, size: 4 });
+            // Load a few key dungeon pieces with caching
+            const floorCache = {};
+            const wallCache = {};
+            
+            // Load main floor tile
+            loadDungeonTile('floor', 'floor_tile_large', (floorModel) => {
+                floorCache['large'] = floorModel;
+                
+                // Create a 10x10 grid of floors
+                for (let x = -5; x <= 5; x++) {
+                    for (let z = -5; z <= 5; z++) {
+                        const floor = floorModel.clone();
+                        floor.position.set(x * 4, 0, z * 4);
+                        scene.add(floor);
                     }
                 }
-            }
+                console.log('✓ Floors loaded');
+            });
             
-            // Place items
-            placeCrystals();
-            placeEnemies();
-            placeChests();
+            // Load main wall piece
+            loadDungeonTile('wall', 'wall', (wallModel) => {
+                wallCache['normal'] = wallModel;
+                
+                // Create perimeter walls
+                for (let i = -5; i <= 5; i++) {
+                    // North/South walls
+                    if (i !== 0) { // Leave gaps for doorways
+                        const wallN = wallModel.clone();
+                        wallN.position.set(i * 4, 0, -20);
+                        scene.add(wallN);
+                        walls.push({ mesh: wallN, x: i * 4, z: -20, size: 2 });
+                        
+                        const wallS = wallModel.clone();
+                        wallS.position.set(i * 4, 0, 20);
+                        wallS.rotation.y = Math.PI;
+                        scene.add(wallS);
+                        walls.push({ mesh: wallS, x: i * 4, z: 20, size: 2 });
+                    }
+                    
+                    // East/West walls
+                    if (i !== 0) {
+                        const wallE = wallModel.clone();
+                        wallE.position.set(20, 0, i * 4);
+                        wallE.rotation.y = Math.PI / 2;
+                        scene.add(wallE);
+                        walls.push({ mesh: wallE, x: 20, z: i * 4, size: 2 });
+                        
+                        const wallW = wallModel.clone();
+                        wallW.position.set(-20, 0, i * 4);
+                        wallW.rotation.y = -Math.PI / 2;
+                        scene.add(wallW);
+                        walls.push({ mesh: wallW, x: -20, z: i * 4, size: 2 });
+                    }
+                }
+                
+                // Add some interior walls for maze-like structure
+                const interiorPositions = [
+                    { x: -8, z: 0 }, { x: 8, z: 0 },
+                    { x: 0, z: -8 }, { x: 0, z: 8 }
+                ];
+                interiorPositions.forEach(pos => {
+                    const wall = wallModel.clone();
+                    wall.position.set(pos.x, 0, pos.z);
+                    if (pos.z === 0) wall.rotation.y = Math.PI / 2;
+                    scene.add(wall);
+                    walls.push({ mesh: wall, x: pos.x, z: pos.z, size: 2 });
+                });
+                
+                console.log('✓ Walls loaded');
+            });
+            
+            // Place items after a delay to ensure geometry is loaded
+            setTimeout(() => {
+                placeCrystals();
+                placeEnemies();
+                placeChests();
+            }, 500);
+        }
+        
+        // Helper to load dungeon tiles with caching
+        function loadDungeonTile(type, name, callback) {
+            const path = `/models/environment/dungeon/${type}s/${name}.gltf`;
+            
+            gltfLoader.load(
+                path,
+                (gltf) => {
+                    const model = gltf.scene;
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    callback(model);
+                },
+                undefined,
+                (error) => {
+                    console.warn(`⚠️ Could not load ${name}, using fallback geometry`);
+                    
+                    // Fallback to simple geometry
+                    let fallback;
+                    if (type === 'floor') {
+                        fallback = new THREE.Mesh(
+                            new THREE.BoxGeometry(4, 0.2, 4),
+                            new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
+                        );
+                    } else {
+                        fallback = new THREE.Mesh(
+                            new THREE.BoxGeometry(4, 6, 1),
+                            new THREE.MeshStandardMaterial({ color: 0x5a5a5a })
+                        );
+                        fallback.position.y = 3;
+                    }
+                    callback(fallback);
+                }
+            );
         }
 
         function placeCrystals() {
