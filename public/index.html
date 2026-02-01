@@ -1322,6 +1322,7 @@
 
         // INPUT HANDLING
         document.addEventListener('keydown', (e) => {
+            if (!e.key) return; // Safety check
             keys[e.key.toLowerCase()] = true;
             if (!GameState.isPlaying) return;
             
@@ -1335,6 +1336,7 @@
         });
         
         document.addEventListener('keyup', (e) => {
+            if (!e.key) return; // Safety check
             keys[e.key.toLowerCase()] = false;
         });
 
