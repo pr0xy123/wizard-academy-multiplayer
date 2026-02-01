@@ -1013,10 +1013,17 @@
             
             console.log(`🔨 Loading ${type}:`, path);
             
-            // Create a manager to handle missing textures
+            // Create a manager to handle texture loading from parent directory
             const manager = new THREE.LoadingManager();
+            manager.setURLModifier(function(url) {
+                // Redirect texture requests to parent dungeon folder
+                if (url.includes('dungeon_texture.png')) {
+                    return '/models/environment/dungeon/dungeon_texture.png';
+                }
+                return url;
+            });
             manager.onError = function(url) {
-                console.warn(`⚠️ Missing texture: ${url} (will use default color)`);
+                console.warn(`⚠️ Failed to load: ${url}`);
             };
             
             const loader = new THREE.GLTFLoader(manager);
