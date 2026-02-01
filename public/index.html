@@ -909,12 +909,24 @@
         
         // Switch between animations based on movement
         function updateCharacterAnimation(isMoving) {
-            if (!GameState.walkAction) return;
+            if (!GameState.walkAction && !GameState.idleAction) return;
             
-            if (isMoving && !GameState.walkAction.isRunning()) {
-                GameState.walkAction.play();
-            } else if (!isMoving && GameState.walkAction.isRunning()) {
-                GameState.walkAction.stop();
+            if (isMoving) {
+                // Switch to walking animation
+                if (GameState.idleAction && GameState.idleAction.isRunning()) {
+                    GameState.idleAction.fadeOut(0.2);
+                }
+                if (GameState.walkAction && !GameState.walkAction.isRunning()) {
+                    GameState.walkAction.reset().fadeIn(0.2).play();
+                }
+            } else {
+                // Switch to idle animation
+                if (GameState.walkAction && GameState.walkAction.isRunning()) {
+                    GameState.walkAction.fadeOut(0.2);
+                }
+                if (GameState.idleAction && !GameState.idleAction.isRunning()) {
+                    GameState.idleAction.reset().fadeIn(0.2).play();
+                }
             }
         }
 
