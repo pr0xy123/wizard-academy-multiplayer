@@ -681,13 +681,13 @@
             rogue: '/models/characters/rogue/Rogue.glb'
         };
 
-        // WEAPON MODEL PATHS - using actual weapon files
+        // WEAPON MODEL PATHS - using character-specific weapon folders
         const weaponModels = {
-            warrior: '/models/weapons/axe_2handed.gltf',
-            mage: '/models/weapons/staff.gltf',
-            rogue: '/models/weapons/dagger.gltf',
-            knight: '/models/weapons/sword_1handed.gltf',
-            ranger: '/models/weapons/bow.gltf'
+            warrior: '/models/characters/warrior/weapons/axe_2handed.gltf',
+            mage: '/models/characters/mage/weapons/staff.gltf',
+            rogue: '/models/characters/rogue/weapons/dagger.gltf',
+            knight: '/models/characters/knight/weapons/sword_1handed.gltf',
+            ranger: '/models/characters/ranger/weapons/bow.gltf'
         };
 
         function init3D() {
@@ -909,12 +909,15 @@
                         console.log('✓ Weapon attached to right hand');
                     } else {
                         // Fallback: attach to character at approximate hand position
-                        // Position it more prominently so it's visible
-                        weapon.position.set(0.5, 0.8, 0.3);  // Right side, mid-height, slightly forward
-                        weapon.rotation.set(0, 0, Math.PI / 6);  // Slight angle
-                        weapon.scale.set(0.6, 0.6, 0.6);  // Bigger so it's visible
+                        // Position weapon prominently at character's side
+                        weapon.position.set(0.7, 1.2, 0.2);  // Right side, shoulder height
+                        weapon.rotation.set(0, Math.PI / 4, Math.PI / 4);  // Angled like held
+                        weapon.scale.set(1.0, 1.0, 1.0);  // Full size
                         model.add(weapon);
-                        console.log('✓ Weapon attached to character (no hand bone found)');
+                        
+                        console.log('✓ Weapon attached:', className, '- visible at character\'s side');
+                        console.log('   Position:', weapon.position);
+                        console.log('   Scale:', weapon.scale);
                     }
                     
                     GameState.weapon = weapon;
