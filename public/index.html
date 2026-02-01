@@ -862,20 +862,34 @@
             });
             
             function setupAnimations() {
-                // Find best walking animation
+                // Find idle animation FIRST (to avoid confusing it with walking)
+                for (let key in GameState.animationActions) {
+                    const keyLower = key.toLowerCase();
+                    if (keyLower.includes('idle') && !keyLower.includes('walk') && !keyLower.includes('run')) {
+                        GameState.idleAction = GameState.animationActions[key];
+                        console.log(`✓ Using idle animation: ${key}`);
+                        // Start idle animation immediately
+                        GameState.idleAction.play();
+                        break;
+                    }
+                }
+                
+                // Find best walking animation (exclude idle)
                 let walkAction = null;
                 for (let key in GameState.animationActions) {
-                    if (key.toLowerCase().includes('walk')) {
+                    const keyLower = key.toLowerCase();
+                    if (keyLower.includes('walk') && !keyLower.includes('idle')) {
                         walkAction = GameState.animationActions[key];
                         console.log(`✓ Using walk animation: ${key}`);
                         break;
                     }
                 }
                 
-                // Fallback to running or first available
+                // Fallback to running or jogging
                 if (!walkAction) {
                     for (let key in GameState.animationActions) {
-                        if (key.toLowerCase().includes('run')) {
+                        const keyLower = key.toLowerCase();
+                        if ((keyLower.includes('run') || keyLower.includes('jog')) && !keyLower.includes('idle')) {
                             walkAction = GameState.animationActions[key];
                             console.log(`✓ Using run animation: ${key}`);
                             break;
@@ -885,12 +899,16 @@
                 
                 GameState.walkAction = walkAction;
                 
-                // Find idle animation
-                for (let key in GameState.animationActions) {
-                    if (key.toLowerCase().includes('idle')) {
-                        GameState.idleAction = GameState.animationActions[key];
-                        console.log(`✓ Using idle animation: ${key}`);
-                        break;
+                // If no idle found, use first non-walk animation
+                if (!GameState.idleAction) {
+                    for (let key in GameState.animationActions) {
+                        const keyLower = key.toLowerCase();
+                        if (!keyLower.includes('walk') && !keyLower.includes('run') && !keyLower.includes('attack')) {
+                            GameState.idleAction = GameState.animationActions[key];
+                            console.log(`✓ Using fallback idle: ${key}`);
+                            GameState.idleAction.play();
+                            break;
+                        }
                     }
                 }
                 
@@ -914,18 +932,18 @@
             if (isMoving) {
                 // Switch to walking animation
                 if (GameState.idleAction && GameState.idleAction.isRunning()) {
-                    GameState.idleAction.fadeOut(0.2);
+                    GameState.idleAction.stop();
                 }
                 if (GameState.walkAction && !GameState.walkAction.isRunning()) {
-                    GameState.walkAction.reset().fadeIn(0.2).play();
+                    GameState.walkAction.reset().play();
                 }
             } else {
                 // Switch to idle animation
                 if (GameState.walkAction && GameState.walkAction.isRunning()) {
-                    GameState.walkAction.fadeOut(0.2);
+                    GameState.walkAction.stop();
                 }
                 if (GameState.idleAction && !GameState.idleAction.isRunning()) {
-                    GameState.idleAction.reset().fadeIn(0.2).play();
+                    GameState.idleAction.reset().play();
                 }
             }
         }
@@ -963,14 +981,14 @@
                     if (rightHand) {
                         // Attach to actual hand bone with class-specific positioning
                         const weaponAdjustments = {
-                            warrior: { pos: [0, 0.1, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.5 },
-                            mage: { pos: [0, 0.15, 0], rot: [0, 0, 0], scale: 0.7 },
-                            rogue: { pos: [0, 0.05, 0.02], rot: [-Math.PI / 2, 0, Math.PI / 4], scale: 0.5 },
-                            knight: { pos: [0, 0.1, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.5 },
-                            ranger: { pos: [0.05, 0, 0], rot: [0, -Math.PI / 2, 0], scale: 0.6 }
+                            warrior: { pos: [0, 0, -0.15], rot: [Math.PI / 2, 0, 0], scale: 1.0 },
+                            mage: { pos: [0, 0, -0.2], rot: [0, 0, 0], scale: 1.2 },
+                            rogue: { pos: [0, 0, -0.1], rot: [Math.PI / 2, 0, -Math.PI / 4], scale: 0.8 },
+                            knight: { pos: [0, 0, -0.15], rot: [Math.PI / 2, 0, 0], scale: 1.0 },
+                            ranger: { pos: [0.1, 0, -0.1], rot: [0, Math.PI / 2, Math.PI / 2], scale: 1.0 }
                         };
                         
-                        const adj = weaponAdjustments[className] || { pos: [0, 0.05, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.6 };
+                        const adj = weaponAdjustments[className] || { pos: [0, 0, -0.15], rot: [Math.PI / 2, 0, 0], scale: 0.8 };
                         weapon.position.set(...adj.pos);
                         weapon.rotation.set(...adj.rot);
                         weapon.scale.set(adj.scale, adj.scale, adj.scale);
