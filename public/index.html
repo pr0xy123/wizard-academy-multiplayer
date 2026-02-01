@@ -1280,11 +1280,12 @@
                 // Success! Use the 3D model
                 characterModel = model;
                 
-                // Fix positioning and rotation
-                characterModel.position.set(0, 0, 0);
-                characterModel.rotation.y = 0; // Face forward (away from camera initially)
-                characterModel.scale.set(0.8, 0.8, 0.8);
+                // FIX: Proper positioning, rotation, and scale
+                characterModel.position.set(0, 0, 0); // Center on player
+                characterModel.rotation.y = Math.PI; // Face AWAY from camera (important!)
+                characterModel.scale.set(1.5, 1.5, 1.5); // Bigger scale so you can see it
                 
+                // IMPORTANT: Add to playerGroup so it moves with player!
                 playerGroup.add(characterModel);
                 setupCharacterAnimations(characterModel, className);
                 console.log(`✓ Using 3D model for ${className}`);
@@ -1681,90 +1682,68 @@
             const roomSize = 20;
             const wallHeight = 8;
             
-            // BUILD FLOOR USING 3D TILES
-            // Create floor grid using actual dungeon tiles
-            const floorTileSize = 2; // Each KayKit tile is about 2x2 units
-            const floorTypes = [
-                'floor_tile_large',
-                'floor_tile_small',
-                'floor_dirt_large',
-                'floor_wood_large'
-            ];
+            // BUILD FLOOR - MUCH SIMPLER FOR PERFORMANCE
+            // Use one large floor plane instead of hundreds of tiles
+            const floorGeo = new THREE.PlaneGeometry(100, 100);
+            const floorMat = new THREE.MeshStandardMaterial({ 
+                color: 0x5a4a35,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
             
-            console.log('Loading dungeon floor tiles...');
-            let tilesLoaded = 0;
-            const totalFloorTiles = 50 * 50 / (floorTileSize * floorTileSize);
+            // Add just a few decorative floor tiles for visual interest (not 600!)
+            const floorTileSize = 4;
+            const floorTypes = ['floor_tile_large', 'floor_dirt_large'];
+            console.log('Loading decorative floor tiles...');
             
-            for (let x = -50; x <= 50; x += floorTileSize) {
-                for (let z = -50; z <= 50; z += floorTileSize) {
-                    // Vary floor tiles for visual interest
+            // Only load ~25 decorative tiles instead of 600+
+            for (let x = -40; x <= 40; x += 20) {
+                for (let z = -40; z <= 40; z += 20) {
                     const tileType = floorTypes[Math.floor(Math.random() * floorTypes.length)];
-                    
                     loadFloorTile(tileType, (tile) => {
-                        tile.position.set(x, 0, z);
-                        tile.rotation.y = (Math.PI / 2) * Math.floor(Math.random() * 4); // Random rotation
+                        tile.position.set(x, 0.01, z); // Slightly above base floor
+                        tile.rotation.y = (Math.PI / 2) * Math.floor(Math.random() * 4);
+                        tile.scale.set(2, 2, 2); // Make them larger
                         scene.add(tile);
-                        tilesLoaded++;
-                        
-                        if (tilesLoaded === 1) {
-                            console.log('✓ First floor tile loaded successfully!');
-                        }
-                    }, () => {
-                        // Fallback: create simple plane if tile fails to load
-                        const fallbackFloor = new THREE.Mesh(
-                            new THREE.PlaneGeometry(floorTileSize, floorTileSize),
-                            new THREE.MeshStandardMaterial({ 
-                                color: 0x5a4a35,
-                                roughness: 0.8,
-                                metalness: 0.1
-                            })
-                        );
-                        fallbackFloor.rotation.x = -Math.PI / 2;
-                        fallbackFloor.position.set(x, 0, z);
-                        fallbackFloor.receiveShadow = true;
-                        scene.add(fallbackFloor);
                     });
                 }
             }
             
-            // BUILD WALLS USING 3D MODELS
-            const wallTypes = [
-                'wall',
-                'wall_corner',
-                'wall_doorway',
-                'wall_broken',
-                'wall_window_closed'
-            ];
-            
+            // BUILD WALLS - SIMPLIFIED FOR PERFORMANCE
             console.log('Loading dungeon walls...');
-            let wallsLoaded = 0;
             
-            // Outer walls - using actual wall models
-            for (let i = -50; i <= 50; i += 4) {
-                // North and South walls
-                const wallType1 = i % 20 === 0 ? 'wall_doorway' : (Math.random() > 0.9 ? 'wall_broken' : 'wall');
-                createWallModel(i, -50, wallType1, 0);
-                createWallModel(i, 50, wallType1, Math.PI);
-                
-                // East and West walls
-                const wallType2 = i % 20 === 0 ? 'wall_doorway' : (Math.random() > 0.9 ? 'wall_window_closed' : 'wall');
-                createWallModel(-50, i, wallType2, Math.PI / 2);
-                createWallModel(50, i, wallType2, -Math.PI / 2);
+            // Create simple geometric walls for perimeter (much faster)
+            const wallMat = new THREE.MeshStandardMaterial({ 
+                color: 0x7a5f47,
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            
+            // Outer walls - simple boxes for performance
+            for (let i = -50; i <= 50; i += 10) {
+                createWall(i, -50, wallMat);
+                createWall(i, 50, wallMat);
+                createWall(-50, i, wallMat);
+                createWall(50, i, wallMat);
             }
             
-            // Interior walls for dungeon rooms
-            for (let i = -40; i <= 40; i += 20) {
-                if (Math.abs(i) > 10) {
-                    createWallModel(i, 0, Math.random() > 0.5 ? 'wall' : 'wall_broken', 0);
-                    createWallModel(0, i, Math.random() > 0.5 ? 'wall' : 'wall_broken', Math.PI / 2);
+            // Add just a few decorative 3D wall models
+            createWallModel(0, -50, 'wall_doorway', 0);
+            createWallModel(0, 50, 'wall_doorway', Math.PI);
+            createWallModel(-50, 0, 'wall_doorway', Math.PI / 2);
+            createWallModel(50, 0, 'wall_doorway', -Math.PI / 2);
+            
+            // Interior walls
+            for (let i = -30; i <= 30; i += 30) {
+                if (i !== 0) {
+                    createWall(i, 0, wallMat);
+                    createWall(0, i, wallMat);
                 }
             }
-            
-            // Corner pieces for visual interest
-            createWallModel(-50, -50, 'wall_corner', 0);
-            createWallModel(50, -50, 'wall_corner', Math.PI / 2);
-            createWallModel(50, 50, 'wall_corner', Math.PI);
-            createWallModel(-50, 50, 'wall_corner', -Math.PI / 2);
             
             // Inner rooms
             createRoom(-20, -20, 'library');
@@ -2185,11 +2164,12 @@
             
             // Animate walking
             if (moved) {
-                GameState.playerMesh.position.y = Math.sin(Date.now() * 0.01) * 0.05;
+                // Subtle bobbing when walking
+                playerGroup.position.y = Math.sin(Date.now() * 0.01) * 0.05;
                 
                 // Rotate character to face movement direction
                 if (characterModel) {
-                    characterModel.rotation.y = cameraAngle + Math.PI;
+                    characterModel.rotation.y = cameraAngle;
                 }
                 
                 // Update character animation
@@ -2198,7 +2178,8 @@
                     running: keys['shift'] || false 
                 });
             } else {
-                // Idle animation
+                // Reset position and idle animation
+                playerGroup.position.y = 0;
                 updateCharacterAnimation({ moving: false });
             }
         }
