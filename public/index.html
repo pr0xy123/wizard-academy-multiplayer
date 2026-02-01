@@ -768,7 +768,6 @@
                     if (key !== 'answer') question = question.replace(`{${key}}`, data[key]);
                 }
                 
-                // Generate wrong answers
                 const answers = [data.answer];
                 while (answers.length < 4) {
                     const wrong = data.answer + Math.floor(Math.random() * 10) - 5;
@@ -888,7 +887,6 @@
         let keys = {};
         let clock = new THREE.Clock();
         
-        // Animation and Model Loading System
         let gltfLoader;
         let animationMixer;
         let currentAnimation;
@@ -896,21 +894,12 @@
         let modelAnimations = {};
         let modelCache = {};
         
-        // Character model paths
         const characterModels = {
             warrior: '/models/characters/warrior/Barbarian.glb',
             mage: '/models/characters/mage/Mage.glb',
             knight: '/models/characters/knight/Knight.glb',
             rogue: '/models/characters/rogue/Rogue.glb',
             ranger: '/models/characters/ranger/Ranger.glb'
-        };
-        
-        // Animation paths (KayKit uses combined animation files)
-        const animationPaths = {
-            basic: '/models/animations/Rig_Medium_MovementBasic.glb',
-            advanced: '/models/animations/Rig_Medium_MovementAdvanced.glb',
-            combat: '/models/animations/Rig_Medium_CombatMelee.glb',
-            general: '/models/animations/Rig_Medium_General.glb'
         };
 
         function init3D() {
@@ -925,25 +914,20 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             
-            // Initialize GLTF Loader
             gltfLoader = new THREE.GLTFLoader();
             
-            // Brighter ambient light
             scene.add(new THREE.AmbientLight(0x666666, 1.2));
             
-            // Torch light attached to player (brighter)
             const torchLight = new THREE.PointLight(0xffaa44, 2.5, 25);
             torchLight.castShadow = true;
             torchLight.shadow.bias = -0.0001;
             GameState.torchLight = torchLight;
             
-            // Main dungeon lighting (much brighter)
             const dungeonLight = new THREE.DirectionalLight(0x8888ff, 1.2);
             dungeonLight.position.set(50, 50, 50);
             dungeonLight.castShadow = true;
             scene.add(dungeonLight);
             
-            // Add hemisphere light for better overall illumination
             const hemiLight = new THREE.HemisphereLight(0x8888ff, 0x443322, 0.8);
             scene.add(hemiLight);
             
@@ -954,13 +938,6 @@
             animate();
         }
         
-        // ==========================================
-        // MODEL & ANIMATION LOADING SYSTEM
-        // ==========================================
-        
-        /**
-         * Load a character model from the KayKit Adventurers pack
-         */
         function loadCharacterModel(className, onLoad, onError) {
             const modelPath = characterModels[className.toLowerCase()];
             
@@ -970,7 +947,6 @@
                 return;
             }
             
-            // Check cache first
             if (modelCache[className]) {
                 console.log(`Loading ${className} from cache`);
                 const clonedModel = modelCache[className].clone();
@@ -984,11 +960,8 @@
                 modelPath,
                 (gltf) => {
                     console.log(`Successfully loaded ${className} model`);
-                    
-                    // Cache the model
                     modelCache[className] = gltf.scene;
                     
-                    // Setup model
                     const model = gltf.scene.clone();
                     model.traverse((child) => {
                         if (child.isMesh) {
@@ -997,8 +970,6 @@
                         }
                     });
                     
-                    // Model will be positioned in createPlayer
-                    // Store animations if available
                     if (gltf.animations && gltf.animations.length > 0) {
                         modelAnimations[className] = gltf.animations;
                     }
@@ -1006,7 +977,6 @@
                     if (onLoad) onLoad(model);
                 },
                 (xhr) => {
-                    // Progress callback
                     console.log(`Loading ${className}: ${(xhr.loaded / xhr.total * 100)}%`);
                 },
                 (error) => {
@@ -1015,686 +985,155 @@
                 }
             );
         }
-        
-        /**
-         * Load environment prop from KayKit Dungeon pack
-         */
-        function loadEnvironmentProp(propName, onLoad, onError) {
-            const propPath = `/models/environment/props/${propName}.gltf`;
-            
-            // Check cache
-            if (modelCache[propName]) {
-                const clonedProp = modelCache[propName].clone();
-                if (onLoad) onLoad(clonedProp);
-                return;
-            }
-            
-            gltfLoader.load(
-                propPath,
-                (gltf) => {
-                    modelCache[propName] = gltf.scene;
-                    
-                    const prop = gltf.scene.clone();
-                    prop.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    
-                    if (onLoad) onLoad(prop);
-                },
-                undefined,
-                (error) => {
-                    console.warn(`Could not load prop ${propName}:`, error);
-                    if (onError) onError(error);
-                }
-            );
-        }
-        
-        /**
-         * Load floor tile from KayKit Dungeon pack
-         */
-        function loadFloorTile(tileName, onLoad, onError) {
-            const tilePath = `/models/environment/dungeon/floors/${tileName}.gltf`;
-            const cacheKey = `floor_${tileName}`;
-            
-            // Check cache
-            if (modelCache[cacheKey]) {
-                const clonedTile = modelCache[cacheKey].clone();
-                if (onLoad) onLoad(clonedTile);
-                return;
-            }
-            
-            gltfLoader.load(
-                tilePath,
-                (gltf) => {
-                    modelCache[cacheKey] = gltf.scene;
-                    
-                    const tile = gltf.scene.clone();
-                    tile.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = false;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    
-                    if (onLoad) onLoad(tile);
-                },
-                undefined,
-                (error) => {
-                    console.warn(`Could not load floor tile ${tileName}:`, error);
-                    if (onError) onError(error);
-                }
-            );
-        }
-        
-        /**
-         * Load wall piece from KayKit Dungeon pack
-         */
-        function loadWallPiece(wallName, onLoad, onError) {
-            const wallPath = `/models/environment/dungeon/walls/${wallName}.gltf`;
-            const cacheKey = `wall_${wallName}`;
-            
-            // Check cache
-            if (modelCache[cacheKey]) {
-                const clonedWall = modelCache[cacheKey].clone();
-                if (onLoad) onLoad(clonedWall);
-                return;
-            }
-            
-            gltfLoader.load(
-                wallPath,
-                (gltf) => {
-                    modelCache[cacheKey] = gltf.scene;
-                    
-                    const wall = gltf.scene.clone();
-                    wall.traverse((child) => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    
-                    if (onLoad) onLoad(wall);
-                },
-                undefined,
-                (error) => {
-                    console.warn(`Could not load wall ${wallName}:`, error);
-                    if (onError) onError(error);
-                }
-            );
-        }
-        
-        /**
-         * Initialize animation mixer for character
-         */
-        function setupCharacterAnimations(model, className) {
-            if (!model) return;
-            
-            // Create animation mixer
-            animationMixer = new THREE.AnimationMixer(model);
-            
-            // Try to load external animation files from KayKit
-            loadAnimationsForCharacter(className, model);
-            
-            // KayKit character models are static poses, so we check for built-in animations
-            if (modelAnimations[className] && modelAnimations[className].length > 0) {
-                console.log(`Found ${modelAnimations[className].length} built-in animations for ${className}`);
-                // Play the first animation as idle
-                const firstAnim = modelAnimations[className][0];
-                const action = animationMixer.clipAction(firstAnim);
-                action.play();
-                currentAnimation = 'idle';
-                console.log('✓ Playing animation:', firstAnim.name);
-            } else {
-                console.log('No built-in animations found, will load external animations');
-            }
-        }
-        
-        /**
-         * Load animation files from KayKit Character Animations pack
-         */
-        function loadAnimationsForCharacter(className, model) {
-            // KayKit has separate animation files - load the basic movement set
-            const animType = 'Rig_Medium_MovementBasic'; // Most characters use medium rig
-            
-            gltfLoader.load(
-                `/models/animations/${animType}.glb`,
-                (gltf) => {
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        console.log(`✓ Loaded ${gltf.animations.length} animations from ${animType}`);
-                        
-                        // Store animations
-                        if (!modelAnimations[className]) {
-                            modelAnimations[className] = [];
-                        }
-                        modelAnimations[className].push(...gltf.animations);
-                        
-                        // Apply animations to the mixer if we have one
-                        if (animationMixer && gltf.animations.length > 0) {
-                            // Play idle animation (usually first in the set)
-                            const idleAnim = gltf.animations.find(a => a.name.toLowerCase().includes('idle')) || gltf.animations[0];
-                            const action = animationMixer.clipAction(idleAnim);
-                            action.play();
-                            console.log(`✓ Playing animation: ${idleAnim.name}`);
-                        }
-                    }
-                },
-                undefined,
-                (error) => {
-                    console.log(`Could not load animations for ${className}, using static pose`);
-                }
-            );
-        }
-        
-        /**
-         * Update character animation based on movement state
-         */
-        function updateCharacterAnimation(state) {
-            if (animationMixer) {
-                // Determine which animation to play based on state
-                let targetAnim = 'idle';
-                if (state) {
-                    if (state.attacking) targetAnim = 'attack';
-                    else if (state.running) targetAnim = 'run';
-                    else if (state.moving) targetAnim = 'walk';
-                }
-                
-                // Only change animation if it's different
-                if (targetAnim !== currentAnimation) {
-                    playCharacterAnimation(targetAnim);
-                    currentAnimation = targetAnim;
-                }
-                
-                animationMixer.update(clock.getDelta());
-            } else if (characterModel && state && state.moving) {
-                // Fallback: simple bobbing animation for static models
-                const time = Date.now() * 0.01;
-                characterModel.position.y = Math.sin(time) * 0.05;
-            } else if (characterModel) {
-                characterModel.position.y = 0;
-            }
-        }
-        
-        /**
-         * Play a specific animation on the character
-         */
-        function playCharacterAnimation(animName) {
-            if (!animationMixer || !modelAnimations[GameState.selectedClass]) return;
-            
-            const animations = modelAnimations[GameState.selectedClass];
-            const anim = animations.find(a => a.name.toLowerCase().includes(animName.toLowerCase()));
-            
-            if (anim) {
-                // Fade out current animation and fade in new one
-                animationMixer.stopAllAction();
-                const action = animationMixer.clipAction(anim);
-                action.reset();
-                action.fadeIn(0.2);
-                action.play();
-                console.log(`Playing ${animName} animation:`, anim.name);
-            }
-        }
-        
-        /**
-         * Replace current player model with new character model
-         */
-        function replacePlayerModel(className) {
-            loadCharacterModel(className, (model) => {
-                // Remove old model if it exists
-                if (characterModel && playerGroup) {
-                    playerGroup.remove(characterModel);
-                }
-                
-                // Add new model
-                characterModel = model;
-                
-                if (playerGroup) {
-                    playerGroup.add(characterModel);
-                    setupCharacterAnimations(characterModel, className);
-                    
-                    console.log(`Character model replaced with ${className}`);
-                }
-            }, () => {
-                console.log(`Failed to load ${className} model, keeping default geometric character`);
-            });
-        }
 
         function createPlayer() {
             playerGroup = new THREE.Group();
             
-            // Try to load character model first
             const className = GameState.selectedClass || 'mage';
             console.log(`Attempting to load ${className} character model...`);
             
             loadCharacterModel(className, (model) => {
-                // Success! Use the 3D model
                 characterModel = model;
                 
-                // Calculate the bounding box to center the model properly
+                // IMPORTANT FIX: Calculate bounding box and center properly
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
                 
-                // Center the model at origin
+                // Center the model horizontally (X and Z)
                 model.position.x = -center.x;
-                model.position.y = -box.min.y; // Place feet at ground level
                 model.position.z = -center.z;
                 
-                // Face AWAY from camera (towards +Z direction in world space)
-                model.rotation.y = 0;
+                // Position feet at ground level (y = 0)
+                // The min.y of the box is the bottom of the model
+                model.position.y = -box.min.y;
                 
-                // Scale to appropriate size (models are about 2 units tall)
+                // CRITICAL FIX: Rotate 180 degrees so character faces away from camera
+                // KayKit models face towards -Z by default (towards camera), so rotate to face +Z (away)
+                model.rotation.y = Math.PI;
+                
+                // Scale to appropriate height (2.0 units)
                 const targetHeight = 2.0;
                 const scale = targetHeight / size.y;
                 model.scale.set(scale, scale, scale);
                 
-                // IMPORTANT: Add to playerGroup so it moves with player!
+                // Add to player group
                 playerGroup.add(characterModel);
-                setupCharacterAnimations(characterModel, className);
-                console.log(`✓ Using 3D model for ${className} (height: ${size.y.toFixed(2)} -> ${targetHeight})`);
+                
+                console.log(`✓ Character model attached successfully! Height: ${size.y.toFixed(2)}`);
+                
+                // Setup animations
+                if (!modelAnimations[className]) {
+                    loadAnimationsForCharacter(className, model);
+                } else {
+                    setupCharacterAnimations(model, className);
+                }
+                
+                // Double-check: Ensure model is in the group
+                if (playerGroup.children.includes(characterModel)) {
+                    console.log('✓ Model confirmed in playerGroup');
+                }
             }, () => {
-                // Fallback to geometric shapes if model fails to load
-                console.log(`✗ Model not found, using geometric character for ${className}`);
+                console.log(`✗ Model failed to load, using geometric fallback`);
                 createGeometricPlayer();
             });
             
-            // Attach torch light
+            // Add torch light to group (it will move with player)
             GameState.torchLight.position.set(0, 2, 0);
             playerGroup.add(GameState.torchLight);
             
             scene.add(playerGroup);
             GameState.playerMesh = playerGroup;
             
-            // Starting position
-            GameState.player.x = 0;
-            GameState.player.z = 0;
+            // Initial position
             playerGroup.position.set(0, 0, 0);
         }
         
-        /**
-         * Create geometric player character (fallback)
-         */
+        function loadAnimationsForCharacter(className, model) {
+            const animType = 'Rig_Medium_MovementBasic';
+            
+            gltfLoader.load(
+                `/models/animations/${animType}.glb`,
+                (gltf) => {
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        console.log(`✓ Loaded ${gltf.animations.length} animations`);
+                        modelAnimations[className] = gltf.animations;
+                        setupCharacterAnimations(model, className);
+                    }
+                },
+                undefined,
+                (error) => {
+                    console.log(`Could not load animations, using static pose`);
+                }
+            );
+        }
+        
+        function setupCharacterAnimations(model, className) {
+            if (!model) return;
+            animationMixer = new THREE.AnimationMixer(model);
+            
+            if (modelAnimations[className] && modelAnimations[className].length > 0) {
+                const idleAnim = modelAnimations[className].find(a => 
+                    a.name.toLowerCase().includes('idle')) || modelAnimations[className][0];
+                
+                if (idleAnim) {
+                    const action = animationMixer.clipAction(idleAnim);
+                    action.play();
+                    currentAnimation = 'idle';
+                    console.log(`✓ Playing animation: ${idleAnim.name}`);
+                }
+            }
+        }
+        
+        function updateCharacterAnimation(state) {
+            // Update mixer if it exists
+            if (animationMixer) {
+                animationMixer.update(clock.getDelta());
+            }
+            
+            // Fallback bobbing if no animations
+            if (characterModel && state && state.moving && !animationMixer) {
+                const time = Date.now() * 0.01;
+                characterModel.position.y = -characterModel.geometry?.boundingBox?.min?.y || 0 + Math.sin(time) * 0.05;
+            }
+        }
+
         function createGeometricPlayer() {
-            // Remove any existing children first (except light)
+            // Remove existing children except light
             const light = GameState.torchLight;
             while(playerGroup.children.length > 0){ 
                 playerGroup.remove(playerGroup.children[0]); 
             }
             playerGroup.add(light);
             
-            // Class-specific appearance
-            const colors = {
-                warrior: 0x8b0000,
-                mage: 0x4a0080,
-                rogue: 0x006400
-            };
+            const colors = { warrior: 0x8b0000, mage: 0x4a0080, rogue: 0x006400 };
             const color = colors[GameState.selectedClass] || colors.mage;
             
-            if (GameState.selectedClass === 'warrior') {
-                // WARRIOR: Heavy armored knight with smooth plated armor
-                // Rounded torso armor
-                const torso = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.42, 0.45, 1.0, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x8b0000, 
-                        metalness: 0.9, 
-                        roughness: 0.3 
-                    })
-                );
-                torso.position.y = 0.75;
-                torso.castShadow = true;
-                playerGroup.add(torso);
-                
-                // Chest plate detail
-                const chestPlate = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.38, 16, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xd4af37, 
-                        metalness: 0.95, 
-                        roughness: 0.2 
-                    })
-                );
-                chestPlate.scale.set(1.0, 1.2, 0.8);
-                chestPlate.position.y = 0.95;
-                playerGroup.add(chestPlate);
-                
-                // Rounded pauldrons (shoulders)
-                for (let side of [-1, 1]) {
-                    const shoulder = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.3, 16, 16),
-                        new THREE.MeshStandardMaterial({ 
-                            color: 0xc0c0c0, 
-                            metalness: 0.95, 
-                            roughness: 0.2 
-                        })
-                    );
-                    shoulder.scale.set(1.2, 0.8, 1.0);
-                    shoulder.position.set(side * 0.55, 1.2, 0);
-                    playerGroup.add(shoulder);
-                }
-                
-                // Head
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.28, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
-                );
-                head.position.y = 1.5;
-                playerGroup.add(head);
-                
-                // Knight helmet (smooth)
-                const helmet = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.32, 0.34, 0.5, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xc0c0c0, 
-                        metalness: 0.95, 
-                        roughness: 0.1 
-                    })
-                );
-                helmet.position.y = 1.7;
-                playerGroup.add(helmet);
-                
-                // Helmet crest
-                const crest = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.05, 0.08, 0.3, 8),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xff0000, 
-                        metalness: 0.5 
-                    })
-                );
-                crest.position.y = 2.0;
-                playerGroup.add(crest);
-                
-                // GREAT SWORD on back
-                const swordHandle = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.06, 0.06, 0.5, 12),
-                    new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.8 })
-                );
-                swordHandle.position.set(0, 1.3, -0.35);
-                playerGroup.add(swordHandle);
-                
-                // Cross guard
-                const crossGuard = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.04, 0.04, 0.5, 8),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xffd700, 
-                        metalness: 0.9 
-                    })
-                );
-                crossGuard.rotation.z = Math.PI / 2;
-                crossGuard.position.set(0, 1.55, -0.35);
-                playerGroup.add(crossGuard);
-                
-                // Blade
-                const swordBlade = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.08, 0.04, 1.6, 8),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xe8e8e8, 
-                        metalness: 1.0,
-                        roughness: 0.1
-                    })
-                );
-                swordBlade.position.set(0, 2.4, -0.35);
-                playerGroup.add(swordBlade);
-                
-                // Shield on side
-                const shield = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.45, 0.45, 0.1, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x8b0000, 
-                        metalness: 0.8 
-                    })
-                );
-                shield.rotation.x = Math.PI / 2;
-                shield.rotation.y = Math.PI / 4;
-                shield.position.set(-0.4, 0.9, -0.3);
-                playerGroup.add(shield);
-                
-                // Red cape flowing behind
-                const cape = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.5, 0.6, 1.0, 12),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0xcc0000, 
-                        roughness: 0.9 
-                    })
-                );
-                cape.position.set(0, 0.7, -0.45);
-                cape.scale.set(1.0, 1.0, 0.3);
-                playerGroup.add(cape);
-                
-            } else if (GameState.selectedClass === 'rogue') {
-                // ROGUE: Hooded ranger with flowing cloak and sword
-                // Slim body
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.32, 1.2, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x2d5016, 
-                        roughness: 0.8 
-                    })
-                );
-                body.position.y = 0.7;
-                body.castShadow = true;
-                playerGroup.add(body);
-                
-                // Leather vest
-                const vest = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.32, 0.34, 0.9, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x3a2817, 
-                        roughness: 0.9 
-                    })
-                );
-                vest.position.y = 0.85;
-                playerGroup.add(vest);
-                
-                // Belt
-                const belt = new THREE.Mesh(
-                    new THREE.TorusGeometry(0.34, 0.05, 8, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a1a1a, 
-                        metalness: 0.5 
-                    })
-                );
-                belt.rotation.x = Math.PI / 2;
-                belt.position.y = 0.45;
-                playerGroup.add(belt);
-                
-                // Head
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.26, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
-                );
-                head.position.y = 1.4;
-                playerGroup.add(head);
-                
-                // DRAMATIC HOOD - main feature
-                const hoodBase = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.36, 0.32, 0.3, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a2d0d, 
-                        roughness: 0.9 
-                    })
-                );
-                hoodBase.position.y = 1.5;
-                playerGroup.add(hoodBase);
-                
-                const hoodTop = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.38, 0.5, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a2d0d, 
-                        roughness: 0.9 
-                    })
-                );
-                hoodTop.position.y = 1.85;
-                playerGroup.add(hoodTop);
-                
-                // Hood shadow over face
-                const shadow = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.27, 0.27, 0.25, 16),
-                    new THREE.MeshBasicMaterial({ 
-                        color: 0x000000, 
-                        transparent: true, 
-                        opacity: 0.7 
-                    })
-                );
-                shadow.position.y = 1.38;
-                playerGroup.add(shadow);
-                
-                // Mysterious glowing eyes
-                for (let side of [-0.08, 0.08]) {
-                    const eye = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.03, 8, 8),
-                        new THREE.MeshBasicMaterial({ color: 0x00ff88 })
-                    );
-                    eye.position.set(side, 1.42, 0.24);
-                    playerGroup.add(eye);
-                }
-                
-                // FLOWING CLOAK - key feature
-                const cloakTop = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.55, 0.6, 0.6, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a2d0d, 
-                        roughness: 0.9 
-                    })
-                );
-                cloakTop.position.set(0, 1.0, -0.25);
-                cloakTop.scale.set(1.0, 1.0, 0.4);
-                playerGroup.add(cloakTop);
-                
-                const cloakBottom = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.65, 1.1, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a2d0d, 
-                        roughness: 0.9 
-                    })
-                );
-                cloakBottom.position.set(0, 0.5, -0.3);
-                playerGroup.add(cloakBottom);
-                
-                // SWORD on hip
-                const swordScabbard = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.05, 0.05, 1.2, 12),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x1a1a1a, 
-                        metalness: 0.6 
-                    })
-                );
-                swordScabbard.position.set(-0.4, 0.7, 0.1);
-                swordScabbard.rotation.z = Math.PI / 10;
-                playerGroup.add(swordScabbard);
-                
-                const swordHandle = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.06, 0.06, 0.25, 12),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x4a3520, 
-                        roughness: 0.8 
-                    })
-                );
-                swordHandle.position.set(-0.42, 1.3, 0.08);
-                swordHandle.rotation.z = Math.PI / 10;
-                playerGroup.add(swordHandle);
-                
-                const swordPommel = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.08, 12, 12),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x8b4513, 
-                        metalness: 0.7 
-                    })
-                );
-                swordPommel.position.set(-0.43, 1.42, 0.05);
-                playerGroup.add(swordPommel);
-                
-            } else {
-                // MAGE: Robes, staff, glowing orb
-                // Body - flowing robes
-                const body = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.5, 1.3, 8),
-                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 })
-                );
-                body.position.y = 0.65;
-                body.castShadow = true;
-                playerGroup.add(body);
-                
-                // Head
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.25, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xffccaa })
-                );
-                head.position.y = 1.4;
-                playerGroup.add(head);
-                
-                // Wizard hat - tall and pointed
-                const hatBase = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16),
-                    new THREE.MeshStandardMaterial({ color: color })
-                );
-                hatBase.position.y = 1.6;
-                playerGroup.add(hatBase);
-                
-                const hatCone = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.3, 0.9, 8),
-                    new THREE.MeshStandardMaterial({ color: color })
-                );
-                hatCone.position.y = 2.1;
-                playerGroup.add(hatCone);
-                
-                // Stars on hat
-                for (let i = 0; i < 3; i++) {
-                    const star = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.03, 8, 8),
-                        new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.5 })
-                    );
-                    star.position.set(Math.sin(i * 2) * 0.25, 1.8 + i * 0.15, Math.cos(i * 2) * 0.25);
-                    playerGroup.add(star);
-                }
-                
-                // Staff - taller and more ornate
-                const staff = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.04, 0.04, 2.0, 8),
-                    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
-                );
-                staff.position.set(0.5, 1.0, 0.3);
-                playerGroup.add(staff);
-                
-                // Glowing orb on staff
-                const orb = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.15, 16, 16),
-                    new THREE.MeshStandardMaterial({ 
-                        color: 0x9370db, 
-                        emissive: 0x9370db,
-                        emissiveIntensity: 0.8,
-                        transparent: true,
-                        opacity: 0.8
-                    })
-                );
-                orb.position.set(0.5, 2.0, 0.3);
-                playerGroup.add(orb);
-                
-                // Orbiting particles around staff
-                const particleOrbit = new THREE.Group();
-                for (let i = 0; i < 4; i++) {
-                    const particle = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.04, 8, 8),
-                        new THREE.MeshBasicMaterial({ color: 0x00ffff })
-                    );
-                    const angle = (i / 4) * Math.PI * 2;
-                    particle.position.set(Math.cos(angle) * 0.2, 0, Math.sin(angle) * 0.2);
-                    particleOrbit.add(particle);
-                }
-                particleOrbit.position.set(0.5, 2.0, 0.3);
-                playerGroup.add(particleOrbit);
-                GameState.staffParticles = particleOrbit;
-            }
+            // Simple geometric character facing +Z (away from camera)
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8),
+                new THREE.MeshStandardMaterial({ color: color })
+            );
+            body.position.y = 0.75;
+            body.castShadow = true;
+            playerGroup.add(body);
+            
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.3, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xffccaa })
+            );
+            head.position.y = 1.7;
+            playerGroup.add(head);
+            
+            // Face towards +Z (away from default camera behind at -Z)
+            playerGroup.rotation.y = 0;
+            
+            characterModel = playerGroup; // Reference for animations
+            console.log('✓ Geometric character created');
         }
 
         function buildDungeon() {
-            // Procedural dungeon generation with GLTF models
-            const roomSize = 20;
-            const wallHeight = 8;
-            
-            // BUILD FLOOR - SIMPLE AND FAST
+            // Floor
             const floorGeo = new THREE.PlaneGeometry(100, 100);
             const floorMat = new THREE.MeshStandardMaterial({ 
                 color: 0x5a4a35,
@@ -1706,18 +1145,12 @@
             floor.receiveShadow = true;
             scene.add(floor);
             
-            console.log('✓ Floor created (simple plane for performance)');
-            
-            // BUILD WALLS - SIMPLE GEOMETRIC WALLS
-            console.log('✓ Building walls (simple geometry)');
-            
+            // Walls
             const wallMat = new THREE.MeshStandardMaterial({ 
                 color: 0x7a5f47,
-                roughness: 0.7,
-                metalness: 0.1
+                roughness: 0.7
             });
             
-            // Outer walls - simple boxes for performance
             for (let i = -50; i <= 50; i += 10) {
                 createWall(i, -50, wallMat);
                 createWall(i, 50, wallMat);
@@ -1725,7 +1158,6 @@
                 createWall(50, i, wallMat);
             }
             
-            // Interior walls
             for (let i = -30; i <= 30; i += 30) {
                 if (i !== 0) {
                     createWall(i, 0, wallMat);
@@ -1733,21 +1165,13 @@
                 }
             }
             
-            console.log('✓ Dungeon created successfully');
-            
-            // Inner rooms
             createRoom(-20, -20, 'library');
             createRoom(20, -20, 'prison');
             createRoom(-20, 20, 'throne');
             createRoom(20, 20, 'treasury');
             
-            // Place crystals
             placeCrystals();
-            
-            // Place enemies
             placeEnemies();
-            
-            // Place chests
             placeChests();
         }
 
@@ -1761,7 +1185,6 @@
             wall.receiveShadow = true;
             scene.add(wall);
             
-            // Add torch near walls for better visibility
             if (Math.random() > 0.7) {
                 const wallLight = new THREE.PointLight(0xffaa44, 1.5, 12);
                 wallLight.position.set(x, 5, z);
@@ -1770,49 +1193,14 @@
             
             walls.push({ mesh: wall, x, z, size: 5 });
         }
-        
-        /**
-         * Create wall using actual 3D model from KayKit Dungeon pack
-         */
-        function createWallModel(x, z, wallType, rotation) {
-            loadWallPiece(wallType, (wall) => {
-                wall.position.set(x, 0, z);
-                wall.rotation.y = rotation || 0;
-                scene.add(wall);
-                
-                // Add torch lighting for atmosphere
-                if (Math.random() > 0.7) {
-                    const wallLight = new THREE.PointLight(0xffaa44, 1.5, 12);
-                    wallLight.position.set(x, 5, z);
-                    scene.add(wallLight);
-                }
-                
-                walls.push({ mesh: wall, x, z, size: 4 });
-            }, () => {
-                // Fallback to geometric wall if model fails
-                const fallbackMat = new THREE.MeshStandardMaterial({ 
-                    color: 0x7a5f47,
-                    roughness: 0.7,
-                    metalness: 0.1
-                });
-                createWall(x, z, fallbackMat);
-            });
-        }
 
         function createRoom(cx, cz, type) {
-            const colors = {
-                library: 0x4a0080,
-                prison: 0x8b0000,
-                throne: 0xffd700,
-                treasury: 0x00ff00
-            };
+            const colors = { library: 0x4a0080, prison: 0x8b0000, throne: 0xffd700, treasury: 0x00ff00 };
             
-            // Room light
             const light = new THREE.PointLight(colors[type] || 0xffffff, 0.5, 15);
             light.position.set(cx, 6, cz);
             scene.add(light);
             
-            // Room marker (crystal)
             const crystal = new THREE.Mesh(
                 new THREE.OctahedronGeometry(0.5),
                 new THREE.MeshStandardMaterial({
