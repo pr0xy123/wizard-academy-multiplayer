@@ -382,20 +382,6 @@
             z-index: 15;
         }
         
-        /* Player Nametags */
-        .player-nametag {
-            position: absolute;
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 100;
-            transform: translate(-50%, -100%);
-            margin-top: -10px;
-        }
-        
         /* Responsive */
         @media (max-width: 768px) {
             .title { font-size: 36px; }
@@ -409,6 +395,36 @@
         <canvas id="render-canvas"></canvas>
         <div class="vignette"></div>
         <div id="particle-overlay"></div>
+        
+        <!-- Multiplayer Modal -->
+        <div id="multiplayer-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+             background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center;">
+            <div style="background: linear-gradient(135deg, rgba(20, 10, 5, 0.98), rgba(40, 20, 10, 0.95)); 
+                        border: 3px solid #ffd700; border-radius: 20px; padding: 40px; max-width: 500px; text-align: center;">
+                <h2 style="color: #ffd700; margin-bottom: 20px; font-family: 'Cinzel', serif;">🌐 Join Multiplayer</h2>
+                <p style="margin-bottom: 20px; color: #c0c0c0;">Adventure with friends in real-time!</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="room-code" placeholder="Enter Room Code (or leave blank for public)" 
+                           style="padding: 12px 20px; font-size: 16px; border-radius: 25px; border: 2px solid #8b6914; 
+                                  background: rgba(0,0,0,0.5); color: #f4e4c1; text-align: center; width: 100%; max-width: 350px;">
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-fantasy" onclick="joinMultiplayer()" 
+                            style="background: linear-gradient(135deg, #00ffff, #0066cc); border-color: #00ffff; color: #fff;">
+                        ✨ Join Room
+                    </button>
+                    <button class="btn-fantasy" onclick="document.getElementById('multiplayer-modal').style.display='none'">
+                        ❌ Cancel
+                    </button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; font-size: 12px; color: #888;">
+                    💡 Tip: Share your room code with friends to play together!
+                </div>
+            </div>
+        </div>
         
         <!-- Start Screen -->
         <div id="start-screen">
@@ -671,13 +687,6 @@
             </button>
         </div>
         
-        <!-- Chest Modal -->
-        <div id="chest-modal" class="modal">
-            <h2 style="color: #ffaa00; margin-bottom: 20px;">📦 Treasure Chest</h2>
-            <div id="chest-contents"></div>
-            <button class="btn-fantasy" onclick="closeModal('chest-modal')" style="margin-top: 20px;">Take Loot</button>
-        </div>
-        
         <!-- Multiplayer Modal -->
         <div id="multiplayer-modal" class="modal">
             <h2 style="color: #00ffff; margin-bottom: 20px;">🌐 Enter the Multiplayer Realm</h2>
@@ -857,9 +866,7 @@
                 potions: 2,
                 scrolls: 1,
                 skillPoints: 0,
-                skills: { health: 0, mana: 0, power: 0 },
-                x: 0,
-                z: 0
+                skills: { health: 0, mana: 0, power: 0 }
             },
             selectedClass: null,
             selectedSpell: 0,
@@ -1192,28 +1199,29 @@
          * Update character animation based on movement state
          */
         function updateCharacterAnimation(state) {
-            if (animationMixer) {
-                // Determine which animation to play based on state
-                let targetAnim = 'idle';
-                if (state) {
-                    if (state.attacking) targetAnim = 'attack';
-                    else if (state.running) targetAnim = 'run';
-                    else if (state.moving) targetAnim = 'walk';
-                }
-                
-                // Only change animation if it's different
-                if (targetAnim !== currentAnimation) {
-                    playCharacterAnimation(targetAnim);
-                    currentAnimation = targetAnim;
-                }
-                
-                animationMixer.update(clock.getDelta());
-            } else if (characterModel && state && state.moving) {
+            if (!characterModel || !animationMixer) {
                 // Fallback: simple bobbing animation for static models
-                const time = Date.now() * 0.01;
-                characterModel.position.y = Math.sin(time) * 0.05;
-            } else if (characterModel) {
-                characterModel.position.y = 0;
+                if (characterModel && state && state.moving) {
+                    const time = Date.now() * 0.01;
+                    characterModel.position.y = Math.sin(time) * 0.05;
+                } else if (characterModel) {
+                    characterModel.position.y = 0;
+                }
+                return;
+            }
+            
+            // Determine which animation to play based on state
+            let targetAnim = 'idle';
+            if (state) {
+                if (state.attacking) targetAnim = 'attack';
+                else if (state.running) targetAnim = 'run';
+                else if (state.moving) targetAnim = 'walk';
+            }
+            
+            // Only change animation if it's different
+            if (targetAnim !== currentAnimation) {
+                playCharacterAnimation(targetAnim);
+                currentAnimation = targetAnim;
             }
         }
         
@@ -1317,13 +1325,6 @@
          * Create geometric player character (fallback)
          */
         function createGeometricPlayer() {
-            // Remove any existing children first (except light)
-            const light = GameState.torchLight;
-            while(playerGroup.children.length > 0){ 
-                playerGroup.remove(playerGroup.children[0]); 
-            }
-            playerGroup.add(light);
-            
             // Class-specific appearance
             const colors = {
                 warrior: 0x8b0000,
@@ -1708,6 +1709,7 @@
             
             console.log('✓ Floor created (simple plane for performance)');
             
+            // BUILD WALLS - SIMPLE GEOMETRIC WALLS
             // BUILD WALLS - SIMPLE GEOMETRIC WALLS
             console.log('✓ Building walls (simple geometry)');
             
@@ -2228,11 +2230,10 @@
                 
                 const isBlocking = distToCamera < distToPlayer - 1 && distWallToPlayer < distToPlayer;
                 
-                // Only update if state changed
-                if (isBlocking && wall.mesh.material.opacity !== 0.3) {
+                if (isBlocking) {
                     wall.mesh.material.opacity = 0.3;
                     wall.mesh.material.transparent = true;
-                } else if (!isBlocking && wall.mesh.material.opacity !== 1) {
+                } else {
                     wall.mesh.material.opacity = 1;
                     wall.mesh.material.transparent = false;
                 }
@@ -2536,16 +2537,6 @@
         // ==========================================
         // AI TUTOR SYSTEM
         // ==========================================
-        function askTutor() {
-            if (GameState.player.mana >= 5) {
-                GameState.player.mana -= 5;
-                openTutor();
-                updateHUD();
-            } else {
-                showFloatingText('Not enough mana!', '#ff0000');
-            }
-        }
-
         function openTutor() {
             const messages = [
                 "Remember: When brewing potions, count your ingredients carefully. If you need 5 herbs and have 2, you need 3 more!",
@@ -2648,14 +2639,15 @@
         function levelUp() {
             GameState.player.level++;
             GameState.player.xp -= GameState.player.xpToNext;
-            GameState.player.xpToNext = Math.floor(GameState.player.xpToNext * 1.5);
-            
+            GameState.player.xpToNext = Game
+                        // Grade progression
             if (GameState.player.level % 2 === 0 && GameState.player.grade < 6) {
                 GameState.player.grade++;
                 showFloatingText(`📚 GRADE UP! ${Curriculum.grades[GameState.player.grade - 1].name}`, '#ffd700');
                 unlockNewSpells();
             }
             
+            // Stat boosts
             GameState.player.maxHealth += 10;
             GameState.player.health = GameState.player.maxHealth;
             GameState.player.maxMana += 5;
@@ -2860,7 +2852,7 @@
                 alert('Please select a class first!');
                 return;
             }
-            document.getElementById('multiplayer-modal').style.display = 'block';
+            document.getElementById('multiplayer-modal').style.display = 'flex';
         }
 
         function joinMultiplayer() {
@@ -2976,7 +2968,6 @@
                     new THREE.MeshStandardMaterial({ color: color, metalness: 0.7 })
                 );
                 shield.rotation.x = Math.PI / 2;
-                shield.rotation.y = Math.PI / 4;
                 shield.position.set(-0.35, 0.8, -0.25);
                 group.add(shield);
             } else if (data.class === 'rogue') {
