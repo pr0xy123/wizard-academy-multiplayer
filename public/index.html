@@ -1695,8 +1695,7 @@
             const roomSize = 20;
             const wallHeight = 8;
             
-            // BUILD FLOOR - MUCH SIMPLER FOR PERFORMANCE
-            // Use one large floor plane instead of hundreds of tiles
+            // BUILD FLOOR - SIMPLE AND FAST
             const floorGeo = new THREE.PlaneGeometry(100, 100);
             const floorMat = new THREE.MeshStandardMaterial({ 
                 color: 0x5a4a35,
@@ -1708,28 +1707,12 @@
             floor.receiveShadow = true;
             scene.add(floor);
             
-            // Add just a few decorative floor tiles for visual interest (not 600!)
-            const floorTileSize = 4;
-            const floorTypes = ['floor_tile_large', 'floor_dirt_large'];
-            console.log('Loading decorative floor tiles...');
+            console.log('✓ Floor created (simple plane for performance)');
             
-            // Only load ~25 decorative tiles instead of 600+
-            for (let x = -40; x <= 40; x += 20) {
-                for (let z = -40; z <= 40; z += 20) {
-                    const tileType = floorTypes[Math.floor(Math.random() * floorTypes.length)];
-                    loadFloorTile(tileType, (tile) => {
-                        tile.position.set(x, 0.01, z); // Slightly above base floor
-                        tile.rotation.y = (Math.PI / 2) * Math.floor(Math.random() * 4);
-                        tile.scale.set(2, 2, 2); // Make them larger
-                        scene.add(tile);
-                    });
-                }
-            }
+            // BUILD WALLS - SIMPLE GEOMETRIC WALLS
+            // BUILD WALLS - SIMPLE GEOMETRIC WALLS
+            console.log('✓ Building walls (simple geometry)');
             
-            // BUILD WALLS - SIMPLIFIED FOR PERFORMANCE
-            console.log('Loading dungeon walls...');
-            
-            // Create simple geometric walls for perimeter (much faster)
             const wallMat = new THREE.MeshStandardMaterial({ 
                 color: 0x7a5f47,
                 roughness: 0.7,
@@ -1744,12 +1727,6 @@
                 createWall(50, i, wallMat);
             }
             
-            // Add just a few decorative 3D wall models
-            createWallModel(0, -50, 'wall_doorway', 0);
-            createWallModel(0, 50, 'wall_doorway', Math.PI);
-            createWallModel(-50, 0, 'wall_doorway', Math.PI / 2);
-            createWallModel(50, 0, 'wall_doorway', -Math.PI / 2);
-            
             // Interior walls
             for (let i = -30; i <= 30; i += 30) {
                 if (i !== 0) {
@@ -1757,6 +1734,8 @@
                     createWall(0, i, wallMat);
                 }
             }
+            
+            console.log('✓ Dungeon created successfully');
             
             // Inner rooms
             createRoom(-20, -20, 'library');
@@ -2168,6 +2147,13 @@
                 if (GameState.playerMesh) {
                     GameState.playerMesh.position.x = newX;
                     GameState.playerMesh.position.z = newZ;
+                    
+                    // Debug: Log first movement to verify it's working
+                    if (!GameState.firstMovementLogged) {
+                        console.log(`✓ Player movement working! Position: (${newX.toFixed(2)}, ${newZ.toFixed(2)})`);
+                        console.log('✓ Character model attached:', characterModel !== null);
+                        GameState.firstMovementLogged = true;
+                    }
                 }
                 
                 // Broadcast position in multiplayer (throttled)
