@@ -681,6 +681,15 @@
             rogue: '/models/characters/rogue/Rogue.glb'
         };
 
+        // WEAPON MODEL PATHS - add your weapon files here
+        const weaponModels = {
+            warrior: '/models/weapons/warrior_sword.glb',      // or axe
+            mage: '/models/weapons/mage_staff.glb',
+            rogue: '/models/weapons/rogue_dagger.glb',
+            knight: '/models/weapons/knight_sword.glb',
+            ranger: '/models/weapons/ranger_bow.glb'
+        };
+
         function init3D() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
@@ -764,6 +773,9 @@
                     // Now load animations from the animations folder
                     loadAnimationsForCharacter(model);
                     
+                    // Load weapon for this character class
+                    loadWeaponForCharacter(model, className);
+                    
                     console.log('✓ Character attached and positioned');
                 },
                 undefined,
@@ -798,33 +810,45 @@
         function loadAnimationsForCharacter(model) {
             const animationPath = '/models/animations/Rig_Medium_MovementBasic.glb';
             
-            console.log('Loading animations from:', animationPath);
+            console.log('🎬 Loading animations from:', animationPath);
             
             gltfLoader.load(
                 animationPath,
                 (gltf) => {
-                    console.log('Animations loaded! Available clips:', gltf.animations.length);
+                    console.log('🎬 Animations loaded! Available clips:', gltf.animations.length);
                     
                     if (gltf.animations && gltf.animations.length > 0) {
                         // Create animation mixer for the character model
                         animationMixer = new THREE.AnimationMixer(model);
                         
-                        // List all available animations
+                        // List all available animations with details
                         gltf.animations.forEach((clip, index) => {
-                            console.log(`  - Animation ${index}: ${clip.name} (duration: ${clip.duration}s)`);
+                            console.log(`   ${index}: "${clip.name}" - ${clip.duration.toFixed(2)}s - ${clip.tracks.length} tracks`);
                         });
                         
-                        // Use the second animation (usually walking) or first if only one
-                        const walkIndex = gltf.animations.length > 1 ? 1 : 0;
-                        GameState.walkAction = animationMixer.clipAction(gltf.animations[walkIndex]);
-                        GameState.walkAction.timeScale = 1.0; // Normal speed
+                        // Try different animation indices
+                        // Some packs: 0=jump, 1=idle, 2=walk, 3=run
+                        // Let's try the longest animation (usually walk/idle)
+                        let longestIndex = 0;
+                        let longestDuration = 0;
+                        gltf.animations.forEach((clip, index) => {
+                            if (clip.duration > longestDuration && clip.duration < 10) {
+                                longestDuration = clip.duration;
+                                longestIndex = index;
+                            }
+                        });
                         
-                        console.log(`✓ Using animation ${walkIndex} for walking`);
+                        GameState.walkAction = animationMixer.clipAction(gltf.animations[longestIndex]);
+                        GameState.walkAction.timeScale = 1.0;
+                        
+                        console.log(`✓ Using animation ${longestIndex} ("${gltf.animations[longestIndex].name}") for movement`);
+                    } else {
+                        console.warn('⚠️ No animations found in file - character may be static model');
                     }
                 },
                 undefined,
                 (error) => {
-                    console.warn('Animation loading failed:', error);
+                    console.error('❌ Animation loading failed:', error);
                 }
             );
         }
@@ -838,6 +862,57 @@
             } else if (!isMoving && GameState.walkAction.isRunning()) {
                 GameState.walkAction.stop();
             }
+        }
+
+        // Load weapon and attach to character's right hand
+        function loadWeaponForCharacter(model, className) {
+            const weaponPath = weaponModels[className];
+            
+            if (!weaponPath) {
+                console.log('⚔️ No weapon defined for', className);
+                return;
+            }
+            
+            console.log('⚔️ Loading weapon:', weaponPath);
+            
+            gltfLoader.load(
+                weaponPath,
+                (gltf) => {
+                    const weapon = gltf.scene;
+                    
+                    // Try to find the right hand bone
+                    let rightHand = null;
+                    model.traverse((bone) => {
+                        const name = bone.name.toLowerCase();
+                        if (name.includes('hand') && name.includes('right') || 
+                            name.includes('hand.r') || name.includes('hand_r')) {
+                            rightHand = bone;
+                        }
+                    });
+                    
+                    if (rightHand) {
+                        // Scale weapon appropriately
+                        weapon.scale.set(0.5, 0.5, 0.5);
+                        
+                        // Attach to hand bone
+                        rightHand.add(weapon);
+                        console.log('✓ Weapon attached to right hand');
+                    } else {
+                        // Fallback: attach to character at approximate hand position
+                        weapon.position.set(0.3, 1.0, 0.2);
+                        weapon.rotation.z = Math.PI / 4;
+                        weapon.scale.set(0.3, 0.3, 0.3);
+                        model.add(weapon);
+                        console.log('✓ Weapon attached to character (no hand bone found)');
+                    }
+                    
+                    GameState.weapon = weapon;
+                },
+                undefined,
+                (error) => {
+                    console.log('⚔️ Weapon not available:', error.message);
+                }
+            );
         }
 
         function buildWorld() {
