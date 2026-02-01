@@ -1003,11 +1003,7 @@
                         }
                     });
                     
-                    // Scale and position the model properly
-                    model.scale.set(0.8, 0.8, 0.8); // Scale down to match game size
-                    model.position.set(0, 0, 0);
-                    model.rotation.y = Math.PI; // Face forward
-                    
+                    // Model will be positioned in createPlayer
                     // Store animations if available
                     if (gltf.animations && gltf.animations.length > 0) {
                         modelAnimations[className] = gltf.animations;
@@ -1133,6 +1129,12 @@
             loadCharacterModel(className, (model) => {
                 // Success! Use the 3D model
                 characterModel = model;
+                
+                // Fix positioning and rotation
+                characterModel.position.set(0, 0, 0);
+                characterModel.rotation.y = 0; // Face forward (away from camera initially)
+                characterModel.scale.set(0.8, 0.8, 0.8);
+                
                 playerGroup.add(characterModel);
                 setupCharacterAnimations(characterModel, className);
                 console.log(`✓ Using 3D model for ${className}`);
@@ -1962,6 +1964,11 @@
             // Animate walking
             if (moved) {
                 GameState.playerMesh.position.y = Math.sin(Date.now() * 0.01) * 0.05;
+                
+                // Rotate character to face movement direction
+                if (characterModel) {
+                    characterModel.rotation.y = cameraAngle + Math.PI;
+                }
                 
                 // Update character animation
                 updateCharacterAnimation({ 
