@@ -770,7 +770,7 @@
                     characterModel = pivot;
                     GameState.characterModel = model; // Store reference to actual model for animation
                     
-                    // Now load animations from the animations folder
+                    // Load animations - models ARE rigged with Rig_Medium skeleton!
                     loadAnimationsForCharacter(model);
                     
                     // Load weapon for this character class
@@ -893,29 +893,33 @@
                     // Try to find the right hand bone
                     let rightHand = null;
                     model.traverse((bone) => {
-                        const name = bone.name.toLowerCase();
-                        if (name.includes('hand') && name.includes('right') || 
-                            name.includes('hand.r') || name.includes('hand_r')) {
-                            rightHand = bone;
+                        if (bone.name && !rightHand) {
+                            const name = bone.name.toLowerCase();
+                            // Look for right hand bone
+                            if (name === 'hand.r' || name === 'handr' || name === 'hand_r' || 
+                                (name.includes('hand') && name.includes('r') && !name.includes('l'))) {
+                                rightHand = bone;
+                                console.log('✓ Found hand bone:', bone.name);
+                            }
                         }
                     });
                     
                     if (rightHand) {
-                        // Scale weapon appropriately
-                        weapon.scale.set(0.5, 0.5, 0.5);
-                        
-                        // Attach to hand bone
+                        // Attach to actual hand bone!
+                        weapon.scale.set(0.8, 0.8, 0.8);
+                        weapon.position.set(0, 0, 0);
+                        weapon.rotation.set(Math.PI / 2, 0, 0);
                         rightHand.add(weapon);
-                        console.log('✓ Weapon attached to right hand');
+                        console.log('✓ Weapon attached to hand bone:', rightHand.name);
                     } else {
-                        // Fallback: attach to character at approximate hand position
-                        // Position weapon prominently at character's side
-                        weapon.position.set(0.7, 1.2, 0.2);  // Right side, shoulder height
-                        weapon.rotation.set(0, Math.PI / 4, Math.PI / 4);  // Angled like held
-                        weapon.scale.set(1.0, 1.0, 1.0);  // Full size
+                        // Fallback: attach weapon in front of character (visible position)
+                        // Since character is in T-pose, put weapon in front/center
+                        weapon.position.set(0, 1.0, 0.8);  // Center, chest height, in front
+                        weapon.rotation.set(0, 0, 0);  // Straight forward
+                        weapon.scale.set(2.0, 2.0, 2.0);  // Large so it's very visible
                         model.add(weapon);
                         
-                        console.log('✓ Weapon attached:', className, '- visible at character\'s side');
+                        console.log('✓ Weapon attached:', className, '- displayed in front of character');
                         console.log('   Position:', weapon.position);
                         console.log('   Scale:', weapon.scale);
                     }
