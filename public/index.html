@@ -1003,9 +1003,10 @@
                         }
                     });
                     
-                    // Scale and position the model
-                    model.scale.set(1.0, 1.0, 1.0);
+                    // Scale and position the model properly
+                    model.scale.set(0.8, 0.8, 0.8); // Scale down to match game size
                     model.position.set(0, 0, 0);
+                    model.rotation.y = Math.PI; // Face forward
                     
                     // Store animations if available
                     if (gltf.animations && gltf.animations.length > 0) {
@@ -1070,17 +1071,17 @@
             // Create animation mixer
             animationMixer = new THREE.AnimationMixer(model);
             
-            // Load default idle animation if available
-            if (modelAnimations[className]) {
-                const idleAnim = modelAnimations[className].find(a => 
-                    a.name.toLowerCase().includes('idle')
-                );
-                
-                if (idleAnim) {
-                    const action = animationMixer.clipAction(idleAnim);
-                    action.play();
-                    currentAnimation = 'idle';
-                }
+            // KayKit models have built-in animations in the GLB file
+            if (modelAnimations[className] && modelAnimations[className].length > 0) {
+                console.log(`Found ${modelAnimations[className].length} animations for ${className}`);
+                // Play the first animation as idle
+                const firstAnim = modelAnimations[className][0];
+                const action = animationMixer.clipAction(firstAnim);
+                action.play();
+                currentAnimation = 'idle';
+                console.log('✓ Playing animation:', firstAnim.name);
+            } else {
+                console.log('No animations found in model, will use pose only');
             }
         }
         
@@ -1088,31 +1089,13 @@
          * Update character animation based on movement state
          */
         function updateCharacterAnimation(state) {
-            if (!animationMixer || !characterModel) return;
-            
-            // Determine which animation to play
-            let targetAnimation = 'idle';
-            
-            if (GameState.inCombat) {
-                targetAnimation = 'attack';
-            } else if (state.moving) {
-                targetAnimation = state.running ? 'run' : 'walk';
-            }
-            
-            // Only change if different from current
-            if (targetAnimation !== currentAnimation) {
-                // Fade out current animation
-                const oldAction = animationMixer.existingAction(currentAnimation);
-                if (oldAction) {
-                    oldAction.fadeOut(0.3);
-                }
-                
-                // Fade in new animation
-                const newAction = animationMixer.existingAction(targetAnimation);
-                if (newAction) {
-                    newAction.reset().fadeIn(0.3).play();
-                    currentAnimation = targetAnimation;
-                }
+            // KayKit character models are static poses, so we'll simulate movement with rotation
+            if (characterModel && state && state.moving) {
+                // Slight bobbing effect when moving
+                const time = Date.now() * 0.01;
+                characterModel.position.y = Math.sin(time) * 0.05;
+            } else if (characterModel) {
+                characterModel.position.y = 0;
             }
         }
         
