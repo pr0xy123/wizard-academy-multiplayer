@@ -808,59 +808,103 @@
 
         // Load animations from the animations folder and apply to character
         function loadAnimationsForCharacter(model) {
-            const animationPath = '/models/animations/Rig_Medium_MovementBasic.glb';
+            // Load multiple animation packs
+            const animationPacks = [
+                { file: 'Rig_Medium_MovementBasic', type: 'movement' },
+                { file: 'Rig_Medium_CombatMelee', type: 'combat' },
+                { file: 'Rig_Medium_General', type: 'general' }
+            ];
             
-            console.log('🎬 Loading animations from:', animationPath);
+            GameState.animationActions = {};
+            let packsLoaded = 0;
             
-            gltfLoader.load(
-                animationPath,
-                (gltf) => {
-                    console.log('🎬 Animations loaded! Available clips:', gltf.animations.length);
-                    
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        // Create animation mixer for the character model
-                        animationMixer = new THREE.AnimationMixer(model);
-                        
-                        // List all available animations with details
-                        gltf.animations.forEach((clip, index) => {
-                            console.log(`   ${index}: "${clip.name}" - ${clip.duration.toFixed(2)}s - ${clip.tracks.length} tracks`);
-                        });
-                        
-                        // Find walking animation by name
-                        let walkIndex = -1;
-                        gltf.animations.forEach((clip, index) => {
-                            const name = clip.name.toLowerCase();
-                            if (name.includes('walk') && !name.includes('backwards')) {
-                                walkIndex = index;
+            animationPacks.forEach(pack => {
+                const path = `/models/animations/${pack.file}.glb`;
+                
+                console.log(`🎬 Loading ${pack.type} animations:`, path);
+                
+                gltfLoader.load(
+                    path,
+                    (gltf) => {
+                        if (gltf.animations && gltf.animations.length > 0) {
+                            // Create animation mixer if not exists
+                            if (!animationMixer) {
+                                animationMixer = new THREE.AnimationMixer(model);
                             }
-                        });
-                        
-                        // Fallback to running if no walking found
-                        if (walkIndex === -1) {
+                            
+                            // Store animations by name
                             gltf.animations.forEach((clip, index) => {
-                                const name = clip.name.toLowerCase();
-                                if (name.includes('run')) {
-                                    walkIndex = index;
-                                }
+                                const action = animationMixer.clipAction(clip);
+                                const animName = `${pack.type}_${clip.name}`;
+                                GameState.animationActions[animName] = action;
+                                GameState.animationActions[clip.name] = action; // Also store by original name
+                                
+                                console.log(`   ${pack.type}: "${clip.name}" (${clip.duration.toFixed(2)}s)`);
                             });
+                            
+                            packsLoaded++;
+                            
+                            // After all packs loaded, set up default animations
+                            if (packsLoaded === animationPacks.length) {
+                                setupAnimations();
+                            }
                         }
-                        
-                        // Use first animation as last resort
-                        if (walkIndex === -1) walkIndex = 0;
-                        
-                        GameState.walkAction = animationMixer.clipAction(gltf.animations[walkIndex]);
-                        GameState.walkAction.timeScale = 1.0;
-                        
-                        console.log(`✓ Using animation ${walkIndex} ("${gltf.animations[walkIndex].name}") for movement`);
-                    } else {
-                        console.warn('⚠️ No animations found in file - character may be static model');
+                    },
+                    undefined,
+                    (error) => {
+                        console.warn(`❌ Failed to load ${pack.type} animations:`, error.message);
+                        packsLoaded++;
+                        if (packsLoaded === animationPacks.length) {
+                            setupAnimations();
+                        }
                     }
-                },
-                undefined,
-                (error) => {
-                    console.error('❌ Animation loading failed:', error);
+                );
+            });
+            
+            function setupAnimations() {
+                // Find best walking animation
+                let walkAction = null;
+                for (let key in GameState.animationActions) {
+                    if (key.toLowerCase().includes('walk')) {
+                        walkAction = GameState.animationActions[key];
+                        console.log(`✓ Using walk animation: ${key}`);
+                        break;
+                    }
                 }
-            );
+                
+                // Fallback to running or first available
+                if (!walkAction) {
+                    for (let key in GameState.animationActions) {
+                        if (key.toLowerCase().includes('run')) {
+                            walkAction = GameState.animationActions[key];
+                            console.log(`✓ Using run animation: ${key}`);
+                            break;
+                        }
+                    }
+                }
+                
+                GameState.walkAction = walkAction;
+                
+                // Find idle animation
+                for (let key in GameState.animationActions) {
+                    if (key.toLowerCase().includes('idle')) {
+                        GameState.idleAction = GameState.animationActions[key];
+                        console.log(`✓ Using idle animation: ${key}`);
+                        break;
+                    }
+                }
+                
+                // Find attack animations
+                for (let key in GameState.animationActions) {
+                    if (key.toLowerCase().includes('attack') || key.toLowerCase().includes('slash')) {
+                        GameState.attackAction = GameState.animationActions[key];
+                        console.log(`✓ Using attack animation: ${key}`);
+                        break;
+                    }
+                }
+                
+                console.log(`✓ Loaded ${Object.keys(GameState.animationActions).length} total animations`);
+            }
         }
         
         // Switch between animations based on movement
@@ -905,12 +949,21 @@
                     });
                     
                     if (rightHand) {
-                        // Attach to actual hand bone!
-                        weapon.scale.set(0.8, 0.8, 0.8);
-                        weapon.position.set(0, 0, 0);
-                        weapon.rotation.set(Math.PI / 2, 0, 0);
+                        // Attach to actual hand bone with class-specific positioning
+                        const weaponAdjustments = {
+                            warrior: { pos: [0, 0.1, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.5 },
+                            mage: { pos: [0, 0.15, 0], rot: [0, 0, 0], scale: 0.7 },
+                            rogue: { pos: [0, 0.05, 0.02], rot: [-Math.PI / 2, 0, Math.PI / 4], scale: 0.5 },
+                            knight: { pos: [0, 0.1, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.5 },
+                            ranger: { pos: [0.05, 0, 0], rot: [0, -Math.PI / 2, 0], scale: 0.6 }
+                        };
+                        
+                        const adj = weaponAdjustments[className] || { pos: [0, 0.05, 0], rot: [-Math.PI / 2, 0, 0], scale: 0.6 };
+                        weapon.position.set(...adj.pos);
+                        weapon.rotation.set(...adj.rot);
+                        weapon.scale.set(adj.scale, adj.scale, adj.scale);
                         rightHand.add(weapon);
-                        console.log('✓ Weapon attached to hand bone:', rightHand.name);
+                        console.log('✓ Weapon attached to hand bone:', rightHand.name, 'for', className);
                     } else {
                         // Fallback: attach weapon in front of character (visible position)
                         // Since character is in T-pose, put weapon in front/center
