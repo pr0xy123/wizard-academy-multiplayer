@@ -759,10 +759,10 @@
                     // Add pivot to player container
                     playerContainer.add(pivot);
                     characterModel = pivot;
+                    GameState.characterModel = model; // Store reference to actual model for animation
                     
-                    // DON'T use skeletal animations - KayKit models are static poses
-                    // They look great as-is! We'll add movement with rotation/bobbing
-                    console.log('✓ Character loaded (static pose - looks great!)');
+                    // Now load animations from the animations folder
+                    loadAnimationsForCharacter(model);
                     
                     console.log('✓ Character attached and positioned');
                 },
@@ -792,6 +792,45 @@
             characterModel = group;
             
             console.log('✓ Fallback character created');
+        }
+
+        // Load animations from the animations folder and apply to character
+        function loadAnimationsForCharacter(model) {
+            const animationPath = '/models/animations/Rig_Medium_MovementBasic.glb';
+            
+            console.log('Loading animations from:', animationPath);
+            
+            gltfLoader.load(
+                animationPath,
+                (gltf) => {
+                    console.log('Animations loaded! Available clips:', gltf.animations.length);
+                    
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        // Create animation mixer for the character model
+                        animationMixer = new THREE.AnimationMixer(model);
+                        
+                        // Store all animation actions
+                        GameState.animations = {};
+                        gltf.animations.forEach((clip) => {
+                            console.log('  - Animation clip:', clip.name);
+                            const action = animationMixer.clipAction(clip);
+                            GameState.animations[clip.name] = action;
+                        });
+                        
+                        // Play idle animation by default (first one)
+                        if (gltf.animations[0]) {
+                            const idleAction = animationMixer.clipAction(gltf.animations[0]);
+                            idleAction.play();
+                            GameState.currentAnimation = idleAction;
+                            console.log('✓ Playing animation:', gltf.animations[0].name);
+                        }
+                    }
+                },
+                undefined,
+                (error) => {
+                    console.warn('Animation loading failed (character will use simple bobbing):', error);
+                }
+            );
         }
 
         function buildWorld() {
@@ -917,8 +956,13 @@
                 }
             });
             
-            // Simple character animation - add bobbing when moving
-            if (GameState.playerMesh && GameState.characterModel) {
+            // Update skeletal animations if available
+            if (animationMixer) {
+                animationMixer.update(delta);
+            }
+            
+            // Fallback: Simple character animation - add bobbing when moving (if no skeletal animations)
+            if (!animationMixer && GameState.playerMesh && GameState.characterModel) {
                 const isMoving = keys['w'] || keys['a'] || keys['s'] || keys['d'] || 
                                keys['arrowup'] || keys['arrowleft'] || keys['arrowdown'] || keys['arrowright'];
                 
