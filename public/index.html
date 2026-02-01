@@ -1280,15 +1280,28 @@
                 // Success! Use the 3D model
                 characterModel = model;
                 
-                // FIX: Proper positioning, rotation, and scale
-                characterModel.position.set(0, 0, 0); // Center on player
-                characterModel.rotation.y = Math.PI; // Face AWAY from camera (important!)
-                characterModel.scale.set(1.5, 1.5, 1.5); // Bigger scale so you can see it
+                // Calculate the bounding box to center the model properly
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                // Center the model at origin
+                model.position.x = -center.x;
+                model.position.y = -box.min.y; // Place feet at ground level
+                model.position.z = -center.z;
+                
+                // Face AWAY from camera (towards +Z direction in world space)
+                model.rotation.y = 0;
+                
+                // Scale to appropriate size (models are about 2 units tall)
+                const targetHeight = 2.0;
+                const scale = targetHeight / size.y;
+                model.scale.set(scale, scale, scale);
                 
                 // IMPORTANT: Add to playerGroup so it moves with player!
                 playerGroup.add(characterModel);
                 setupCharacterAnimations(characterModel, className);
-                console.log(`✓ Using 3D model for ${className}`);
+                console.log(`✓ Using 3D model for ${className} (height: ${size.y.toFixed(2)} -> ${targetHeight})`);
             }, () => {
                 // Fallback to geometric shapes if model fails to load
                 console.log(`✗ Model not found, using geometric character for ${className}`);
@@ -2163,14 +2176,13 @@
             }
             
             // Animate walking
-            if (moved) {
+            if (moved && (dx !== 0 || dz !== 0)) {
                 // Subtle bobbing when walking
                 playerGroup.position.y = Math.sin(Date.now() * 0.01) * 0.05;
                 
-                // Rotate character to face movement direction
-                if (characterModel) {
-                    characterModel.rotation.y = cameraAngle;
-                }
+                // Rotate entire playerGroup to face movement direction
+                const moveAngle = Math.atan2(dx, dz);
+                playerGroup.rotation.y = moveAngle;
                 
                 // Update character animation
                 updateCharacterAnimation({ 
@@ -2178,8 +2190,9 @@
                     running: keys['shift'] || false 
                 });
             } else {
-                // Reset position and idle animation
+                // When idle, face the camera direction
                 playerGroup.position.y = 0;
+                playerGroup.rotation.y = cameraAngle;
                 updateCharacterAnimation({ moving: false });
             }
         }
