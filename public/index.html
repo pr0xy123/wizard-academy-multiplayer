@@ -760,12 +760,9 @@
                     playerContainer.add(pivot);
                     characterModel = pivot;
                     
-                    // Setup animations
-                    if (gltf.animations && gltf.animations.length > 0) {
-                        animationMixer = new THREE.AnimationMixer(model);
-                        const action = animationMixer.clipAction(gltf.animations[0]);
-                        action.play();
-                    }
+                    // DON'T use skeletal animations - KayKit models are static poses
+                    // They look great as-is! We'll add movement with rotation/bobbing
+                    console.log('✓ Character loaded (static pose - looks great!)');
                     
                     console.log('✓ Character attached and positioned');
                 },
@@ -920,9 +917,24 @@
                 }
             });
             
-            // Update animations
-            if (animationMixer) {
-                animationMixer.update(delta);
+            // Simple character animation - add bobbing when moving
+            if (GameState.playerMesh && GameState.characterModel) {
+                const isMoving = keys['w'] || keys['a'] || keys['s'] || keys['d'] || 
+                               keys['arrowup'] || keys['arrowleft'] || keys['arrowdown'] || keys['arrowright'];
+                
+                if (isMoving) {
+                    // Walking bob - slight up/down motion
+                    const bobSpeed = 8.0;
+                    const bobHeight = 0.08;
+                    GameState.characterModel.position.y = Math.abs(Math.sin(clock.elapsedTime * bobSpeed)) * bobHeight;
+                    
+                    // Slight tilt forward when walking
+                    GameState.characterModel.rotation.x = Math.sin(clock.elapsedTime * bobSpeed * 0.5) * 0.05;
+                } else {
+                    // Return to neutral pose when idle
+                    GameState.characterModel.position.y *= 0.9;
+                    GameState.characterModel.rotation.x *= 0.9;
+                }
             }
             
             if (GameState.isPlaying && !GameState.inCombat) {
