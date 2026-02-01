@@ -927,85 +927,144 @@
         }
 
         function buildWorld() {
-            console.log('🏰 Building dungeon...');
+            console.log('🏰 Building dungeon maze...');
             
-            // Load a few key dungeon pieces with caching
-            const floorCache = {};
-            const wallCache = {};
+            // Define room themes with different floor/wall combinations
+            const roomThemes = [
+                { floor: 'floor_tile_large', wall: 'wall', name: 'Stone Chamber' },
+                { floor: 'floor_wood_large', wall: 'wall_broken', name: 'Ancient Hall' },
+                { floor: 'floor_dirt_large', wall: 'wall_cracked', name: 'Abandoned Corridor' },
+                { floor: 'floor_tile_grate', wall: 'wall_pillar', name: 'Prison Block' },
+                { floor: 'floor_tile_small', wall: 'wall_window_open', name: 'Guard Tower' }
+            ];
             
-            // Load main floor tile
-            loadDungeonTile('floor', 'floor_tile_large', (floorModel) => {
-                floorCache['large'] = floorModel;
+            // Define room layout (position and size)
+            const rooms = [
+                { x: 0, z: 0, size: 5, theme: 0 },      // Center room (starting area)
+                { x: 25, z: 0, size: 4, theme: 1 },     // East room
+                { x: -25, z: 0, size: 4, theme: 2 },    // West room
+                { x: 0, z: 25, size: 4, theme: 3 },     // North room
+                { x: 0, z: -25, size: 4, theme: 4 },    // South room
+                { x: 25, z: 25, size: 3, theme: 1 },    // NE corner
+                { x: -25, z: -25, size: 3, theme: 2 }   // SW corner
+            ];
+            
+            // Define corridors connecting rooms
+            const corridors = [
+                { from: 0, to: 1, floor: 'floor_tile_small' },  // Center to East
+                { from: 0, to: 2, floor: 'floor_tile_small' },  // Center to West
+                { from: 0, to: 3, floor: 'floor_tile_small' },  // Center to North
+                { from: 0, to: 4, floor: 'floor_tile_small' },  // Center to South
+                { from: 1, to: 5, floor: 'floor_dirt_small_A' }, // East to NE
+                { from: 2, to: 6, floor: 'floor_dirt_small_A' }  // West to SW
+            ];
+            
+            let loadedRooms = 0;
+            const totalRooms = rooms.length;
+            
+            // Build each room
+            rooms.forEach((room, roomIndex) => {
+                const theme = roomThemes[room.theme];
+                console.log(`🚪 Room ${roomIndex}: ${theme.name}`);
                 
-                // Create a 10x10 grid of floors
-                for (let x = -5; x <= 5; x++) {
-                    for (let z = -5; z <= 5; z++) {
-                        const floor = floorModel.clone();
-                        floor.position.set(x * 4, 0, z * 4);
-                        scene.add(floor);
-                    }
-                }
-                console.log('✓ Floors loaded');
-            });
-            
-            // Load main wall piece
-            loadDungeonTile('wall', 'wall', (wallModel) => {
-                wallCache['normal'] = wallModel;
-                
-                // Create perimeter walls
-                for (let i = -5; i <= 5; i++) {
-                    // North/South walls
-                    if (i !== 0) { // Leave gaps for doorways
-                        const wallN = wallModel.clone();
-                        wallN.position.set(i * 4, 0, -20);
-                        scene.add(wallN);
-                        walls.push({ mesh: wallN, x: i * 4, z: -20, size: 2 });
-                        
-                        const wallS = wallModel.clone();
-                        wallS.position.set(i * 4, 0, 20);
-                        wallS.rotation.y = Math.PI;
-                        scene.add(wallS);
-                        walls.push({ mesh: wallS, x: i * 4, z: 20, size: 2 });
+                // Load floor for this room
+                loadDungeonTile('floor', theme.floor, (floorModel) => {
+                    // Create floor grid for this room
+                    for (let x = -room.size; x <= room.size; x++) {
+                        for (let z = -room.size; z <= room.size; z++) {
+                            const floor = floorModel.clone();
+                            floor.position.set(room.x + x * 4, 0, room.z + z * 4);
+                            scene.add(floor);
+                        }
                     }
                     
-                    // East/West walls
-                    if (i !== 0) {
-                        const wallE = wallModel.clone();
-                        wallE.position.set(20, 0, i * 4);
-                        wallE.rotation.y = Math.PI / 2;
-                        scene.add(wallE);
-                        walls.push({ mesh: wallE, x: 20, z: i * 4, size: 2 });
+                    // Load walls for this room
+                    loadDungeonTile('wall', theme.wall, (wallModel) => {
+                        // Create perimeter walls for this room
+                        for (let i = -room.size; i <= room.size; i++) {
+                            // Skip center positions for doorways
+                            const isDoorway = (i === 0 || i === 1 || i === -1);
+                            
+                            if (!isDoorway || Math.random() > 0.3) {
+                                // North wall
+                                const wallN = wallModel.clone();
+                                wallN.position.set(room.x + i * 4, 0, room.z + room.size * 4);
+                                scene.add(wallN);
+                                walls.push({ mesh: wallN, x: room.x + i * 4, z: room.z + room.size * 4, size: 2 });
+                                
+                                // South wall
+                                const wallS = wallModel.clone();
+                                wallS.position.set(room.x + i * 4, 0, room.z - room.size * 4);
+                                wallS.rotation.y = Math.PI;
+                                scene.add(wallS);
+                                walls.push({ mesh: wallS, x: room.x + i * 4, z: room.z - room.size * 4, size: 2 });
+                            }
+                            
+                            if (!isDoorway || Math.random() > 0.3) {
+                                // East wall
+                                const wallE = wallModel.clone();
+                                wallE.position.set(room.x + room.size * 4, 0, room.z + i * 4);
+                                wallE.rotation.y = Math.PI / 2;
+                                scene.add(wallE);
+                                walls.push({ mesh: wallE, x: room.x + room.size * 4, z: room.z + i * 4, size: 2 });
+                                
+                                // West wall
+                                const wallW = wallModel.clone();
+                                wallW.position.set(room.x - room.size * 4, 0, room.z + i * 4);
+                                wallW.rotation.y = -Math.PI / 2;
+                                scene.add(wallW);
+                                walls.push({ mesh: wallW, x: room.x - room.size * 4, z: room.z + i * 4, size: 2 });
+                            }
+                        }
                         
-                        const wallW = wallModel.clone();
-                        wallW.position.set(-20, 0, i * 4);
-                        wallW.rotation.y = -Math.PI / 2;
-                        scene.add(wallW);
-                        walls.push({ mesh: wallW, x: -20, z: i * 4, size: 2 });
-                    }
-                }
-                
-                // Add some interior walls for maze-like structure
-                const interiorPositions = [
-                    { x: -8, z: 0 }, { x: 8, z: 0 },
-                    { x: 0, z: -8 }, { x: 0, z: 8 }
-                ];
-                interiorPositions.forEach(pos => {
-                    const wall = wallModel.clone();
-                    wall.position.set(pos.x, 0, pos.z);
-                    if (pos.z === 0) wall.rotation.y = Math.PI / 2;
-                    scene.add(wall);
-                    walls.push({ mesh: wall, x: pos.x, z: pos.z, size: 2 });
+                        loadedRooms++;
+                        if (loadedRooms === totalRooms) {
+                            buildCorridors();
+                        }
+                    });
                 });
-                
-                console.log('✓ Walls loaded');
             });
             
-            // Place items after a delay to ensure geometry is loaded
+            // Build corridors between rooms
+            function buildCorridors() {
+                corridors.forEach(corridor => {
+                    const roomA = rooms[corridor.from];
+                    const roomB = rooms[corridor.to];
+                    
+                    loadDungeonTile('floor', corridor.floor, (floorModel) => {
+                        // Simple corridor - straight line between room centers
+                        const dx = roomB.x - roomA.x;
+                        const dz = roomB.z - roomA.z;
+                        const steps = Math.max(Math.abs(dx), Math.abs(dz)) / 4;
+                        
+                        for (let i = 0; i <= steps; i++) {
+                            const t = i / steps;
+                            const x = roomA.x + dx * t;
+                            const z = roomA.z + dz * t;
+                            
+                            // Place corridor floor (2-wide)
+                            for (let offset = -1; offset <= 1; offset++) {
+                                const floor = floorModel.clone();
+                                if (Math.abs(dx) > Math.abs(dz)) {
+                                    floor.position.set(x, 0, z + offset * 4);
+                                } else {
+                                    floor.position.set(x + offset * 4, 0, z);
+                                }
+                                scene.add(floor);
+                            }
+                        }
+                    });
+                });
+                
+                console.log('✓ Dungeon maze complete!');
+            }
+            
+            // Place items after rooms are built
             setTimeout(() => {
                 placeCrystals();
                 placeEnemies();
                 placeChests();
-            }, 500);
+            }, 1000);
         }
         
         // Helper to load dungeon tiles with caching
