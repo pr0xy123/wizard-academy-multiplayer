@@ -1,27 +1,41 @@
 # Wizard Academy Multiplayer 🧙‍♂️⚔️
 
-An educational multiplayer dungeon crawler game where players solve math problems to defeat enemies and progress through magical dungeons!
+An educational multiplayer dungeon crawler game where players solve questions to defeat enemies and progress through magical dungeons!
 
-## ✨ New: Professional 3D Character Models & Animations!
+## ✨ What's New: Professional Code Architecture!
 
-The game now supports beautiful animated character models from the KayKit asset packs:
-- **Animated Characters**: Warrior, Mage, Rogue, and Ranger
-- **Smooth Animations**: Idle, walking, running, and combat animations
-- **Dungeon Environment**: 200+ props and environment pieces
-- **Easy Integration**: Just download and drop the files in!
+The game has been completely refactored with production-ready architecture:
+- **Modular Structure**: Clean separation of concerns (8 JavaScript modules)
+- **Enhanced Security**: No inline scripts, CSP-ready
+- **Better Maintainability**: Small, focused files (50-350 lines each)
+- **Production Ready**: Optimized for deployment and collaboration
 
-### 🎯 Quick Setup (5 minutes)
-See [QUICK_START.md](QUICK_START.md) for easy instructions to add 3D models to your game!
+See [REFACTORING_COMPLETE.md](REFACTORING_COMPLETE.md) for full details!
 
-## Features
+## 🎮 Features
 
-- **Three.js 3D Graphics**: Immersive dungeon exploration with dynamic lighting
-- **Character Classes**: Choose between Warrior, Mage, or Rogue
-- **Educational Combat**: Solve math problems to defeat enemies
-- **Multiplayer Support**: Play with friends via Socket.io
-- **Spell System**: Cast different spells to aid in combat
-- **Progressive Difficulty**: Dungeon challenges scale with your level
-- **XP & Leveling**: Gain experience and level up your character
+### 3D Graphics & Models
+- **Three.js Rendering**: Immersive 3D dungeon exploration
+- **KayKit Character Models**: 5 playable classes with full animations
+  - Warrior (2H Melee), Mage (Staff), Rogue (Daggers), Knight (Sword & Shield), Ranger (Bow)
+- **94 Animations**: Smooth idle, walk, attack, and combat animations
+- **Dungeon Environment**: 200+ tiles, walls, props from KayKit Dungeon Remastered
+- **Dynamic Lighting**: Ambient, directional, and atmospheric torch lighting
+
+### Educational Content
+- **Multiple Subjects**: Math, Science, History, Literature, Geography, Art, Music
+- **Grade-Based Questions**: Adaptive difficulty for grades 3-12
+- **Hint System**: Educational hints when students struggle
+- **Multiple Answer Formats**: Accepts various correct answer formats
+
+### Gameplay
+- **Character Classes**: Choose from 5 unique classes with different abilities
+- **Question-Based Combat**: Answer questions correctly to attack enemies
+- **Spell System**: Cast elemental spells (Fire, Ice, Lightning)
+- **Progressive Difficulty**: Enemies scale with player level
+- **XP & Leveling**: Gain experience and level up (health restoration on level-up)
+- **Treasure & Gold**: Find chests and knowledge crystals for rewards
+- **Multiplayer Support**: Play with friends via Socket.io (ready for expansion)
 
 ## Getting Started
 
@@ -80,18 +94,63 @@ Follow the [QUICK_START.md](QUICK_START.md) guide for easy setup!
 
 ```
 wizard-academy-multiplayer/
-├── server.js              # Express & Socket.io server
+├── server.js                    # Express & Socket.io server
 ├── public/
-│   ├── index.html        # Main game file with Three.js
-│   ├── models/           # 3D character and environment models
-│   │   ├── characters/   # Character models (warrior, mage, rogue)
-│   │   ├── animations/   # Character animations
-│   │   └── environment/  # Dungeon props and pieces
-│   └── js/
-│       └── GLTFLoader.js # Model loader
-├── QUICK_START.md        # Quick guide to add 3D models
-└── ASSET_INTEGRATION_GUIDE.md  # Detailed integration guide
+│   ├── index.html              # Main HTML structure (215 lines)
+│   ├── css/
+│   │   └── style.css           # All styling (350 lines)
+│   ├── js/                     # Modular JavaScript
+│   │   ├── gameState.js        # Player data & save/load
+│   │   ├── threeSetup.js       # Scene, camera, lighting
+│   │   ├── characters.js       # Character models & animations
+│   │   ├── curriculum.js       # Educational questions
+│   │   ├── dungeon.js          # World generation
+│   │   ├── combat.js           # Combat system
+│   │   ├── ui.js               # HUD & input handling
+│   │   └── main.js             # Game loop & initialization
+│   └── models/                 # 3D Assets (KayKit)
+│       ├── characters/         # 5 playable classes
+│       │   ├── warrior/       # Barbarian + weapons
+│       │   ├── mage/          # Mage + staffs
+│       │   ├── rogue/         # Rogue + daggers
+│       │   ├── knight/        # Knight + sword/shield
+│       │   └── ranger/        # Ranger + bow
+│       ├── animations/        # 94 animations (3 packs)
+│       │   ├── KayKit_AnimationPack_MovementBasic.glb
+│       │   ├── KayKit_AnimationPack_CombatMelee.glb
+│       │   └── KayKit_AnimationPack_General.glb
+│       └── environment/       # Dungeon Remastered
+│           └── dungeon/
+│               ├── floors/    # 30+ floor variants
+│               ├── walls/     # 40+ wall variants
+│               └── props/     # 100+ decorations
+├── QUICK_START.md             # Asset download guide
+├── REFACTORING_COMPLETE.md    # Architecture documentation
+└── ASSET_INTEGRATION_GUIDE.md # Detailed integration guide
 ```
+
+## Code Architecture
+
+The game uses a **modular architecture** for better maintainability and security:
+
+### Module Overview
+- **gameState.js**: Centralized game state management, save/load system
+- **threeSetup.js**: Three.js initialization, lighting, camera controls
+- **characters.js**: Character loading, animation system, weapon attachment
+- **curriculum.js**: Educational content (6 subjects, 3 difficulty levels)
+- **dungeon.js**: Procedural world generation, room themes
+- **combat.js**: Question-based combat, enemy AI, rewards
+- **ui.js**: HUD updates, input handling, modals
+- **main.js**: Game loop orchestration, initialization sequence
+
+### Benefits
+- ✅ **Security**: No inline scripts, CSP-ready
+- ✅ **Maintainability**: Small, focused files (50-350 lines)
+- ✅ **Performance**: Browser can cache modules
+- ✅ **Scalability**: Easy to add new features
+- ✅ **Collaboration**: Multiple developers can work simultaneously
+
+See [REFACTORING_COMPLETE.md](REFACTORING_COMPLETE.md) for full architecture details.
 
 ## Asset Credits
 
