@@ -2,7 +2,7 @@
 
 // Track placed floors to prevent Z-fighting
 const placedFloors = new Set();
-const tileSpacing = 4.02; // Slight spacing to prevent overlap
+const tileSpacing = 4.1; // Increased spacing to prevent overlap
 
 // Room themes with educational content
 const roomThemes = [
@@ -40,8 +40,8 @@ function buildWorld() {
                 const posX = room.x + (x - room.width / 2) * tileSpacing;
                 const posZ = room.z + (z - room.depth / 2) * tileSpacing;
                 
-                // Check if this position already has a tile
-                const key = `${Math.round(posX)},${Math.round(posZ)}`;
+                // Check if this position already has a tile (use precise key)
+                const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
                 if (placedFloors.has(key)) continue;
                 
                 placedFloors.add(key);
@@ -119,7 +119,7 @@ function buildCorridors(rooms) {
             const minX = Math.min(startX, endX);
             const maxX = Math.max(startX, endX);
             for (let x = minX; x <= maxX; x += tileSpacing) {
-                const key = `${Math.round(x)},${Math.round(startZ)}`;
+                const key = `${x.toFixed(2)},${startZ.toFixed(2)}`;
                 if (!placedFloors.has(key)) {
                     placedFloors.add(key);
                     loadDungeonTile('floor', x, startZ, 0x666666);
@@ -132,7 +132,7 @@ function buildCorridors(rooms) {
             const minZ = Math.min(startZ, endZ);
             const maxZ = Math.max(startZ, endZ);
             for (let z = minZ; z <= maxZ; z += tileSpacing) {
-                const key = `${Math.round(endX)},${Math.round(z)}`;
+                const key = `${endX.toFixed(2)},${z.toFixed(2)}`;
                 if (!placedFloors.has(key)) {
                     placedFloors.add(key);
                     loadDungeonTile('floor', endX, z, 0x666666);
@@ -167,7 +167,7 @@ function loadDungeonTile(type, x, z, color, rotation = 0) {
             
             // Position tile (raised Y to prevent Z-fighting)
             if (type === 'floor') {
-                tile.position.set(x, 0.02, z); // Raised from 0.01 to 0.02
+                tile.position.set(x, 0.05, z); // Raised higher to prevent overlap
             } else {
                 tile.position.set(x, 0, z);
             }
@@ -211,7 +211,7 @@ function loadDungeonTile(type, x, z, color, rotation = 0) {
                 });
                 mesh = new THREE.Mesh(geometry, material);
                 mesh.rotation.x = -Math.PI / 2;
-                mesh.position.set(x, 0.02, z);
+                mesh.position.set(x, 0.05, z);
             } else {
                 geometry = new THREE.BoxGeometry(4, 3, 0.5);
                 material = new THREE.MeshStandardMaterial({ 
