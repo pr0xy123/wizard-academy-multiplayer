@@ -785,6 +785,7 @@
             createCharacter();
             buildWorld();
             initParticles();
+            initEditor(); // Initialize dungeon editor
             
             animate();
         }
@@ -1200,9 +1201,505 @@
             );
         }
 
-        // Room designer state - removed, will be reimplemented
+        // ==========================================
+        // VISUAL DUNGEON EDITOR
+        // ==========================================
         
-        // Room designer functions - removed, will be reimplemented
+        let isEditorMode = false;
+        let editorGrid = [];
+        let selectedTileType = 'floor';
+        const gridSize = 20; // 20x20 grid
+        const tileTypes = {
+            floor: { color: 0x444444, name: 'Floor' },
+            wall: { color: 0x666666, name: 'Wall' },
+            room_floor: { color: 0x3366ff, name: 'Math Room' },
+            room_floor2: { color: 0x00ff66, name: 'Science Room' },
+            room_floor3: { color: 0xff9933, name: 'History Room' },
+            room_floor4: { color: 0xff3366, name: 'Library' },
+            chest: { color: 0xffd700, name: 'Treasure' },
+            crystal: { color: 0x00ffff, name: 'Crystal' },
+            spawn: { color: 0xff00ff, name: 'Player Spawn' },
+            delete: { color: 0xff0000, name: 'Delete' }
+        };
+        
+        function initEditor() {
+            createEditorUI();
+            createEditorGrid();
+            console.log('🛠️ Editor initialized! Press E to toggle');
+        }
+        
+        function createEditorUI() {
+            const editorPanel = document.createElement('div');
+            editorPanel.id = 'dungeon-editor';
+            editorPanel.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                width: 300px;
+                background: rgba(20, 25, 40, 0.95);
+                border: 2px solid #4a5568;
+                border-radius: 12px;
+                padding: 20px;
+                z-index: 1000;
+                display: none;
+                color: white;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+                max-height: 90vh;
+                overflow-y: auto;
+            `;
+            
+            editorPanel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #f39c12; font-size: 18px;">🏗️ Dungeon Editor</h3>
+                    <button onclick="toggleEditor()" style="background: #e74c3c; border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer;">✕</button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #a0aec0; font-size: 12px;">Dungeon Name:</label>
+                    <input type="text" id="dungeon-name" placeholder="My Awesome Dungeon" 
+                           style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid #4a5568; background: rgba(0,0,0,0.5); color: white; box-sizing: border-box;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; color: #a0aec0; font-size: 12px;">Selected Tool:</label>
+                    <div id="tile-palette" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        ${Object.entries(tileTypes).map(([key, type]) => `
+                            <div class="editor-tile-btn" data-type="${key}" 
+                                style="background: #${type.color.toString(16).padStart(6, '0')}; 
+                                       border: 2px solid ${key === selectedTileType ? '#f39c12' : 'transparent'}; 
+                                       border-radius: 6px; padding: 10px; text-align: center; 
+                                       cursor: pointer; font-size: 11px; color: ${key.includes('floor') || key === 'delete' ? 'white' : 'black'};">
+                                ${type.name}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; color: #a0aec0;">
+                    <div>🖱️ <b>Left Click</b> - Place tile</div>
+                    <div>🖱️ <b>Right Click</b> - Remove tile</div>
+                    <div>🖱️ <b>Drag</b> - Paint multiple tiles</div>
+                    <div>⌨️ <b>E</b> - Toggle editor</div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button onclick="clearEditor()" style="flex: 1; background: #e74c3c; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        🗑️ Clear
+                    </button>
+                    <button onclick="saveDungeon()" style="flex: 1; background: #27ae60; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        💾 Save
+                    </button>
+                </div>
+                
+                <button onclick="loadDungeonList()" style="width: 100%; background: #3498db; border: none; color: white; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">
+                    📂 Load Saved
+                </button>
+                
+                <button onclick="applyToGame()" style="width: 100%; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                    ▶️ Apply & Play
+                </button>
+            `;
+            
+            document.body.appendChild(editorPanel);
+            
+            // Add event listeners to palette buttons
+            document.querySelectorAll('.editor-tile-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedTileType = btn.dataset.type;
+                    document.querySelectorAll('.editor-tile-btn').forEach(b => 
+                        b.style.borderColor = 'transparent'
+                    );
+                    btn.style.borderColor = '#f39c12';
+                });
+            });
+        }
+        
+        function createEditorGrid() {
+            // Remove old grid if exists
+            if (window.editorGridGroup) {
+                scene.remove(window.editorGridGroup);
+            }
+            
+            window.editorGridGroup = new THREE.Group();
+            editorGrid = [];
+            
+            const geometry = new THREE.PlaneGeometry(3.8, 3.8);
+            
+            for (let x = -gridSize/2; x < gridSize/2; x++) {
+                editorGrid[x + gridSize/2] = [];
+                for (let z = -gridSize/2; z < gridSize/2; z++) {
+                    const material = new THREE.MeshBasicMaterial({ 
+                        color: 0x222222,
+                        transparent: true,
+                        opacity: 0.3,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const tile = new THREE.Mesh(geometry, material);
+                    tile.position.set(x * 4, 0.1, z * 4);
+                    tile.rotation.x = -Math.PI / 2;
+                    tile.userData = { 
+                        gridX: x + gridSize/2, 
+                        gridZ: z + gridSize/2,
+                        isEditorTile: true
+                    };
+                    
+                    // Grid border
+                    const borderGeo = new THREE.EdgesGeometry(geometry);
+                    const borderMat = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.5 });
+                    const border = new THREE.LineSegments(borderGeo, borderMat);
+                    border.position.copy(tile.position);
+                    border.rotation.copy(tile.rotation);
+                    window.editorGridGroup.add(border);
+                    
+                    window.editorGridGroup.add(tile);
+                    editorGrid[x + gridSize/2][z + gridSize/2] = { 
+                        mesh: tile, 
+                        type: null,
+                        object: null 
+                    };
+                }
+            }
+            
+            window.editorGridGroup.visible = false;
+            scene.add(window.editorGridGroup);
+        }
+        
+        function toggleEditor() {
+            // Check teacher PIN first
+            const savedPIN = localStorage.getItem('teacherPIN');
+            if (!savedPIN || savedPIN !== TEACHER_PIN) {
+                const input = prompt('🔒 Enter Teacher PIN to access editor:');
+                if (input !== TEACHER_PIN) {
+                    alert('❌ Incorrect PIN. Editor access denied.');
+                    return;
+                }
+                localStorage.setItem('teacherPIN', TEACHER_PIN);
+            }
+            
+            isEditorMode = !isEditorMode;
+            const editorPanel = document.getElementById('dungeon-editor');
+            const uiLayer = document.getElementById('ui-layer');
+            
+            if (editorPanel) {
+                editorPanel.style.display = isEditorMode ? 'block' : 'none';
+            }
+            
+            if (window.editorGridGroup) {
+                window.editorGridGroup.visible = isEditorMode;
+            }
+            
+            // Hide game UI in editor mode
+            if (uiLayer) {
+                uiLayer.style.opacity = isEditorMode ? '0.2' : '1';
+            }
+            
+            // Pause game logic
+            GameState.inCombat = isEditorMode;
+            
+            console.log(isEditorMode ? '🛠️ Editor mode ON' : '▶️ Game mode ON');
+        }
+        
+        function handleEditorClick(event) {
+            if (!isEditorMode) return;
+            
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Find clicked grid tile
+            const intersects = raycaster.intersectObjects(window.editorGridGroup.children);
+            
+            for (let intersect of intersects) {
+                if (intersect.object.userData.isEditorTile) {
+                    const gx = intersect.object.userData.gridX;
+                    const gz = intersect.object.userData.gridZ;
+                    
+                    if (event.button === 2) { // Right click = delete
+                        clearTile(gx, gz);
+                    } else { // Left click = place
+                        placeTile(gx, gz, selectedTileType);
+                    }
+                    break;
+                }
+            }
+        }
+        
+        function placeTile(gx, gz, type) {
+            const cell = editorGrid[gx][gz];
+            if (!cell) return;
+            
+            // Clear existing
+            clearTile(gx, gz);
+            
+            const worldX = (gx - gridSize/2) * 4;
+            const worldZ = (gz - gridSize/2) * 4;
+            
+            // Update visual
+            if (type === 'delete') {
+                cell.mesh.material.color.setHex(0x222222);
+                cell.mesh.material.opacity = 0.3;
+                return;
+            }
+            
+            const typeInfo = tileTypes[type];
+            cell.mesh.material.color.setHex(typeInfo.color);
+            cell.mesh.material.opacity = 0.8;
+            cell.type = type;
+            
+            // Create 3D object preview
+            let object;
+            if (type === 'wall') {
+                const geo = new THREE.BoxGeometry(3, 4, 3);
+                const mat = new THREE.MeshStandardMaterial({ color: typeInfo.color });
+                object = new THREE.Mesh(geo, mat);
+                object.position.set(worldX, 2, worldZ);
+                object.castShadow = true;
+            } else if (type === 'chest') {
+                const geo = new THREE.BoxGeometry(1, 0.8, 0.6);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                object = new THREE.Mesh(geo, mat);
+                object.position.set(worldX, 0.4, worldZ);
+            } else if (type === 'crystal') {
+                const geo = new THREE.OctahedronGeometry(0.5);
+                const mat = new THREE.MeshStandardMaterial({ 
+                    color: 0x00ffff, 
+                    emissive: 0x0088ff,
+                    emissiveIntensity: 0.5 
+                });
+                object = new THREE.Mesh(geo, mat);
+                object.position.set(worldX, 1, worldZ);
+            } else if (type === 'spawn') {
+                const geo = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
+                object = new THREE.Mesh(geo, mat);
+                object.position.set(worldX, 1, worldZ);
+            }
+            
+            if (object) {
+                window.editorGridGroup.add(object);
+                cell.object = object;
+            }
+        }
+        
+        function clearTile(gx, gz) {
+            const cell = editorGrid[gx][gz];
+            if (!cell) return;
+            
+            cell.mesh.material.color.setHex(0x222222);
+            cell.mesh.material.opacity = 0.3;
+            cell.type = null;
+            
+            if (cell.object) {
+                window.editorGridGroup.remove(cell.object);
+                cell.object = null;
+            }
+        }
+        
+        function clearEditor() {
+            if (!confirm('Clear entire dungeon?')) return;
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    clearTile(x, z);
+                }
+            }
+            console.log('🗑️ Editor cleared');
+        }
+        
+        function saveDungeon() {
+            const nameInput = document.getElementById('dungeon-name');
+            const dungeonName = nameInput.value.trim() || 'Untitled Dungeon';
+            
+            const layout = [];
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    if (editorGrid[x][z].type) {
+                        layout.push({
+                            x: (x - gridSize/2) * 4,
+                            z: (z - gridSize/2) * 4,
+                            type: editorGrid[x][z].type
+                        });
+                    }
+                }
+            }
+            
+            const dungeonData = {
+                name: dungeonName,
+                tiles: layout,
+                createdAt: new Date().toISOString(),
+                author: GameState.player.name || 'Anonymous'
+            };
+            
+            // Get existing dungeons
+            const saved = JSON.parse(localStorage.getItem('savedDungeons') || '[]');
+            
+            // Check for duplicate name
+            const existingIndex = saved.findIndex(d => d.name === dungeonName);
+            if (existingIndex >= 0) {
+                if (!confirm(`Dungeon "${dungeonName}" already exists. Overwrite?`)) return;
+                saved[existingIndex] = dungeonData;
+            } else {
+                saved.push(dungeonData);
+            }
+            
+            localStorage.setItem('savedDungeons', JSON.stringify(saved));
+            showFloatingText(`💾 Saved: ${dungeonName}`, '#27ae60');
+            console.log('💾 Dungeon saved:', dungeonName);
+        }
+        
+        function loadDungeonList() {
+            const saved = JSON.parse(localStorage.getItem('savedDungeons') || '[]');
+            
+            if (saved.length === 0) {
+                alert('No saved dungeons found. Create one first!');
+                return;
+            }
+            
+            let list = 'Select a dungeon to load:\n\n';
+            saved.forEach((d, i) => {
+                list += `${i + 1}. ${d.name} (by ${d.author})\n`;
+            });
+            list += '\nEnter number to load, or 0 to cancel:';
+            
+            const choice = prompt(list);
+            const index = parseInt(choice) - 1;
+            
+            if (index >= 0 && index < saved.length) {
+                loadDungeon(saved[index]);
+            }
+        }
+        
+        function loadDungeon(dungeonData) {
+            // Clear current editor
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    clearTile(x, z);
+                }
+            }
+            
+            // Load tiles
+            dungeonData.tiles.forEach(tile => {
+                const gx = Math.floor((tile.x / 4) + gridSize/2);
+                const gz = Math.floor((tile.z / 4) + gridSize/2);
+                if (gx >= 0 && gx < gridSize && gz >= 0 && gz < gridSize) {
+                    placeTile(gx, gz, tile.type);
+                }
+            });
+            
+            // Set name
+            document.getElementById('dungeon-name').value = dungeonData.name;
+            showFloatingText(`📂 Loaded: ${dungeonData.name}`, '#3498db');
+            console.log('📂 Dungeon loaded:', dungeonData.name);
+        }
+        
+        function exportDungeon() {
+            const nameInput = document.getElementById('dungeon-name');
+            const dungeonName = nameInput.value.trim() || 'Untitled Dungeon';
+            
+            const layout = [];
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    if (editorGrid[x][z].type) {
+                        layout.push({
+                            x: (x - gridSize/2) * 4,
+                            z: (z - gridSize/2) * 4,
+                            type: editorGrid[x][z].type
+                        });
+                    }
+                }
+            }
+            
+            const dungeonData = {
+                name: dungeonName,
+                tiles: layout,
+                exportedAt: new Date().toISOString()
+            };
+            
+            console.log('💾 Dungeon Export:', JSON.stringify(dungeonData, null, 2));
+            return dungeonData;
+        }
+        
+        function applyToGame() {
+            const data = exportDungeon();
+            
+            if (data.tiles.length === 0) {
+                alert('❌ Cannot apply empty dungeon! Add some tiles first.');
+                return;
+            }
+            
+            // Clear existing world objects
+            walls = [];
+            enemies = [];
+            chests = [];
+            crystals = [];
+            
+            // Remove old dungeon objects from scene
+            const toRemove = [];
+            scene.children.forEach(child => {
+                if (child.userData.isDungeonTile || child.userData.type) {
+                    toRemove.push(child);
+                }
+            });
+            toRemove.forEach(obj => scene.remove(obj));
+            
+            // Build from editor
+            data.tiles.forEach(tile => {
+                if (tile.type === 'floor' || tile.type.startsWith('room')) {
+                    const color = tileTypes[tile.type].color;
+                    const geo = new THREE.BoxGeometry(4, 0.2, 4);
+                    const mat = new THREE.MeshStandardMaterial({ color });
+                    const floor = new THREE.Mesh(geo, mat);
+                    floor.position.set(tile.x, 0, tile.z);
+                    floor.receiveShadow = true;
+                    floor.userData.isDungeonTile = true;
+                    scene.add(floor);
+                } else if (tile.type === 'wall') {
+                    const geo = new THREE.BoxGeometry(4, 6, 4);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                    const wall = new THREE.Mesh(geo, mat);
+                    wall.position.set(tile.x, 3, tile.z);
+                    wall.castShadow = true;
+                    wall.userData.isDungeonTile = true;
+                    scene.add(wall);
+                    walls.push({ mesh: wall, x: tile.x, z: tile.z, size: 4 });
+                } else if (tile.type === 'chest') {
+                    const geo = new THREE.BoxGeometry(1.5, 1, 1);
+                    const mat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+                    const chest = new THREE.Mesh(geo, mat);
+                    chest.position.set(tile.x, 0.5, tile.z);
+                    chest.userData = { type: 'chest', opened: false };
+                    scene.add(chest);
+                    chests.push(chest);
+                } else if (tile.type === 'crystal') {
+                    const geo = new THREE.OctahedronGeometry(0.6);
+                    const mat = new THREE.MeshStandardMaterial({ 
+                        color: 0x00ffff, 
+                        emissive: 0x00ffff,
+                        emissiveIntensity: 0.5 
+                    });
+                    const crystal = new THREE.Mesh(geo, mat);
+                    crystal.position.set(tile.x, 1.5, tile.z);
+                    crystal.userData = { type: 'crystal', id: crystals.length, collected: false };
+                    scene.add(crystal);
+                    crystals.push(crystal);
+                } else if (tile.type === 'spawn') {
+                    if (playerContainer) {
+                        playerContainer.position.set(tile.x, 0, tile.z);
+                        GameState.player.x = tile.x;
+                        GameState.player.z = tile.z;
+                    }
+                }
+            });
+            
+            toggleEditor();
+            showFloatingText('✅ Custom dungeon applied!', '#27ae60');
+            console.log('✅ Custom dungeon applied!');
+        }
         
         function applyRoomDesign() {
             closeModal('room-designer-modal');
@@ -1733,6 +2230,12 @@
             keys[e.key.toLowerCase()] = true;
             if (!GameState.isPlaying) return;
             
+            // Editor toggle (E key)
+            if (e.key.toLowerCase() === 'e' && !GameState.inCombat) {
+                toggleEditor();
+                return;
+            }
+            
             if (e.code === 'Space' && nearestInteractable) {
                 handleInteraction();
             }
@@ -1745,6 +2248,15 @@
         document.addEventListener('keyup', (e) => {
             if (!e.key) return; // Safety check
             keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Editor mouse events
+        document.addEventListener('mousedown', (e) => {
+            if (isEditorMode) handleEditorClick(e);
+        });
+        
+        document.addEventListener('contextmenu', (e) => {
+            if (isEditorMode) e.preventDefault();
         });
 
         function handleInteraction() {
