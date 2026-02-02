@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Academy - Mystic Dungeons</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    
+    <!-- CSS Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Game Container -->
+    <div id="game-container">
+        <div class="vignette"></div>
+        <div id="ui-layer">
+            <!-- HUD Top Left -->
+            <div style="flex: 1;">
+                <div class="hud-panel">
+                    <div id="player-name" style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Player</div>
+                    
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>❤️ Health</span>
+                            <span id="health-text" style="font-size: 12px;">100/100</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="health-bar" class="stat-fill health-fill" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>✨ Mana</span>
+                            <span id="mana-text" style="font-size: 12px;">100/100</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="mana-bar" class="stat-fill mana-fill" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span id="level-text">Level 1</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div id="xp-bar" class="stat-fill xp-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <span>💰 <span id="gold-text">0 Gold</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Center - Spell Bar -->
+            <div class="spell-book">
+                <div class="spell-slot" onclick="castSpell('fireball')">
+                    🔥
+                    <span class="spell-key">1</span>
+                </div>
+                <div class="spell-slot" onclick="castSpell('icebolt')">
+                    ❄️
+                    <span class="spell-key">2</span>
+                </div>
+                <div class="spell-slot" onclick="castSpell('lightning')">
+                    ⚡
+                    <span class="spell-key">3</span>
+                </div>
+                <div class="spell-slot locked">
+                    🔒
+                    <span class="spell-key">4</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Floating Text Container -->
+        <div id="floating-text-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
+    </div>
+
+    <!-- Start Screen Modal -->
+    <div id="start-screen" class="modal" style="display: flex;">
+        <div class="modal-content" style="max-width: 700px; width: 90%; background: linear-gradient(135deg, rgba(26, 32, 44, 0.98), rgba(45, 55, 72, 0.98)); border: 3px solid #4a5568; border-radius: 20px; padding: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.9);">
+            <h1 class="fantasy-font" style="font-size: 36px; margin-bottom: 30px; text-align: center; color: #ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+                ⚔️ Wizard Academy ⚔️
+            </h1>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #a0aec0;">Your Name:</label>
+                <input id="player-name-input" type="text" class="fantasy-input" placeholder="Enter your hero name" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 2px solid #4a5568; border-radius: 8px; color: white; font-size: 16px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #a0aec0;">Grade Level:</label>
+                <select id="grade-select" class="fantasy-input" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 2px solid #4a5568; border-radius: 8px; color: white; font-size: 16px;">
+                    <option value="3">3rd Grade (Elementary)</option>
+                    <option value="4">4th Grade</option>
+                    <option value="5">5th Grade</option>
+                    <option value="6" selected>6th Grade (Middle)</option>
+                    <option value="7">7th Grade</option>
+                    <option value="8">8th Grade</option>
+                    <option value="9">9th Grade (High)</option>
+                    <option value="10">10th Grade</option>
+                    <option value="11">11th Grade</option>
+                    <option value="12">12th Grade</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px; text-align: center; color: #ffd700;">Choose Your Class:</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                    <div class="class-card" data-class="warrior" style="background: rgba(255,255,255,0.05); border: 2px solid #4a5568; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">⚔️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Warrior</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Strong melee fighter</div>
+                    </div>
+                    <div class="class-card" data-class="mage" style="background: rgba(255,255,255,0.05); border: 2px solid #4a5568; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🔮</div>
+                        <div style="font-weight: bold; font-size: 16px;">Mage</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Powerful magic user</div>
+                    </div>
+                    <div class="class-card" data-class="rogue" style="background: rgba(255,255,255,0.05); border: 2px solid #4a5568; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🗡️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Rogue</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Quick and stealthy</div>
+                    </div>
+                    <div class="class-card" data-class="knight" style="background: rgba(255,255,255,0.05); border: 2px solid #4a5568; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🛡️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Knight</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Defensive tank</div>
+                    </div>
+                    <div class="class-card" data-class="ranger" style="background: rgba(255,255,255,0.05); border: 2px solid #4a5568; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🏹</div>
+                        <div style="font-weight: bold; font-size: 16px;">Ranger</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Ranged specialist</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="start-single" class="fantasy-button" style="padding: 15px 30px; background: linear-gradient(135deg, #d69e2e, #b7791f); border: 2px solid #f6e05e; border-radius: 8px; color: #1a202c; font-weight: bold; font-size: 16px; cursor: pointer;">
+                    🎮 Play Solo
+                </button>
+                <button id="start-multi" class="fantasy-button" style="padding: 15px 30px; background: linear-gradient(135deg, #805ad5, #6b46c1); border: 2px solid #9f7aea; border-radius: 8px; color: white; font-weight: bold; font-size: 16px; cursor: pointer;">
+                    🌐 Multiplayer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combat Modal -->
+    <div id="combat-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; padding: 30px;">
+            <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ff4444;">
+                ⚔️ <span id="enemy-name">Enemy</span>
+            </h2>
+            
+            <div style="margin-bottom: 20px;">
+                <div class="stat-bar" style="width: 100%; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden;">
+                    <div id="enemy-health" class="stat-fill health-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); transition: width 0.3s;"></div>
+                </div>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: center; color: white;"></p>
+            </div>
+            
+            <input id="answer-input" type="text" class="fantasy-input" placeholder="Your answer..." style="width: 100%; margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.4); border: 2px solid #4a5568; color: white; font-size: 16px; border-radius: 8px;">
+            
+            <p id="hint-text" style="text-align: center; min-height: 20px; font-style: italic; margin-bottom: 15px; color: #ffd700;"></p>
+            
+            <button id="submit-answer" class="fantasy-button" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #d69e2e, #b7791f); border: 2px solid #f6e05e; color: #1a202c; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 8px;">
+                ⚔️ Submit Answer
+            </button>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="inventory-modal" class="modal" style="display: none;">
+        <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px;">
+            🎒 Inventory
+        </h2>
+        
+        <div id="inventory-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
+            <!-- Items will be dynamically added here -->
+        </div>
+        
+        <button onclick="closeInventory()" class="fantasy-button" style="width: 100%;">
+            Close
+        </button>
+    </div>
+
+    <!-- Game Modules (Load in order) -->
+    <script src="js/gameState.js"></script>
+    <script src="js/threeSetup.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/curriculum.js"></script>
+    <script src="js/dungeon.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+    
+    <script>
+        // Placeholder spell casting function
+        function castSpell(spellName) {
+            console.log(`🔮 Casting ${spellName}`);
+        }
+        
+        function closeInventory() {
+            document.getElementById('inventory-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
