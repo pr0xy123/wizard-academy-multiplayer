@@ -862,40 +862,47 @@
             });
             
             function setupAnimations() {
-                // Choose weapon-specific idle based on character class
-                const weaponIdles = {
-                    warrior: 'melee_2h_idle',      // 2-handed axe
-                    knight: 'melee_1h',            // 1-handed sword + shield
-                    mage: 'idle',                  // Staff (use generic idle)
-                    rogue: 'melee_1h',             // Dagger
-                    ranger: 'idle'                 // Bow (use generic idle)
-                };
-                
                 const className = GameState.player.class || 'warrior';
-                const preferredIdle = weaponIdles[className];
                 
-                // Find weapon-specific idle animation FIRST
-                for (let key in GameState.animationActions) {
-                    const keyLower = key.toLowerCase();
-                    if (keyLower.includes(preferredIdle) && keyLower.includes('idle') && 
-                        !keyLower.includes('walk') && !keyLower.includes('run') && !keyLower.includes('attack')) {
-                        GameState.idleAction = GameState.animationActions[key];
-                        console.log(`✓ Using weapon idle animation: ${key}`);
-                        // Start idle animation immediately with proper settings
-                        GameState.idleAction.reset();
-                        GameState.idleAction.setEffectiveWeight(1);
-                        GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
-                        GameState.idleAction.play();
-                        break;
+                // Find weapon-specific idle animation based on class
+                // Warrior and knight with 2H weapons: use Melee_2H_Idle
+                // Others: use generic Idle_A or Idle_B
+                
+                if (className === 'warrior') {
+                    // Look for 2H idle first
+                    for (let key in GameState.animationActions) {
+                        if (key.includes('Melee_2H_Idle')) {
+                            GameState.idleAction = GameState.animationActions[key];
+                            console.log(`✓ Using weapon idle animation: ${key}`);
+                            GameState.idleAction.reset();
+                            GameState.idleAction.setEffectiveWeight(1);
+                            GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
+                            GameState.idleAction.play();
+                            break;
+                        }
+                    }
+                } else if (className === 'knight') {
+                    // Look for blocking/shield pose
+                    for (let key in GameState.animationActions) {
+                        if (key.includes('Melee_Blocking') || key.includes('Melee_Block')) {
+                            GameState.idleAction = GameState.animationActions[key];
+                            console.log(`✓ Using shield idle animation: ${key}`);
+                            GameState.idleAction.reset();
+                            GameState.idleAction.setEffectiveWeight(1);
+                            GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
+                            GameState.idleAction.play();
+                            break;
+                        }
                     }
                 }
                 
-                // Fallback to generic idle if no weapon idle found
+                // Fallback to generic idle for all classes
                 if (!GameState.idleAction) {
                     for (let key in GameState.animationActions) {
                         const keyLower = key.toLowerCase();
-                        if (keyLower.includes('idle') && !keyLower.includes('walk') && 
-                            !keyLower.includes('run') && !keyLower.includes('melee') && !keyLower.includes('attack')) {
+                        if ((key.includes('Idle_A') || key.includes('Idle_B')) && 
+                            !keyLower.includes('walk') && !keyLower.includes('jump') && 
+                            !keyLower.includes('melee')) {
                             GameState.idleAction = GameState.animationActions[key];
                             console.log(`✓ Using generic idle animation: ${key}`);
                             GameState.idleAction.reset();
@@ -1027,15 +1034,16 @@
                     
                     if (rightHand) {
                         // Attach to actual hand bone with class-specific positioning
+                        // These positions are tuned for weapon-holding animations
                         const weaponAdjustments = {
-                            warrior: { pos: [0, -0.1, 0.08], rot: [Math.PI / 4, 0, Math.PI], scale: 0.9 },
-                            mage: { pos: [0, -0.3, 0], rot: [0, 0, 0], scale: 1.2 },
-                            rogue: { pos: [0, -0.15, 0.02], rot: [0, 0, Math.PI / 2], scale: 0.8 },
-                            knight: { pos: [0, -0.15, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.9 },
-                            ranger: { pos: [0.15, -0.1, 0], rot: [0, Math.PI / 2, 0], scale: 1.0 }
+                            warrior: { pos: [0.05, -0.05, 0.1], rot: [Math.PI / 6, 0, Math.PI], scale: 0.85 },
+                            mage: { pos: [0, -0.25, 0], rot: [0, 0, 0], scale: 1.2 },
+                            rogue: { pos: [0, -0.12, 0.03], rot: [0, 0, Math.PI / 2], scale: 0.8 },
+                            knight: { pos: [0.05, -0.05, 0.1], rot: [Math.PI / 6, 0, Math.PI], scale: 0.85 },
+                            ranger: { pos: [0.12, -0.08, 0], rot: [0, Math.PI / 2, 0], scale: 1.0 }
                         };
                         
-                        const adj = weaponAdjustments[className] || { pos: [0, -0.15, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.8 };
+                        const adj = weaponAdjustments[className] || { pos: [0, -0.12, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.8 };
                         weapon.position.set(...adj.pos);
                         weapon.rotation.set(...adj.rot);
                         weapon.scale.set(adj.scale, adj.scale, adj.scale);
