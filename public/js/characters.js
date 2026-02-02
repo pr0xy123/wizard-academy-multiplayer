@@ -62,7 +62,39 @@ function createCharacter(className) {
         console.log(`🎭 Character ${className} ready!`);
     }, undefined, (error) => {
         console.error(`❌ Error loading character model:`, error);
+        
+        // Fallback: Create a simple colored cube as the character
+        console.log(`🔄 Using fallback cube character for ${className}`);
+        createFallbackCharacter(className);
     });
+}
+
+// Create a simple cube character as fallback
+function createFallbackCharacter(className) {
+    const colors = {
+        warrior: 0xff4444,
+        mage: 0x4444ff,
+        rogue: 0x44ff44,
+        knight: 0xffaa00,
+        ranger: 0xff44ff
+    };
+    
+    const geometry = new THREE.BoxGeometry(1, 2, 1);
+    const material = new THREE.MeshStandardMaterial({ 
+        color: colors[className] || 0xffffff,
+        roughness: 0.7,
+        metalness: 0.3
+    });
+    
+    const cube = new THREE.Mesh(geometry, material);
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    cube.position.y = 1; // Lift cube off ground
+    
+    window.playerContainer.add(cube);
+    window.GameState.player.model = cube;
+    
+    console.log(`✅ Fallback character created for ${className}`);
 }
 
 // Load all animation packs for character

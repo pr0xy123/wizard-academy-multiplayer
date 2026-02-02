@@ -142,36 +142,95 @@ function buildCorridors(rooms) {
     });
 }
 
-// Load a single dungeon tile (floor or wall) - using simple cubes for clean rendering
+// Load a single dungeon tile (floor or wall)
 function loadDungeonTile(type, x, z, color, rotation = 0) {
-    let geometry, material, mesh;
-    
-    if (type === 'floor') {
-        geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 0.2, tileSpacing * 0.95);
-        material = new THREE.MeshStandardMaterial({ 
-            color: color || 0x444444,
-            roughness: 0.8,
-            metalness: 0.2
-        });
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, 0, z);
-    } else if (type === 'wall') {
-        geometry = new THREE.BoxGeometry(tileSpacing * 0.5, 4, tileSpacing * 0.5);
-        material = new THREE.MeshStandardMaterial({ 
-            color: color || 0x666666,
-            roughness: 0.9,
-            metalness: 0.1
-        });
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, 2, z);
-        mesh.rotation.y = rotation;
-    }
-    
-    if (mesh) {
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        window.scene.add(mesh);
-    }
+    const tilePaths = {
+        floor: [
+            'models/environment/dungeon/floors/floor_tile_large.gltf',
+            'models/environment/dungeon/floors/floor_tile_small.gltf',
+            'models/environment/dungeon/floors/floor_wood_large.gltf'
+        ],
+        wall: [
+            'models/environment/dungeon/walls/wall.gltf',
+            'models/environment/dungeon/walls/wall_corner.gltf',
+            'models/environment/dungeon/walls/wall_arched.gltf'
+        ]
+    };
+
+    const paths = tilePaths[type] || tilePaths.floor;
+    const randomPath = paths[Math.floor(Math.random() * paths.length)];
+
+    window.gltfLoader.load(
+        randomPath,
+        (gltf) => {
+            const tile = gltf.scene;
+            
+            // Position tile
+            if (type === 'floor') {
+                tile.position.set(x, 0, z);
+            } else {
+                tile.position.set(x, 0, z);
+            }
+            
+            tile.rotation.y = rotation;
+            
+            // Apply subtle color tint (less aggressive)
+            if (color) {
+                tile.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const material = child.material.clone();
+                        const baseColor = material.color.getHex();
+                        // Blend 70% original color with 30% theme color
+                        const blended = new THREE.Color(baseColor).lerp(new THREE.Color(color), 0.3);
+                        material.color = blended;
+                        child.material = material;
+                    }
+                });
+            }
+            
+            // Enable shadows
+            tile.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            window.scene.add(tile);
+        },
+        undefined,
+        (error) => {
+            // Fallback to basic geometry if model fails
+            console.warn(`⚠️ Could not load ${type} tile, using fallback`);
+            
+            let geometry, material, mesh;
+            
+            if (type === 'floor') {
+                geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 0.2, tileSpacing * 0.95);
+                material = new THREE.MeshStandardMaterial({ 
+                    color: color || 0x444444,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, 0, z);
+            } else {
+                geometry = new THREE.BoxGeometry(tileSpacing * 0.5, 4, tileSpacing * 0.5);
+                material = new THREE.MeshStandardMaterial({ 
+                    color: color || 0x666666,
+                    roughness: 0.9,
+                    metalness: 0.1
+                });
+                mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, 2, z);
+                mesh.rotation.y = rotation;
+            }
+            
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            window.scene.add(mesh);
+        }
+    );
 }
 
 // Add interactive objects to world
