@@ -866,12 +866,12 @@
                 
                 // Find weapon-specific idle animation based on class
                 // Warrior and knight with 2H weapons: use Melee_2H_Idle
-                // Others: use generic Idle_A or Idle_B
+                // Knight: can also use blocking pose
                 
                 if (className === 'warrior') {
                     // Look for 2H idle first
                     for (let key in GameState.animationActions) {
-                        if (key.includes('Melee_2H_Idle')) {
+                        if (key.toLowerCase().includes('melee_2h_idle')) {
                             GameState.idleAction = GameState.animationActions[key];
                             console.log(`✓ Using weapon idle animation: ${key}`);
                             GameState.idleAction.reset();
@@ -884,7 +884,7 @@
                 } else if (className === 'knight') {
                     // Look for blocking/shield pose
                     for (let key in GameState.animationActions) {
-                        if (key.includes('Melee_Blocking') || key.includes('Melee_Block')) {
+                        if (key.toLowerCase().includes('melee_blocking')) {
                             GameState.idleAction = GameState.animationActions[key];
                             console.log(`✓ Using shield idle animation: ${key}`);
                             GameState.idleAction.reset();
@@ -900,9 +900,7 @@
                 if (!GameState.idleAction) {
                     for (let key in GameState.animationActions) {
                         const keyLower = key.toLowerCase();
-                        if ((key.includes('Idle_A') || key.includes('Idle_B')) && 
-                            !keyLower.includes('walk') && !keyLower.includes('jump') && 
-                            !keyLower.includes('melee')) {
+                        if (keyLower.includes('idle_a') || keyLower.includes('idle_b')) {
                             GameState.idleAction = GameState.animationActions[key];
                             console.log(`✓ Using generic idle animation: ${key}`);
                             GameState.idleAction.reset();
