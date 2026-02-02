@@ -2172,7 +2172,8 @@
                 knight: '🛡️',
                 ranger: '🏹'
             };
-            document.getElementById('player-class-display').textContent = classIcons[GameState.selectedClass] || '🎮';
+            const classDisplayEl = document.getElementById('player-class-display');
+            if (classDisplayEl) classDisplayEl.textContent = classIcons[GameState.selectedClass] || '🎮';
             
             init3D();
             GameState.isPlaying = true;
