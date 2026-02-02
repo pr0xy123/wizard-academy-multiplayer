@@ -18,11 +18,11 @@ const weaponModels = {
     ranger: 'models/characters/ranger/Weapon_Bow_02.gltf'
 };
 
-// Animation pack paths
+// Animation pack paths (using Medium rig for all character types)
 const animationPacks = {
-    movement: 'models/animations/KayKit_AnimationPack_MovementBasic.glb',
-    combat: 'models/animations/KayKit_AnimationPack_CombatMelee.glb',
-    general: 'models/animations/KayKit_AnimationPack_General.glb'
+    movement: 'models/animations/Rig_Medium_MovementBasic.glb',
+    combat: 'models/animations/Rig_Medium_CombatMelee.glb',
+    general: 'models/animations/Rig_Medium_General.glb'
 };
 
 // Create character with model, animations, and weapon
@@ -215,14 +215,22 @@ function loadWeaponForCharacter(model, className) {
 
     // Find the right hand bone
     let rightHand = null;
+    const boneNames = [];
+    
     model.traverse((child) => {
-        if (child.isBone && (child.name === 'hand.r' || child.name === 'RightHand' || child.name === 'mixamorigRightHand')) {
-            rightHand = child;
+        if (child.isBone) {
+            boneNames.push(child.name);
+            // Check for various right hand bone naming conventions
+            const lowerName = child.name.toLowerCase();
+            if (lowerName.includes('hand') && (lowerName.includes('right') || lowerName.includes('.r') || lowerName.includes('_r'))) {
+                rightHand = child;
+            }
         }
     });
 
     if (!rightHand) {
         console.error(`❌ Could not find right hand bone for ${className}`);
+        console.log(`📋 Available bones:`, boneNames);
         return;
     }
 
