@@ -7,21 +7,267 @@
     
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     
     <!-- CSS Styles -->
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Lato', sans-serif;
+            background: #0a0e1a;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1c2e 0%, #0a0e1a 100%);
+        }
+        
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        #ui-layer > * {
+            pointer-events: auto;
+        }
+        
+        .hud-panel {
+            background: rgba(20, 25, 40, 0.9);
+            border: 2px solid #4a5568;
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 200px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        
+        .stat-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .health-fill { background: linear-gradient(90deg, #e53e3e, #fc8181); }
+        .mana-fill { background: linear-gradient(90deg, #3182ce, #63b3ed); }
+        .xp-fill { background: linear-gradient(90deg, #d69e2e, #f6e05e); }
+        
+        .spell-book {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            pointer-events: auto;
+        }
+        
+        .spell-slot {
+            width: 70px;
+            height: 70px;
+            background: rgba(20, 25, 40, 0.9);
+            border: 2px solid #4a5568;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .spell-slot:hover {
+            transform: translateY(-5px);
+            border-color: #ffd700;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+        
+        .spell-slot.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .spell-key {
+            position: absolute;
+            bottom: 2px;
+            right: 5px;
+            font-size: 10px;
+            color: #a0aec0;
+            font-weight: bold;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            border: 3px solid #4a5568;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+            position: relative;
+        }
+        
+        .fantasy-font {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+        }
+        
+        .fantasy-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-family: 'Lato', sans-serif;
+            transition: all 0.2s;
+        }
+        
+        .fantasy-input:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+        }
+        
+        .fantasy-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #d69e2e 0%, #d69e2e 50%, #b7791f 100%);
+            border: 2px solid #f6e05e;
+            border-radius: 8px;
+            color: #1a202c;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(214, 158, 46, 0.4);
+        }
+        
+        .fantasy-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(214, 158, 46, 0.6);
+        }
+        
+        .class-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #4a5568;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .class-card:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #ffd700;
+            transform: translateY(-5px);
+        }
+        
+        .class-card.selected {
+            background: rgba(255, 215, 0, 0.15);
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .floating-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 24px;
+            pointer-events: none;
+            animation: floatUp 1.5s ease-out forwards;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+        }
+        
+        #combat-modal .modal-content {
+            max-width: 500px;
+        }
+        
+        label {
+            color: #a0aec0;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
     <!-- Game Container -->
     <div id="game-container">
         <div class="vignette"></div>
-        <div id="ui-layer">
+        <div id="ui-layer" style="display: none;">
             <!-- HUD Top Left -->
             <div style="flex: 1;">
                 <div class="hud-panel">
-                    <div id="player-name" style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Player</div>
+                    <div id="player-name-display" style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #ffd700;">Player</div>
                     
                     <div style="margin-bottom: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -53,7 +299,7 @@
                     </div>
                     
                     <div style="margin-top: 10px;">
-                        <span>💰 <span id="gold-text">0 Gold</span></span>
+                        <span style="color: #ffd700;">💰 <span id="gold-text">0 Gold</span></span>
                     </div>
                 </div>
             </div>
@@ -80,125 +326,475 @@
         </div>
         
         <!-- Floating Text Container -->
-        <div id="floating-text-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;"></div>
+        <div id="floating-text-container"></div>
     </div>
 
     <!-- Start Screen Modal -->
-    <div id="start-screen" class="modal" style="display: flex;">
-        <h1 class="fantasy-font" style="font-size: 36px; margin-bottom: 30px; text-align: center; color: #ffd700;">
-            ⚔️ Wizard Academy ⚔️
-        </h1>
-        
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Your Name:</label>
-            <input id="player-name-input" type="text" class="fantasy-input" placeholder="Enter your hero name">
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Grade Level:</label>
-            <select id="grade-select" class="fantasy-input">
-                <option value="3">3rd Grade (Elementary)</option>
-                <option value="4">4th Grade</option>
-                <option value="5">5th Grade</option>
-                <option value="6" selected>6th Grade (Middle)</option>
-                <option value="7">7th Grade</option>
-                <option value="8">8th Grade</option>
-                <option value="9">9th Grade (High)</option>
-                <option value="10">10th Grade</option>
-                <option value="11">11th Grade</option>
-                <option value="12">12th Grade</option>
-            </select>
-        </div>
-        
-        <div style="margin-bottom: 30px;">
-            <h3 style="margin-bottom: 15px; text-align: center;">Choose Your Class:</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
-                <div class="class-card" data-class="warrior">
-                    <div style="font-size: 48px; margin-bottom: 10px;">⚔️</div>
-                    <div style="font-weight: bold; font-size: 16px;">Warrior</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Strong melee fighter</div>
-                </div>
-                <div class="class-card" data-class="mage">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🔮</div>
-                    <div style="font-weight: bold; font-size: 16px;">Mage</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Powerful magic user</div>
-                </div>
-                <div class="class-card" data-class="rogue">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🗡️</div>
-                    <div style="font-weight: bold; font-size: 16px;">Rogue</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Quick and stealthy</div>
-                </div>
-                <div class="class-card" data-class="knight">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🛡️</div>
-                    <div style="font-weight: bold; font-size: 16px;">Knight</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Defensive tank</div>
-                </div>
-                <div class="class-card" data-class="ranger">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🏹</div>
-                    <div style="font-weight: bold; font-size: 16px;">Ranger</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Ranged specialist</div>
+    <div id="start-screen" class="modal active">
+        <div class="modal-content">
+            <h1 class="fantasy-font" style="font-size: 36px; margin-bottom: 30px; text-align: center; color: #ffd700; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+                ⚔️ Wizard Academy ⚔️
+            </h1>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Your Name:</label>
+                <input id="player-name-input" type="text" class="fantasy-input" placeholder="Enter your hero name" value="Hero">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Grade Level:</label>
+                <select id="grade-select" class="fantasy-input">
+                    <option value="3">3rd Grade (Elementary)</option>
+                    <option value="4">4th Grade</option>
+                    <option value="5">5th Grade</option>
+                    <option value="6" selected>6th Grade (Middle)</option>
+                    <option value="7">7th Grade</option>
+                    <option value="8">8th Grade</option>
+                    <option value="9">9th Grade (High)</option>
+                    <option value="10">10th Grade</option>
+                    <option value="11">11th Grade</option>
+                    <option value="12">12th Grade</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px; text-align: center; color: #ffd700;">Choose Your Class:</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;" id="class-grid">
+                    <div class="class-card" data-class="warrior">
+                        <div style="font-size: 48px; margin-bottom: 10px;">⚔️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Warrior</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Strong melee fighter</div>
+                    </div>
+                    <div class="class-card" data-class="mage">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🔮</div>
+                        <div style="font-weight: bold; font-size: 16px;">Mage</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Powerful magic user</div>
+                    </div>
+                    <div class="class-card" data-class="rogue">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🗡️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Rogue</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Quick and stealthy</div>
+                    </div>
+                    <div class="class-card" data-class="knight">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🛡️</div>
+                        <div style="font-weight: bold; font-size: 16px;">Knight</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Defensive tank</div>
+                    </div>
+                    <div class="class-card" data-class="ranger">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🏹</div>
+                        <div style="font-weight: bold; font-size: 16px;">Ranger</div>
+                        <div style="font-size: 12px; margin-top: 5px; color: #a0aec0;">Ranged specialist</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div style="display: flex; gap: 15px; justify-content: center;">
-            <button id="start-single" class="fantasy-button">
-                🎮 Play Solo
-            </button>
-            <button id="start-multi" class="fantasy-button">
-                🌐 Multiplayer
-            </button>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="start-single" class="fantasy-button">
+                    🎮 Play Solo
+                </button>
+                <button id="start-multi" class="fantasy-button" style="background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%); border-color: #9f7aea;">
+                    🌐 Multiplayer
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Combat Modal -->
-    <div id="combat-modal" class="modal" style="display: none;">
-        <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ff4444;">
-            ⚔️ <span id="enemy-name">Enemy</span>
-        </h2>
-        
-        <div style="margin-bottom: 20px;">
-            <div class="stat-bar" style="width: 100%;">
-                <div id="enemy-health" class="stat-fill health-fill" style="width: 100%;"></div>
+    <div id="combat-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ff4444;">
+                ⚔️ <span id="enemy-name">Enemy</span>
+            </h2>
+            
+            <div style="margin-bottom: 20px;">
+                <div class="stat-bar" style="width: 100%; height: 20px;">
+                    <div id="enemy-health-bar" class="stat-fill health-fill" style="width: 100%;"></div>
+                </div>
+                <div style="text-align: center; margin-top: 5px; font-size: 12px; color: #a0aec0;">
+                    <span id="enemy-hp-text">100/100 HP</span>
+                </div>
             </div>
+            
+            <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: center; color: #fff;"></p>
+            </div>
+            
+            <input id="answer-input" type="text" class="fantasy-input" placeholder="Your answer..." style="margin-bottom: 15px; text-align: center; font-size: 18px;">
+            
+            <p id="hint-text" style="text-align: center; min-height: 20px; font-style: italic; margin-bottom: 15px; color: #63b3ed;"></p>
+            
+            <button id="submit-answer" class="fantasy-button" style="width: 100%;">
+                ⚔️ Submit Answer
+            </button>
         </div>
-        
-        <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: center;"></p>
-        </div>
-        
-        <input id="answer-input" type="text" class="fantasy-input" placeholder="Your answer..." style="margin-bottom: 15px;">
-        
-        <p id="hint-text" style="text-align: center; min-height: 20px; font-style: italic; margin-bottom: 15px;"></p>
-        
-        <button id="submit-answer" class="fantasy-button" style="width: 100%;">
-            ⚔️ Submit Answer
-        </button>
     </div>
 
     <!-- Inventory Modal -->
-    <div id="inventory-modal" class="modal" style="display: none;">
-        <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px;">
-            🎒 Inventory
-        </h2>
-        
-        <div id="inventory-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">
-            <!-- Items will be dynamically added here -->
+    <div id="inventory-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ffd700;">
+                🎒 Inventory
+            </h2>
+            
+            <div id="inventory-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; min-height: 200px;">
+                <!-- Items will be dynamically added here -->
+            </div>
+            
+            <button onclick="closeInventory()" class="fantasy-button" style="width: 100%; background: linear-gradient(135deg, #718096 0%, #4a5568 100%); border-color: #a0aec0;">
+                Close
+            </button>
         </div>
-        
-        <button onclick="closeInventory()" class="fantasy-button" style="width: 100%;">
-            Close
-        </button>
     </div>
 
-    <!-- Game Modules (Load in order) -->
-    <script src="js/gameState.js"></script>
-    <script src="js/threeSetup.js"></script>
-    <script src="js/characters.js"></script>
-    <script src="js/curriculum.js"></script>
-    <script src="js/dungeon.js"></script>
-    <script src="js/combat.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/main.js"></script>
+    <script>
+        // ==========================================
+        // GAME STATE MODULE
+        // ==========================================
+        const GameState = {
+            player: {
+                name: '',
+                class: '',
+                grade: 6,
+                health: 100,
+                maxHealth: 100,
+                mana: 100,
+                maxMana: 100,
+                level: 1,
+                xp: 0,
+                maxXp: 100,
+                gold: 0,
+                inventory: []
+            },
+            currentEnemy: null,
+            inCombat: false,
+            selectedClass: null
+        };
+
+        // ==========================================
+        // CURRICULUM MODULE
+        // ==========================================
+        const Curriculum = {
+            generateProblem(grade) {
+                const operations = ['+', '-', '*', '/'];
+                const operation = operations[Math.floor(Math.random() * operations.length)];
+                let num1, num2;
+                
+                switch(parseInt(grade)) {
+                    case 3:
+                    case 4:
+                        num1 = Math.floor(Math.random() * 20) + 1;
+                        num2 = Math.floor(Math.random() * 20) + 1;
+                        break;
+                    case 5:
+                    case 6:
+                        num1 = Math.floor(Math.random() * 50) + 1;
+                        num2 = Math.floor(Math.random() * 12) + 1;
+                        break;
+                    default:
+                        num1 = Math.floor(Math.random() * 100) + 1;
+                        num2 = Math.floor(Math.random() * 20) + 1;
+                }
+                
+                let question, answer;
+                switch(operation) {
+                    case '+':
+                        question = `What is ${num1} + ${num2}?`;
+                        answer = num1 + num2;
+                        break;
+                    case '-':
+                        if (num1 < num2) [num1, num2] = [num2, num1];
+                        question = `What is ${num1} - ${num2}?`;
+                        answer = num1 - num2;
+                        break;
+                    case '*':
+                        num1 = Math.floor(Math.random() * 12) + 1;
+                        num2 = Math.floor(Math.random() * 12) + 1;
+                        question = `What is ${num1} × ${num2}?`;
+                        answer = num1 * num2;
+                        break;
+                    case '/':
+                        answer = num1;
+                        num1 = num1 * num2;
+                        question = `What is ${num1} ÷ ${num2}?`;
+                        break;
+                }
+                
+                return { question, answer, hint: this.getHint(operation) };
+            },
+            
+            getHint(operation) {
+                const hints = {
+                    '+': 'Add the numbers together carefully.',
+                    '-': 'Subtract the second number from the first.',
+                    '*': 'Think of it as repeated addition.',
+                    '/': 'Divide the first number by the second.'
+                };
+                return hints[operation];
+            }
+        };
+
+        // ==========================================
+        // COMBAT MODULE
+        // ==========================================
+        const CombatSystem = {
+            startCombat(enemyType = 'Orc') {
+                GameState.currentEnemy = {
+                    name: enemyType,
+                    health: 100,
+                    maxHealth: 100
+                };
+                GameState.inCombat = true;
+                
+                const problem = Curriculum.generateProblem(GameState.player.grade);
+                document.getElementById('enemy-name').textContent = enemyType;
+                document.getElementById('question-text').textContent = problem.question;
+                document.getElementById('hint-text').textContent = `Hint: ${problem.hint}`;
+                document.getElementById('answer-input').value = '';
+                document.getElementById('answer-input').focus();
+                
+                CombatSystem.updateEnemyHealth();
+                openModal('combat-modal');
+            },
+            
+            updateEnemyHealth() {
+                if (!GameState.currentEnemy) return;
+                const pct = (GameState.currentEnemy.health / GameState.currentEnemy.maxHealth) * 100;
+                document.getElementById('enemy-health-bar').style.width = `${pct}%`;
+                document.getElementById('enemy-hp-text').textContent = 
+                    `${GameState.currentEnemy.health}/${GameState.currentEnemy.maxHealth} HP`;
+            },
+            
+            submitAnswer() {
+                const input = document.getElementById('answer-input');
+                const answer = parseInt(input.value);
+                
+                if (isNaN(answer)) {
+                    showFloatingText('Please enter a number!', window.innerWidth/2, window.innerHeight/2, '#ff5555');
+                    return;
+                }
+                
+                // Simulate combat logic
+                const damage = Math.floor(Math.random() * 20) + 10;
+                GameState.currentEnemy.health -= damage;
+                this.updateEnemyHealth();
+                
+                if (GameState.currentEnemy.health <= 0) {
+                    this.endCombat(true);
+                } else {
+                    // Generate new problem
+                    const problem = Curriculum.generateProblem(GameState.player.grade);
+                    document.getElementById('question-text').textContent = problem.question;
+                    document.getElementById('hint-text').textContent = `Hint: ${problem.hint}`;
+                    input.value = '';
+                    input.focus();
+                    
+                    showFloatingText(`${damage} Damage!`, window.innerWidth/2, window.innerHeight/2 - 50, '#ff5555');
+                }
+            },
+            
+            endCombat(victory) {
+                GameState.inCombat = false;
+                closeModal('combat-modal');
+                
+                if (victory) {
+                    const reward = Math.floor(Math.random() * 50) + 20;
+                    GameState.player.gold += reward;
+                    GameState.player.xp += 25;
+                    updateUI();
+                    showFloatingText(`Victory! +${reward} Gold`, window.innerWidth/2, window.innerHeight/2, '#ffd700');
+                    
+                    if (GameState.player.xp >= GameState.player.maxXp) {
+                        this.levelUp();
+                    }
+                }
+            },
+            
+            levelUp() {
+                GameState.player.level++;
+                GameState.player.xp = 0;
+                GameState.player.maxXp = Math.floor(GameState.player.maxXp * 1.5);
+                GameState.player.maxHealth += 20;
+                GameState.player.health = GameState.player.maxHealth;
+                updateUI();
+                showFloatingText('Level Up!', window.innerWidth/2, window.innerHeight/2 - 100, '#4ade80');
+            }
+        };
+
+        // ==========================================
+        // UI MODULE
+        // ==========================================
+        function openModal(id) {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function closeInventory() {
+            closeModal('inventory-modal');
+        }
+
+        function updateUI() {
+            document.getElementById('player-name-display').textContent = GameState.player.name;
+            document.getElementById('health-text').textContent = 
+                `${GameState.player.health}/${GameState.player.maxHealth}`;
+            document.getElementById('health-bar').style.width = 
+                `${(GameState.player.health / GameState.player.maxHealth) * 100}%`;
+            
+            document.getElementById('mana-text').textContent = 
+                `${GameState.player.mana}/${GameState.player.maxMana}`;
+            document.getElementById('mana-bar').style.width = 
+                `${(GameState.player.mana / GameState.player.maxMana) * 100}%`;
+            
+            document.getElementById('level-text').textContent = `Level ${GameState.player.level}`;
+            document.getElementById('xp-bar').style.width = 
+                `${(GameState.player.xp / GameState.player.maxXp) * 100}%`;
+            
+            document.getElementById('gold-text').textContent = `${GameState.player.gold} Gold`;
+        }
+
+        function showFloatingText(text, x, y, color = '#fff') {
+            const container = document.getElementById('floating-text-container');
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.textContent = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = color;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        // ==========================================
+        // MAIN INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Class selection
+            document.querySelectorAll('.class-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    GameState.selectedClass = card.dataset.class;
+                });
+            });
+
+            // Start buttons
+            document.getElementById('start-single').addEventListener('click', () => {
+                if (!GameState.selectedClass) {
+                    alert('Please select a class first!');
+                    return;
+                }
+                startGame();
+            });
+
+            document.getElementById('start-multi').addEventListener('click', () => {
+                if (!GameState.selectedClass) {
+                    alert('Please select a class first!');
+                    return;
+                }
+                startGame(true);
+            });
+
+            // Combat submit
+            document.getElementById('submit-answer').addEventListener('click', () => {
+                CombatSystem.submitAnswer();
+            });
+
+            document.getElementById('answer-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') CombatSystem.submitAnswer();
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (GameState.inCombat) return;
+                
+                switch(e.key) {
+                    case '1':
+                        castSpell('fireball');
+                        break;
+                    case '2':
+                        castSpell('icebolt');
+                        break;
+                    case '3':
+                        castSpell('lightning');
+                        break;
+                    case 'i':
+                        openModal('inventory-modal');
+                        fillInventory();
+                        break;
+                    case 'Escape':
+                        closeModal('inventory-modal');
+                        break;
+                }
+            });
+        });
+
+        function startGame(multiplayer = false) {
+            GameState.player.name = document.getElementById('player-name-input').value || 'Hero';
+            GameState.player.class = GameState.selectedClass;
+            GameState.player.grade = parseInt(document.getElementById('grade-select').value);
+            
+            // Set class stats
+            const classStats = {
+                warrior: { health: 150, mana: 50 },
+                mage: { health: 80, mana: 150 },
+                rogue: { health: 100, mana: 100 },
+                knight: { health: 180, mana: 40 },
+                ranger: { health: 110, mana: 90 }
+            };
+            
+            const stats = classStats[GameState.selectedClass];
+            GameState.player.maxHealth = stats.health;
+            GameState.player.health = stats.health;
+            GameState.player.maxMana = stats.mana;
+            GameState.player.mana = stats.mana;
+            
+            closeModal('start-screen');
+            document.getElementById('ui-layer').style.display = 'flex';
+            updateUI();
+            
+            // Start demo combat after 2 seconds for testing
+            setTimeout(() => {
+                CombatSystem.startCombat('Dungeon Orc');
+            }, 2000);
+            
+            if (multiplayer) {
+                console.log('Multiplayer mode initialized');
+                showFloatingText('Connected to Server', window.innerWidth/2, 100, '#4ade80');
+            }
+        }
+
+        function castSpell(spell) {
+            if (GameState.player.mana < 10) {
+                showFloatingText('Not enough mana!', window.innerWidth/2, window.innerHeight - 100, '#ff5555');
+                return;
+            }
+            GameState.player.mana -= 10;
+            updateUI();
+            showFloatingText(spell.toUpperCase() + '!', window.innerWidth/2, window.innerHeight - 150, '#63b3ed');
+        }
+
+        function fillInventory() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            const items = ['🗡️ Sword', '🛡️ Shield', '💊 Potion', '📜 Scroll', '💰 Gold', '💎 Gem', '🗝️ Key', '🍞 Bread'];
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.style.cssText = 'background: rgba(255,255,255,0.1); border: 1px solid #4a5568; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer;';
+                div.textContent = item;
+                div.onclick = () => showFloatingText(`Used ${item}`, window.innerWidth/2, window.innerHeight/2, '#ffd700');
+                grid.appendChild(div);
+            });
+        }
+
+        // Expose functions to window for onclick handlers
+        window.castSpell = castSpell;
+        window.closeInventory = closeInventory;
+        window.closeModal = closeModal;
+        window.openModal = openModal;
+    </script>
 </body>
 </html>
