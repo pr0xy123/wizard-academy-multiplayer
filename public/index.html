@@ -385,6 +385,16 @@
                     <h3>Rogue</h3>
                     <p style="font-size: 12px; color: #888;">Fast • Critical Hits</p>
                 </div>
+                <div class="class-card" onclick="selectClass('knight')" id="class-knight">
+                    <div class="class-icon">🛡️</div>
+                    <h3>Knight</h3>
+                    <p style="font-size: 12px; color: #888;">Balanced • Defender</p>
+                </div>
+                <div class="class-card" onclick="selectClass('ranger')" id="class-ranger">
+                    <div class="class-icon">🏹</div>
+                    <h3>Ranger</h3>
+                    <p style="font-size: 12px; color: #888;">Ranged • Swift</p>
+                </div>
             </div>
             
             <div style="margin: 20px 0;">
@@ -1190,210 +1200,11 @@
             );
         }
 
-        // Room designer state
-        let designerRooms = [];
-        let designerCanvas, designerCtx;
-        let selectedRoom = null;
-        let isDragging = false;
+        // Room designer state - removed, will be reimplemented
         
-        function initRoomDesigner() {
-            designerCanvas = document.getElementById('room-designer-canvas');
-            designerCtx = designerCanvas.getContext('2d');
-            
-            // Load default cross pattern
-            loadPreset('cross');
-            
-            // Mouse events
-            designerCanvas.addEventListener('mousedown', onDesignerMouseDown);
-            designerCanvas.addEventListener('mousemove', onDesignerMouseMove);
-            designerCanvas.addEventListener('mouseup', onDesignerMouseUp);
-            designerCanvas.addEventListener('contextmenu', onDesignerRightClick);
-            
-            drawDesigner();
-        }
-        
-        function onDesignerMouseDown(e) {
-            const rect = designerCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const worldX = (x - 300) / 5;
-            const worldZ = (y - 300) / 5;
-            
-            // Check if clicking existing room
-            selectedRoom = null;
-            for (let room of designerRooms) {
-                const dist = Math.sqrt((worldX - room.x) ** 2 + (worldZ - room.z) ** 2);
-                if (dist < room.size * 2) {
-                    selectedRoom = room;
-                    isDragging = true;
-                    return;
-                }
-            }
-            
-            // Add new room
-            if (e.button === 0) {
-                const size = parseInt(document.getElementById('room-size-slider').value);
-                const theme = parseInt(document.getElementById('room-theme-select').value);
-                designerRooms.push({ 
-                    x: Math.round(worldX / 4) * 4, 
-                    z: Math.round(worldZ / 4) * 4, 
-                    size, 
-                    theme 
-                });
-                updateRoomList();
-                drawDesigner();
-            }
-        }
-        
-        function onDesignerMouseMove(e) {
-            if (isDragging && selectedRoom) {
-                const rect = designerCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                selectedRoom.x = Math.round(((x - 300) / 5) / 4) * 4;
-                selectedRoom.z = Math.round(((y - 300) / 5) / 4) * 4;
-                drawDesigner();
-            }
-        }
-        
-        function onDesignerMouseUp(e) {
-            isDragging = false;
-        }
-        
-        function onDesignerRightClick(e) {
-            e.preventDefault();
-            const rect = designerCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const worldX = (x - 300) / 5;
-            const worldZ = (y - 300) / 5;
-            
-            // Remove room at click position
-            for (let i = designerRooms.length - 1; i >= 0; i--) {
-                const room = designerRooms[i];
-                const dist = Math.sqrt((worldX - room.x) ** 2 + (worldZ - room.z) ** 2);
-                if (dist < room.size * 2) {
-                    designerRooms.splice(i, 1);
-                    updateRoomList();
-                    drawDesigner();
-                    break;
-                }
-            }
-        }
-        
-        function drawDesigner() {
-            designerCtx.fillStyle = '#1a1520';
-            designerCtx.fillRect(0, 0, 600, 600);
-            
-            // Draw grid
-            designerCtx.strokeStyle = '#2a2530';
-            designerCtx.lineWidth = 1;
-            for (let i = 0; i <= 600; i += 20) {
-                designerCtx.beginPath();
-                designerCtx.moveTo(i, 0);
-                designerCtx.lineTo(i, 600);
-                designerCtx.stroke();
-                designerCtx.beginPath();
-                designerCtx.moveTo(0, i);
-                designerCtx.lineTo(600, i);
-                designerCtx.stroke();
-            }
-            
-            // Draw center axis
-            designerCtx.strokeStyle = '#4a4560';
-            designerCtx.lineWidth = 2;
-            designerCtx.beginPath();
-            designerCtx.moveTo(300, 0);
-            designerCtx.lineTo(300, 600);
-            designerCtx.stroke();
-            designerCtx.beginPath();
-            designerCtx.moveTo(0, 300);
-            designerCtx.lineTo(600, 300);
-            designerCtx.stroke();
-            
-            // Draw rooms
-            const colors = ['#3366ff', '#00ff66', '#ff9933', '#ff3366', '#66ffff'];
-            designerRooms.forEach((room, idx) => {
-                const screenX = 300 + room.x * 5;
-                const screenY = 300 + room.z * 5;
-                const screenSize = room.size * 5 * 2;
-                
-                designerCtx.fillStyle = colors[room.theme] + '44';
-                designerCtx.fillRect(screenX - screenSize/2, screenY - screenSize/2, screenSize, screenSize);
-                
-                designerCtx.strokeStyle = colors[room.theme];
-                designerCtx.lineWidth = 2;
-                designerCtx.strokeRect(screenX - screenSize/2, screenY - screenSize/2, screenSize, screenSize);
-                
-                designerCtx.fillStyle = '#ffffff';
-                designerCtx.font = '12px Arial';
-                designerCtx.textAlign = 'center';
-                designerCtx.fillText(`R${idx + 1}`, screenX, screenY);
-            });
-        }
-        
-        function updateRoomList() {
-            const container = document.getElementById('room-items');
-            const themeNames = ['Stone', 'Wood', 'Ruined', 'Earth', 'Foundation'];
-            container.innerHTML = designerRooms.map((room, idx) => 
-                `<div style="padding: 5px; border-bottom: 1px solid #3a3530;">
-                    Room ${idx + 1}: ${themeNames[room.theme]} (${room.size}x${room.size}) at (${room.x}, ${room.z})
-                </div>`
-            ).join('');
-            document.querySelector('#room-list h3').textContent = `Rooms (${designerRooms.length})`;
-        }
-        
-        function updateRoomSizeDisplay(value) {
-            document.getElementById('room-size-display').textContent = `${value} tiles`;
-        }
-        
-        function loadPreset(type) {
-            if (type === 'cross') {
-                designerRooms = [
-                    { x: 0, z: 0, size: 5, theme: 0 },
-                    { x: 30, z: 0, size: 4, theme: 1 },
-                    { x: -30, z: 0, size: 4, theme: 2 },
-                    { x: 0, z: 30, size: 4, theme: 3 },
-                    { x: 0, z: -30, size: 4, theme: 4 }
-                ];
-            } else if (type === 'grid') {
-                designerRooms = [
-                    { x: -30, z: -30, size: 4, theme: 0 },
-                    { x: 0, z: -30, size: 4, theme: 1 },
-                    { x: 30, z: -30, size: 4, theme: 2 },
-                    { x: -30, z: 0, size: 4, theme: 3 },
-                    { x: 0, z: 0, size: 5, theme: 0 },
-                    { x: 30, z: 0, size: 4, theme: 1 },
-                    { x: -30, z: 30, size: 4, theme: 2 },
-                    { x: 0, z: 30, size: 4, theme: 3 },
-                    { x: 30, z: 30, size: 4, theme: 4 }
-                ];
-            } else if (type === 'linear') {
-                designerRooms = [
-                    { x: -40, z: 0, size: 4, theme: 0 },
-                    { x: -20, z: 0, size: 4, theme: 1 },
-                    { x: 0, z: 0, size: 5, theme: 2 },
-                    { x: 20, z: 0, size: 4, theme: 3 },
-                    { x: 40, z: 0, size: 4, theme: 4 }
-                ];
-            }
-            updateRoomList();
-            drawDesigner();
-        }
-        
-        function clearDesigner() {
-            if (confirm('Clear all rooms?')) {
-                designerRooms = [];
-                updateRoomList();
-                drawDesigner();
-            }
-        }
+        // Room designer functions - removed, will be reimplemented
         
         function applyRoomDesign() {
-            if (designerRooms.length === 0) {
-                alert('Please add at least one room!');
-                return;
-            }
             closeModal('room-designer-modal');
             startGameWithDesign();
         }
@@ -1430,8 +1241,8 @@
                 }
             ];
             
-            // Use designer rooms if available, otherwise use default
-            const rooms = designerRooms.length > 0 ? designerRooms : [
+            // Use default cross pattern layout
+            const rooms = [
                 { x: 0, z: 0, size: 5, theme: 0 },
                 { x: 30, z: 0, size: 4, theme: 1 },
                 { x: -30, z: 0, size: 4, theme: 2 },
