@@ -1544,14 +1544,15 @@
                     { from: 0, to: 1 },  // Center to East
                     { from: 0, to: 2 },  // Center to West
                     { from: 0, to: 3 },  // Center to North
-                    { from: 0, to: 4 },  // Center to South
-                    { from: 1, to: 5 },  // East to NE
-                    { from: 2, to: 6 }   // West to SW
+                    { from: 0, to: 4 }   // Center to South
                 ];
                 
                 corridors.forEach(corridor => {
                     const roomA = rooms[corridor.from];
                     const roomB = rooms[corridor.to];
+                    
+                    // Skip if room doesn't exist
+                    if (!roomA || !roomB) return;
                     const corridorTheme = roomThemes[0]; // Use stone for corridors
                     
                     // Simple corridor - straight line between room centers
