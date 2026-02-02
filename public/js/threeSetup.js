@@ -1,6 +1,7 @@
 // Fixed threeSetup.js - Use window.GameState instead of GameState
 let scene, camera, renderer;
 let playerContainer;
+let gltfLoader = new THREE.GLTFLoader();
 let clock = new THREE.Clock();
 let cameraAngle = Math.PI;
 
@@ -36,6 +37,7 @@ function initThreeJS() {
     window.camera = camera;
     window.renderer = renderer;
     window.playerContainer = playerContainer;
+    window.gltfLoader = gltfLoader;
     window.clock = clock;
     window.cameraAngle = cameraAngle;
     
