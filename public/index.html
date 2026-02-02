@@ -862,18 +862,48 @@
             });
             
             function setupAnimations() {
-                // Find idle animation FIRST (to avoid confusing it with walking)
+                // Choose weapon-specific idle based on character class
+                const weaponIdles = {
+                    warrior: 'melee_2h_idle',      // 2-handed axe
+                    knight: 'melee_1h',            // 1-handed sword + shield
+                    mage: 'idle',                  // Staff (use generic idle)
+                    rogue: 'melee_1h',             // Dagger
+                    ranger: 'idle'                 // Bow (use generic idle)
+                };
+                
+                const className = GameState.player.class || 'warrior';
+                const preferredIdle = weaponIdles[className];
+                
+                // Find weapon-specific idle animation FIRST
                 for (let key in GameState.animationActions) {
                     const keyLower = key.toLowerCase();
-                    if (keyLower.includes('idle') && !keyLower.includes('walk') && !keyLower.includes('run')) {
+                    if (keyLower.includes(preferredIdle) && keyLower.includes('idle') && 
+                        !keyLower.includes('walk') && !keyLower.includes('run') && !keyLower.includes('attack')) {
                         GameState.idleAction = GameState.animationActions[key];
-                        console.log(`✓ Using idle animation: ${key}`);
+                        console.log(`✓ Using weapon idle animation: ${key}`);
                         // Start idle animation immediately with proper settings
                         GameState.idleAction.reset();
                         GameState.idleAction.setEffectiveWeight(1);
                         GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
                         GameState.idleAction.play();
                         break;
+                    }
+                }
+                
+                // Fallback to generic idle if no weapon idle found
+                if (!GameState.idleAction) {
+                    for (let key in GameState.animationActions) {
+                        const keyLower = key.toLowerCase();
+                        if (keyLower.includes('idle') && !keyLower.includes('walk') && 
+                            !keyLower.includes('run') && !keyLower.includes('melee') && !keyLower.includes('attack')) {
+                            GameState.idleAction = GameState.animationActions[key];
+                            console.log(`✓ Using generic idle animation: ${key}`);
+                            GameState.idleAction.reset();
+                            GameState.idleAction.setEffectiveWeight(1);
+                            GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
+                            GameState.idleAction.play();
+                            break;
+                        }
                     }
                 }
                 
