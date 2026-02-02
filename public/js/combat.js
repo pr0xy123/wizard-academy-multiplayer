@@ -333,3 +333,8 @@ function openChest(chest) {
         window.updateHUD();
     }
 }
+
+// Export functions to window for global access
+window.startCombat = startCombat;
+window.submitAnswer = submitAnswer;
+window.checkInteractions = checkInteractions;

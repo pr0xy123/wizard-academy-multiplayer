@@ -280,3 +280,7 @@ function addInteractiveObjects() {
         window.scene.add(crystal);
     });
 }
+
+// Export functions to window for global access
+window.buildWorld = buildWorld;
+window.addInteractiveObjects = addInteractiveObjects;

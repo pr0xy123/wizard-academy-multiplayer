@@ -140,3 +140,8 @@ function getCurrentRoomSubject(playerX, playerZ) {
     const subjects = ['math', 'science', 'history', 'literature', 'geography'];
     return subjects[Math.floor(Math.random() * subjects.length)];
 }
+
+// Export functions to window for global access
+window.getRandomQuestion = getRandomQuestion;
+window.checkAnswer = checkAnswer;
+window.getCurrentRoomSubject = getCurrentRoomSubject;

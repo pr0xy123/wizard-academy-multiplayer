@@ -84,17 +84,13 @@ function updateCamera() {
     );
 }
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { 
-        initThreeJS, 
-        updateCamera, 
-        scene, 
-        camera, 
-        renderer,
-        playerContainer,
-        gltfLoader,
-        clock,
-        cameraAngle
-    };
-}
+// Export to window for global access
+window.initThreeJS = initThreeJS;
+window.updateCamera = updateCamera;
+window.scene = scene;
+window.camera = camera;
+window.renderer = renderer;
+window.playerContainer = playerContainer;
+window.gltfLoader = gltfLoader;
+window.clock = clock;
+window.cameraAngle = cameraAngle;

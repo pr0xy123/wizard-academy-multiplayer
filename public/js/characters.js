@@ -339,3 +339,8 @@ function playAttackAnimation() {
         }
     }, 1000);
 }
+
+// Export functions to window for global access
+window.createCharacter = createCharacter;
+window.updateCharacterAnimation = updateCharacterAnimation;
+window.playAttackAnimation = playAttackAnimation;

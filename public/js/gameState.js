@@ -60,7 +60,7 @@ function loadGame() {
     return false;
 }
 
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { GameState, saveGame, loadGame };
-}
+// Export to window for global access
+window.GameState = GameState;
+window.saveGame = saveGame;
+window.loadGame = loadGame;

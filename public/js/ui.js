@@ -325,5 +325,13 @@ function updateMovement(delta) {
     return isMoving;
 }
 
-// Export keys for other modules
+// Export functions and variables to window for global access
 window.keys = keys;
+window.updateHUD = updateHUD;
+window.selectClass = selectClass;
+window.startSinglePlayer = startSinglePlayer;
+window.startMultiplayer = startMultiplayer;
+window.showInventory = showInventory;
+window.closeInventory = closeInventory;
+window.setupInputHandlers = setupInputHandlers;
+window.updateMovement = updateMovement;
