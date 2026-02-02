@@ -294,10 +294,11 @@ function checkInteractions() {
         }
     });
     
-    // Random combat encounters (very rare - about once per minute of walking)
-    if (Math.random() < 0.00001) {
-        startCombat();
-    }
+    // Random combat encounters disabled for now
+    // TODO: Re-enable with proper cooldown system
+    // if (Math.random() < 0.00001) {
+    //     startCombat();
+    // }
 }
 
 // Collect knowledge crystal
