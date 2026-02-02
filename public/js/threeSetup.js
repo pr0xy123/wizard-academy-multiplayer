@@ -55,6 +55,13 @@ function initThreeJS() {
     playerContainer = new THREE.Group();
     scene.add(playerContainer);
     
+    // Export to window for global access (after creation)
+    window.scene = scene;
+    window.camera = camera;
+    window.renderer = renderer;
+    window.playerContainer = playerContainer;
+    window.clock = clock;
+    
     // Window resize handler
     window.addEventListener('resize', onWindowResize);
     
@@ -84,13 +91,7 @@ function updateCamera() {
     );
 }
 
-// Export to window for global access
+// Export functions and loader to window for global access
 window.initThreeJS = initThreeJS;
 window.updateCamera = updateCamera;
-window.scene = scene;
-window.camera = camera;
-window.renderer = renderer;
-window.playerContainer = playerContainer;
 window.gltfLoader = gltfLoader;
-window.clock = clock;
-window.cameraAngle = cameraAngle;
