@@ -63,5 +63,36 @@ function animate() {
 // Make global functions accessible
 window.initGame = initGame;
 
+// Initialize start screen event listeners
+function initStartScreen() {
+    console.log('🎬 Initializing start screen...');
+    
+    // Class card selection
+    document.querySelectorAll('.class-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const className = this.getAttribute('data-class');
+            window.selectClass(className);
+        });
+    });
+    
+    // Start buttons
+    document.getElementById('start-single').addEventListener('click', function() {
+        window.startSinglePlayer();
+    });
+    
+    document.getElementById('start-multi').addEventListener('click', function() {
+        window.startMultiplayer();
+    });
+    
+    console.log('✅ Start screen initialized');
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStartScreen);
+} else {
+    initStartScreen();
+}
+
 // Start game when all modules loaded
 console.log('✅ Main module loaded');

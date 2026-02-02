@@ -42,8 +42,11 @@ function selectClass(className) {
         card.classList.remove('selected');
     });
     
-    // Add selected class to clicked card
-    event.target.closest('.class-card').classList.add('selected');
+    // Add selected class to the clicked card
+    const clickedCard = document.querySelector(`.class-card[data-class="${className}"]`);
+    if (clickedCard) {
+        clickedCard.classList.add('selected');
+    }
     
     console.log(`🎭 Selected class: ${className}`);
 }
