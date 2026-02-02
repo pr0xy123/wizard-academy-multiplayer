@@ -294,8 +294,8 @@ function checkInteractions() {
         }
     });
     
-    // Random combat encounters (10% chance per check in rooms)
-    if (Math.random() < 0.001) {
+    // Random combat encounters (very rare - about once per minute of walking)
+    if (Math.random() < 0.00001) {
         startCombat();
     }
 }

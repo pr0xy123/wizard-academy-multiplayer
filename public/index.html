@@ -155,27 +155,29 @@
 
     <!-- Combat Modal -->
     <div id="combat-modal" class="modal" style="display: none;">
-        <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ff4444;">
-            ⚔️ <span id="enemy-name">Enemy</span>
-        </h2>
-        
-        <div style="margin-bottom: 20px;">
-            <div class="stat-bar" style="width: 100%;">
-                <div id="enemy-health" class="stat-fill health-fill" style="width: 100%;"></div>
+        <div class="modal-content" style="max-width: 600px; padding: 30px;">
+            <h2 class="fantasy-font" style="text-align: center; margin-bottom: 20px; font-size: 28px; color: #ff4444;">
+                ⚔️ <span id="enemy-name">Enemy</span>
+            </h2>
+            
+            <div style="margin-bottom: 20px;">
+                <div class="stat-bar" style="width: 100%; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden;">
+                    <div id="enemy-health" class="stat-fill health-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); transition: width 0.3s;"></div>
+                </div>
             </div>
+            
+            <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: center; color: white;"></p>
+            </div>
+            
+            <input id="answer-input" type="text" class="fantasy-input" placeholder="Your answer..." style="width: 100%; margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.4); border: 2px solid #4a5568; color: white; font-size: 16px; border-radius: 8px;">
+            
+            <p id="hint-text" style="text-align: center; min-height: 20px; font-style: italic; margin-bottom: 15px; color: #ffd700;"></p>
+            
+            <button id="submit-answer" class="fantasy-button" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #d69e2e, #b7791f); border: 2px solid #f6e05e; color: #1a202c; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 8px;">
+                ⚔️ Submit Answer
+            </button>
         </div>
-        
-        <div style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <p id="question-text" style="font-size: 18px; line-height: 1.6; text-align: center;"></p>
-        </div>
-        
-        <input id="answer-input" type="text" class="fantasy-input" placeholder="Your answer..." style="margin-bottom: 15px;">
-        
-        <p id="hint-text" style="text-align: center; min-height: 20px; font-style: italic; margin-bottom: 15px;"></p>
-        
-        <button id="submit-answer" class="fantasy-button" style="width: 100%;">
-            ⚔️ Submit Answer
-        </button>
     </div>
 
     <!-- Inventory Modal -->
