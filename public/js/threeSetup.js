@@ -1,11 +1,13 @@
 // Fixed threeSetup.js - Use window.GameState instead of GameState
 let scene, camera, renderer;
 let playerContainer;
-let gltfLoader = new THREE.GLTFLoader();
+let gltfLoader;
 let clock = new THREE.Clock();
 let cameraAngle = Math.PI;
 
 function initThreeJS() {
+    // Initialize GLTF Loader
+    gltfLoader = new THREE.GLTFLoader();
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x000000, 1, 100);
     scene.background = new THREE.Color(0x0a0a0a);
