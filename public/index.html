@@ -417,21 +417,20 @@
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <span style="font-size: 24px;" id="class-icon">🔮</span>
                         <div>
-                            <div style="font-size: 18px; font-weight: bold; color: #ffd700;" id="player-name-display">Wizard</div>
-                            <div class="grade-badge" id="grade-display">
-                                <span>📚</span>
-                                <span>Grade: Kindergarten</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                            <span>❤️ Health</span>
-                            <span id="health-text">100/100</span>
-                        </div>
-                        <div class="stat-bar"><div class="stat-fill health-fill" id="health-fill" style="width: 100%"></div></div>
-                    </div>
+                            const SERVER_URL = 'wss://wizard-academy-multiplayer.onrender.com';
+                            try {
+                                GameState.socket = io(SERVER_URL);
+                                GameState.socket.emit('join-room', room, name);
+                                // Listen for teacher's dungeon broadcasts
+                                GameState.socket.on('dungeon-broadcast', (dungeonData) => {
+                                    ...
+                                });
+                                document.getElementById('multiplayer-modal').style.display = 'none';
+                                startGame(true);
+                            } catch(e) {
+                                alert('Multiplayer server unavailable. Starting single player.');
+                                startGame(false);
+                            }
                     
                     <div style="margin-top: 8px;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px;">
@@ -1996,27 +1995,20 @@
         function joinMultiplayer() {
             const name = document.getElementById('player-name').value.trim();
             const room = document.getElementById('room-code').value.trim() || 'public';
-            
             if (!name) {
                 alert('⚠️ Please enter your name!');
                 return;
             }
-            
             if (!GameState.selectedClass) {
                 alert('⚠️ Please select a character class!');
                 return;
             }
-            
-            GameState.player.name = name;
-            GameState.player.class = GameState.selectedClass;
-            GameState.isMultiplayer = true;
-            
-            // Simple WebSocket connection simulation
+            document.getElementById('multiplayer-modal').style.display = 'none';
+            startGame(true);
             const SERVER_URL = 'wss://wizard-academy-multiplayer.onrender.com';
             try {
                 GameState.socket = io(SERVER_URL);
                 GameState.socket.emit('join-room', room, name);
-                
                 // Listen for teacher's dungeon broadcasts
                 GameState.socket.on('dungeon-broadcast', (dungeonData) => {
                     console.log('📡 Receiving dungeon from teacher:', dungeonData.name);
@@ -2091,19 +2083,9 @@
                     }
                 });
                 
-                document.getElementById('multiplayer-modal').style.display = 'none';
-                document.getElementById('start-screen').style.display = 'none';
-                document.getElementById('ui-layer').style.display = 'flex';
-                document.getElementById('player-list').style.display = 'block';
-                
-                init3D();
-                GameState.isPlaying = true;
-                updateHUD();
-                
-                setInterval(saveGame, 60000);
             } catch(e) {
                 alert('Multiplayer server unavailable. Starting single player.');
-                startSinglePlayer();
+                startGame(false);
             }
         }
 
@@ -2151,19 +2133,18 @@
             }
         }
 
-        function startSinglePlayer() {
+        function startGame(isMultiplayer = false) {
             const name = document.getElementById('player-name').value.trim();
             if (!name || !GameState.selectedClass) {
                 alert('Enter name and select class!');
                 return;
             }
-            
             GameState.player.name = name;
-            GameState.isMultiplayer = false;
-            
-            // Start game directly
+            GameState.player.class = GameState.selectedClass;
+            GameState.isMultiplayer = isMultiplayer;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'flex';
+            document.getElementById('player-list').style.display = isMultiplayer ? 'block' : 'none';
             document.getElementById('player-name-display').textContent = GameState.player.name;
             const classIcons = {
                 warrior: '⚔️',
@@ -2174,12 +2155,14 @@
             };
             const classDisplayEl = document.getElementById('player-class-display');
             if (classDisplayEl) classDisplayEl.textContent = classIcons[GameState.selectedClass] || '🎮';
-            
             init3D();
             GameState.isPlaying = true;
             updateHUD();
-            
             setInterval(saveGame, 60000);
+        }
+
+        function startSinglePlayer() {
+            startGame(false);
         }
         
         function startGameWithDesign() {
