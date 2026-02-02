@@ -1225,7 +1225,7 @@
         function initEditor() {
             createEditorUI();
             createEditorGrid();
-            console.log('🛠️ Editor initialized! Press E to toggle');
+            console.log('🛠️ Editor initialized! Press B to toggle (Teachers only)');
         }
         
         function createEditorUI() {
@@ -1280,7 +1280,8 @@
                     <div>🖱️ <b>Left Click</b> - Place tile</div>
                     <div>🖱️ <b>Right Click</b> - Remove tile</div>
                     <div>🖱️ <b>Drag</b> - Paint multiple tiles</div>
-                    <div>⌨️ <b>E</b> - Toggle editor</div>
+                    <div>⌨️ <b>B</b> - Toggle editor</div>
+                    <div>⌨️ <b>Q/E</b> - Rotate camera</div>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -1699,6 +1700,13 @@
             toggleEditor();
             showFloatingText('✅ Custom dungeon applied!', '#27ae60');
             console.log('✅ Custom dungeon applied!');
+            
+            // Broadcast dungeon to all connected players in multiplayer
+            if (GameState.isMultiplayer && GameState.socket) {
+                GameState.socket.emit('dungeon-broadcast', data);
+                showFloatingText('📡 Dungeon shared with students!', '#3498db');
+                console.log('📡 Broadcasting dungeon to multiplayer session');
+            }
         }
         
         function applyRoomDesign() {
@@ -2518,6 +2526,80 @@
             try {
                 GameState.socket = io(SERVER_URL);
                 GameState.socket.emit('join-room', room, name);
+                
+                // Listen for teacher's dungeon broadcasts
+                GameState.socket.on('dungeon-broadcast', (dungeonData) => {
+                    console.log('📡 Receiving dungeon from teacher:', dungeonData.name);
+                    
+                    if (dungeonData.tiles && dungeonData.tiles.length > 0) {
+                        // Clear existing world objects
+                        walls = [];
+                        enemies = [];
+                        chests = [];
+                        crystals = [];
+                        
+                        // Remove old dungeon objects from scene
+                        const toRemove = [];
+                        scene.children.forEach(child => {
+                            if (child.userData.isDungeonTile || child.userData.type) {
+                                toRemove.push(child);
+                            }
+                        });
+                        toRemove.forEach(obj => scene.remove(obj));
+                        
+                        // Build from teacher's dungeon
+                        dungeonData.tiles.forEach(tile => {
+                            if (tile.type === 'floor' || tile.type.startsWith('room')) {
+                                const color = tileTypes[tile.type].color;
+                                const geo = new THREE.BoxGeometry(4, 0.2, 4);
+                                const mat = new THREE.MeshStandardMaterial({ color });
+                                const floor = new THREE.Mesh(geo, mat);
+                                floor.position.set(tile.x, 0, tile.z);
+                                floor.receiveShadow = true;
+                                floor.userData.isDungeonTile = true;
+                                scene.add(floor);
+                            } else if (tile.type === 'wall') {
+                                const geo = new THREE.BoxGeometry(4, 6, 4);
+                                const mat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+                                const wall = new THREE.Mesh(geo, mat);
+                                wall.position.set(tile.x, 3, tile.z);
+                                wall.castShadow = true;
+                                wall.userData.isDungeonTile = true;
+                                scene.add(wall);
+                                walls.push({ mesh: wall, x: tile.x, z: tile.z, size: 4 });
+                            } else if (tile.type === 'chest') {
+                                const geo = new THREE.BoxGeometry(1.5, 1, 1);
+                                const mat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+                                const chest = new THREE.Mesh(geo, mat);
+                                chest.position.set(tile.x, 0.5, tile.z);
+                                chest.userData = { type: 'chest', opened: false };
+                                scene.add(chest);
+                                chests.push(chest);
+                            } else if (tile.type === 'crystal') {
+                                const geo = new THREE.OctahedronGeometry(0.6);
+                                const mat = new THREE.MeshStandardMaterial({ 
+                                    color: 0x00ffff, 
+                                    emissive: 0x00ffff,
+                                    emissiveIntensity: 0.5 
+                                });
+                                const crystal = new THREE.Mesh(geo, mat);
+                                crystal.position.set(tile.x, 1.5, tile.z);
+                                crystal.userData = { type: 'crystal', id: crystals.length, collected: false };
+                                scene.add(crystal);
+                                crystals.push(crystal);
+                            } else if (tile.type === 'spawn') {
+                                if (playerContainer) {
+                                    playerContainer.position.set(tile.x, 0, tile.z);
+                                    GameState.player.x = tile.x;
+                                    GameState.player.z = tile.z;
+                                }
+                            }
+                        });
+                        
+                        showFloatingText(`🏰 Now playing: ${dungeonData.name}`, '#3498db');
+                        console.log('✅ Teacher\'s dungeon loaded!');
+                    }
+                });
                 
                 document.getElementById('multiplayer-modal').style.display = 'none';
                 document.getElementById('start-screen').style.display = 'none';

@@ -49,6 +49,12 @@ io.on('connection', (socket) => {
         // Add new player to room
         room.set(socket.id, { name: playerName, x: 0, z: 0 });
         
+        // Send current dungeon if room has one
+        if (room.currentDungeon) {
+            socket.emit('dungeon-broadcast', room.currentDungeon);
+            console.log(`📡 Sending existing dungeon to ${playerName}`);
+        }
+        
         // Notify others in the room
         socket.to(roomId).emit('player-joined', { 
             id: socket.id, 
@@ -112,6 +118,20 @@ io.on('connection', (socket) => {
                 playerId: socket.id,
                 crystalId: data.crystalId
             });
+        }
+    });
+    
+    socket.on('dungeon-broadcast', (dungeonData) => {
+        const roomId = Array.from(socket.rooms)[1];
+        if (roomId) {
+            console.log(`📡 Broadcasting dungeon "${dungeonData.name}" to room ${roomId}`);
+            // Send dungeon to all other players in the room
+            socket.to(roomId).emit('dungeon-broadcast', dungeonData);
+            // Store dungeon for the room so new joiners can get it
+            const room = rooms.get(roomId);
+            if (room) {
+                room.currentDungeon = dungeonData;
+            }
         }
     });
     
