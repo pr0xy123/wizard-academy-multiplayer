@@ -1474,13 +1474,13 @@
                 moved = true;
             }
             if (keys['a'] || keys['arrowleft']) {
-                dx += Math.sin(cameraAngle - Math.PI/2) * speed;
-                dz += Math.cos(cameraAngle - Math.PI/2) * speed;
+                dx += Math.sin(cameraAngle + Math.PI/2) * speed;
+                dz += Math.cos(cameraAngle + Math.PI/2) * speed;
                 moved = true;
             }
             if (keys['d'] || keys['arrowright']) {
-                dx += Math.sin(cameraAngle + Math.PI/2) * speed;
-                dz += Math.cos(cameraAngle + Math.PI/2) * speed;
+                dx += Math.sin(cameraAngle - Math.PI/2) * speed;
+                dz += Math.cos(cameraAngle - Math.PI/2) * speed;
                 moved = true;
             }
             
