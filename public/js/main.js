@@ -1,98 +1,96 @@
-// main.js - Main game initialization and loop
+// main.js - Main game initialization
 
-// Initialize the game
 function initGame() {
     console.log('🎮 Initializing Wizard Academy...');
     
-    // Initialize Three.js scene
-    window.initThreeJS();
+    // Hide start screen properly
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('ui-layer').style.display = 'flex';
     
-    // Build dungeon world
+    // Initialize systems
+    window.initThreeJS();
     window.buildWorld();
     window.addInteractiveObjects();
-    
-    // Create player character
     window.createCharacter(window.GameState.player.class);
-    
-    // Setup input handlers
     window.setupInputHandlers();
-    
-    // Update HUD
     window.updateHUD();
     
-    // Start animation loop
-    animate();
+    // Set initial player position
+    window.GameState.player.x = 0;
+    window.GameState.player.z = 0;
+    if (window.playerContainer) {
+        window.playerContainer.position.set(0, 0, 0);
+    }
     
-    console.log('✅ Wizard Academy initialized!');
+    animate();
+    console.log('✅ Game initialized!');
 }
 
-// Main animation loop
 function animate() {
     requestAnimationFrame(animate);
     
     const delta = window.clock.getDelta();
     
-    // Update animations
     if (window.GameState.mixer) {
         window.GameState.mixer.update(delta);
     }
     
-    // Update player movement
     window.updateMovement(delta);
-    
-    // Update camera to follow player
     window.updateCamera();
     
-    // Check for interactions
     if (window.checkInteractions) {
         window.checkInteractions();
     }
     
-    // Rotate crystals
-    window.scene.children.forEach((object) => {
-        if (object.userData.type === 'crystal' && !object.userData.collected) {
-            object.rotation.y += object.userData.rotation || 0.01;
-            object.position.y = 1 + Math.sin(Date.now() * 0.001) * 0.2;
-        }
-    });
+    // Animate crystals
+    if (window.scene) {
+        window.scene.children.forEach((object) => {
+            if (object.userData.type === 'crystal' && !object.userData.collected) {
+                object.rotation.y += 0.02;
+                object.position.y = 1 + Math.sin(Date.now() * 0.003) * 0.3;
+            }
+        });
+    }
     
-    // Render scene
     window.renderer.render(window.scene, window.camera);
 }
 
-// Make global functions accessible
-window.initGame = initGame;
-
-// Initialize start screen event listeners
 function initStartScreen() {
     console.log('🎬 Initializing start screen...');
     
-    // Class card selection
+    // Class selection
     document.querySelectorAll('.class-card').forEach(card => {
         card.addEventListener('click', function() {
-            const className = this.getAttribute('data-class');
-            window.selectClass(className);
+            document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            window.GameState.selectedClass = this.dataset.class;
+            window.GameState.player.class = this.dataset.class;
         });
     });
     
     // Start buttons
     document.getElementById('start-single').addEventListener('click', function() {
+        if (!window.GameState.selectedClass) {
+            alert('Please select a class!');
+            return;
+        }
         window.startSinglePlayer();
     });
     
     document.getElementById('start-multi').addEventListener('click', function() {
-        window.startMultiplayer();
+        if (!window.GameState.selectedClass) {
+            alert('Please select a class!');
+            return;
+        }
+        alert('Multiplayer temporarily disabled - starting single player');
+        window.startSinglePlayer();
     });
-    
-    console.log('✅ Start screen initialized');
 }
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initStartScreen);
 } else {
     initStartScreen();
 }
 
-// Start game when all modules loaded
-console.log('✅ Main module loaded');
+window.initGame = initGame;
