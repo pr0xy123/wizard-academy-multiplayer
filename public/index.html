@@ -1145,6 +1145,9 @@
             let loadedRooms = 0;
             const totalRooms = rooms.length;
             
+            // Track placed floor tiles to prevent overlaps
+            const placedFloors = new Set();
+            
             // Build each room
             rooms.forEach((room, roomIndex) => {
                 const theme = roomThemes[room.theme];
@@ -1153,10 +1156,19 @@
                 // Load floor for this room
                 loadDungeonTile('floor', theme.floor, (floorModel) => {
                     // Create floor grid for this room
+                    const tileSpacing = 4.02; // Slightly larger to prevent edge overlap
                     for (let x = -room.size; x <= room.size; x++) {
                         for (let z = -room.size; z <= room.size; z++) {
+                            const posX = room.x + x * tileSpacing;
+                            const posZ = room.z + z * tileSpacing;
+                            const key = `${Math.round(posX)},${Math.round(posZ)}`;
+                            
+                            // Skip if tile already placed here
+                            if (placedFloors.has(key)) continue;
+                            placedFloors.add(key);
+                            
                             const floor = floorModel.clone();
-                            floor.position.set(room.x + x * 4, 0.01, room.z + z * 4);
+                            floor.position.set(posX, 0.02, posZ);
                             scene.add(floor);
                         }
                     }
@@ -1220,6 +1232,7 @@
                         const dz = roomB.z - roomA.z;
                         const steps = Math.max(Math.abs(dx), Math.abs(dz)) / 4;
                         
+                        const tileSpacing = 4.02;
                         for (let i = 0; i <= steps; i++) {
                             const t = i / steps;
                             const x = roomA.x + dx * t;
@@ -1227,12 +1240,22 @@
                             
                             // Place corridor floor (2-wide)
                             for (let offset = -1; offset <= 1; offset++) {
-                                const floor = floorModel.clone();
+                                let posX, posZ;
                                 if (Math.abs(dx) > Math.abs(dz)) {
-                                    floor.position.set(x, 0.01, z + offset * 4);
+                                    posX = x;
+                                    posZ = z + offset * tileSpacing;
                                 } else {
-                                    floor.position.set(x + offset * 4, 0.01, z);
+                                    posX = x + offset * tileSpacing;
+                                    posZ = z;
                                 }
+                                
+                                const key = `${Math.round(posX)},${Math.round(posZ)}`;
+                                // Skip if already placed (room tile exists here)
+                                if (placedFloors.has(key)) continue;
+                                placedFloors.add(key);
+                                
+                                const floor = floorModel.clone();
+                                floor.position.set(posX, 0.02, posZ);
                                 scene.add(floor);
                             }
                         }
