@@ -1017,48 +1017,87 @@
                 (gltf) => {
                     const weapon = gltf.scene;
                     
-                    // Try to find the right hand bone
+                    // Find the right hand bone in the skeleton
                     let rightHand = null;
-                    model.traverse((bone) => {
-                        if (bone.name && !rightHand) {
-                            const name = bone.name.toLowerCase();
-                            // Look for right hand bone
+                    model.traverse((node) => {
+                        if (node.isBone && node.name) {
+                            const name = node.name.toLowerCase();
+                            // Check for common hand bone naming conventions
                             if (name === 'hand.r' || name === 'handr' || name === 'hand_r' || 
+                                name === 'r_hand' || name === 'rhand' || name === 'hand' ||
                                 (name.includes('hand') && name.includes('r') && !name.includes('l'))) {
-                                rightHand = bone;
-                                console.log('✓ Found hand bone:', bone.name);
+                                rightHand = node;
+                                console.log('✓ Found hand bone:', node.name);
                             }
                         }
                     });
                     
                     if (rightHand) {
-                        // Attach to actual hand bone with class-specific positioning
-                        // These positions are tuned for weapon-holding animations
-                        const weaponAdjustments = {
-                            warrior: { pos: [0.05, -0.05, 0.1], rot: [Math.PI / 6, 0, Math.PI], scale: 0.85 },
-                            mage: { pos: [0, -0.25, 0], rot: [0, 0, 0], scale: 1.2 },
-                            rogue: { pos: [0, -0.12, 0.03], rot: [0, 0, Math.PI / 2], scale: 0.8 },
-                            knight: { pos: [0.05, -0.05, 0.1], rot: [Math.PI / 6, 0, Math.PI], scale: 0.85 },
-                            ranger: { pos: [0.12, -0.08, 0], rot: [0, Math.PI / 2, 0], scale: 1.0 }
+                        // CRITICAL FIX: Reset weapon transform completely first
+                        weapon.position.set(0, 0, 0);
+                        weapon.rotation.set(0, 0, 0);
+                        weapon.scale.set(1, 1, 1);
+                        
+                        // Add to hand BEFORE adjusting (so local coords work)
+                        rightHand.add(weapon);
+                        
+                        // NOW adjust position/rotation relative to hand bone
+                        // These values are specifically tuned for KayKit weapons
+                        const weaponOffsets = {
+                            warrior: { 
+                                // Axe needs to be held by handle, blade forward
+                                pos: [0, 0, 0.15],     // Slightly forward in hand
+                                rot: [Math.PI/2, 0, Math.PI/2],  // Rotate to grip properly
+                                scale: 1.0 
+                            },
+                            mage: { 
+                                // Staff held vertically
+                                pos: [0, -0.8, 0],     // Center staff in hand
+                                rot: [0, 0, 0],        // Upright
+                                scale: 0.8 
+                            },
+                            rogue: { 
+                                // Daggers held pointing forward
+                                pos: [0, 0, 0.1],
+                                rot: [Math.PI/2, 0, 0],
+                                scale: 0.7 
+                            },
+                            knight: {
+                                // Sword
+                                pos: [0, 0.05, 0.1],
+                                rot: [Math.PI/2, 0, Math.PI/2],
+                                scale: 1.0
+                            },
+                            ranger: {
+                                // Bow held horizontally
+                                pos: [0, 0, 0],
+                                rot: [0, 0, Math.PI/2],
+                                scale: 0.9
+                            }
                         };
                         
-                        const adj = weaponAdjustments[className] || { pos: [0, -0.12, 0.05], rot: [Math.PI / 4, 0, Math.PI], scale: 0.8 };
-                        weapon.position.set(...adj.pos);
-                        weapon.rotation.set(...adj.rot);
-                        weapon.scale.set(adj.scale, adj.scale, adj.scale);
-                        rightHand.add(weapon);
-                        console.log('✓ Weapon attached to hand bone:', rightHand.name, 'for', className);
-                    } else {
-                        // Fallback: attach weapon in front of character (visible position)
-                        // Since character is in T-pose, put weapon in front/center
-                        weapon.position.set(0, 1.0, 0.8);  // Center, chest height, in front
-                        weapon.rotation.set(0, 0, 0);  // Straight forward
-                        weapon.scale.set(2.0, 2.0, 2.0);  // Large so it's very visible
-                        model.add(weapon);
+                        const offset = weaponOffsets[className] || { pos: [0, 0, 0], rot: [0, 0, 0], scale: 1 };
                         
-                        console.log('✓ Weapon attached:', className, '- displayed in front of character');
-                        console.log('   Position:', weapon.position);
-                        console.log('   Scale:', weapon.scale);
+                        // Apply weapon-specific offsets
+                        weapon.position.set(...offset.pos);
+                        weapon.rotation.set(...offset.rot);
+                        weapon.scale.set(offset.scale, offset.scale, offset.scale);
+                        
+                        // ADDITIONAL FIX: If weapon is still backward, try flipping 180
+                        // Uncomment if needed:
+                        // weapon.rotation.y += Math.PI;
+                        
+                        console.log(`✓ Weapon attached to ${rightHand.name} for ${className}`);
+                        console.log(`   Position: ${weapon.position.x.toFixed(2)}, ${weapon.position.y.toFixed(2)}, ${weapon.position.z.toFixed(2)}`);
+                        console.log(`   Rotation: ${(weapon.rotation.x * 180/Math.PI).toFixed(0)}°, ${(weapon.rotation.y * 180/Math.PI).toFixed(0)}°, ${(weapon.rotation.z * 180/Math.PI).toFixed(0)}°`);
+                        
+                    } else {
+                        console.warn('❌ No hand bone found, weapon will float');
+                        
+                        // Fallback: Attach to model root with front offset
+                        model.add(weapon);
+                        weapon.position.set(0.5, 1.0, 0.5); // Right side, chest height, front
+                        weapon.scale.set(2, 2, 2);
                     }
                     
                     GameState.weapon = weapon;
