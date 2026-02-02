@@ -862,7 +862,8 @@
             });
             
             function setupAnimations() {
-                const className = GameState.player.class || 'warrior';
+                const className = GameState.selectedClass || GameState.player.class || 'warrior';
+                console.log(`🎭 Setting up animations for class: ${className}`);
                 
                 // Find weapon-specific idle animation based on class
                 // Warrior and knight with 2H weapons: use Melee_2H_Idle
