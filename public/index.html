@@ -1409,6 +1409,16 @@ document.addEventListener('click', function resumeAudioContext() {
 
         function checkCollision(x, z) {
             const buffer = 1.0;
+            
+            // Check dungeon wall colliders if available
+            if (window.checkWallCollision) {
+                const playerPos = { x: x, y: 1, z: z };
+                if (window.checkWallCollision(playerPos, buffer)) {
+                    return true;
+                }
+            }
+            
+            // Fallback to old collision system
             for (let wall of walls) {
                 if (Math.abs(x - wall.x) < wall.size/2 + buffer && 
                     Math.abs(z - wall.z) < wall.size/2 + buffer) {
