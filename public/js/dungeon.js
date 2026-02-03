@@ -208,10 +208,10 @@ function buildHallway(hallway) {
     const hallColor = 0x555555;
 
     if (hallway.type === 'horizontal') {
-        for (let x = 0; x < hallway.width; x += tileSpacing) {
-            for (let z = 0; z < hallway.depth; z += tileSpacing) {
-                const posX = hallway.x + x;
-                const posZ = hallway.z + z;
+        for (let x = 0; x < hallway.width; x++) {
+            for (let z = 0; z < hallway.depth; z++) {
+                const posX = hallway.x + x * tileSpacing;
+                const posZ = hallway.z + z * tileSpacing;
                 const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
 
                 if (!placedFloors.has(key)) {
@@ -221,10 +221,10 @@ function buildHallway(hallway) {
             }
         }
     } else {
-        for (let x = 0; x < hallway.width; x += tileSpacing) {
-            for (let z = 0; z < hallway.depth; z += tileSpacing) {
-                const posX = hallway.x + x;
-                const posZ = hallway.z + z;
+        for (let x = 0; x < hallway.width; x++) {
+            for (let z = 0; z < hallway.depth; z++) {
+                const posX = hallway.x + x * tileSpacing;
+                const posZ = hallway.z + z * tileSpacing;
                 const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
 
                 if (!placedFloors.has(key)) {
@@ -236,7 +236,6 @@ function buildHallway(hallway) {
     }
 }
 
-// Load a dungeon tile
 function loadDungeonTile(type, x, z, color, rotation = 0) {
     let geometry, material, mesh;
 
