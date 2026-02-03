@@ -148,8 +148,13 @@ function collectRoomsAndHallways(node, rooms, hallways) {
 
 // Build a single room
 function buildRoom(room) {
-    for (let x = 0; x < room.width; x++) {
-        for (let z = 0; z < room.depth; z++) {
+    // Convert world units to tile counts
+    const tilesWide = Math.max(2, Math.round(room.width / tileSpacing));
+    const tilesDeep = Math.max(2, Math.round(room.depth / tileSpacing));
+
+    // Place floor tiles (interior only)
+    for (let x = 1; x < tilesWide - 1; x++) {
+        for (let z = 1; z < tilesDeep - 1; z++) {
             const posX = room.x + x * tileSpacing;
             const posZ = room.z + z * tileSpacing;
             const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
@@ -161,46 +166,50 @@ function buildRoom(room) {
         }
     }
 
-    // Walls around room perimeter
-    const wallPositions = [];
-
-    for (let x = 0; x < room.width; x++) {
+    // Place walls only at perimeter
+    // North wall
+    for (let x = 0; x < tilesWide; x++) {
         const posX = room.x + x * tileSpacing;
-
-        wallPositions.push({
-            x: posX,
-            z: room.z - tileSpacing,
-            rotation: 0
-        });
-
-        wallPositions.push({
-            x: posX,
-            z: room.z + (room.depth - 1) * tileSpacing,
-            rotation: Math.PI
-        });
-    }
-
-    for (let z = 0; z < room.depth; z++) {
-        const posZ = room.z + z * tileSpacing;
-
-        wallPositions.push({
-            x: room.x - tileSpacing,
-            z: posZ,
-            rotation: -Math.PI / 2
-        });
-
-        wallPositions.push({
-            x: room.x + (room.width - 1) * tileSpacing,
-            z: posZ,
-            rotation: Math.PI / 2
-        });
-    }
-
-    wallPositions.forEach((pos, idx) => {
-        if (idx % 5 !== 2) {
-            loadDungeonTile('wall', pos.x, pos.z, room.theme.color, pos.rotation);
+        const posZ = room.z;
+        const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
+        if (!placedFloors.has(key)) {
+            placedFloors.add(key);
+            loadDungeonTile('wall', posX, posZ, room.theme.color, 0);
         }
-    });
+    }
+
+    // South wall
+    for (let x = 0; x < tilesWide; x++) {
+        const posX = room.x + x * tileSpacing;
+        const posZ = room.z + (tilesDeep - 1) * tileSpacing;
+        const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
+        if (!placedFloors.has(key)) {
+            placedFloors.add(key);
+            loadDungeonTile('wall', posX, posZ, room.theme.color, Math.PI);
+        }
+    }
+
+    // West wall
+    for (let z = 0; z < tilesDeep; z++) {
+        const posX = room.x;
+        const posZ = room.z + z * tileSpacing;
+        const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
+        if (!placedFloors.has(key)) {
+            placedFloors.add(key);
+            loadDungeonTile('wall', posX, posZ, room.theme.color, -Math.PI / 2);
+        }
+    }
+
+    // East wall
+    for (let z = 0; z < tilesDeep; z++) {
+        const posX = room.x + (tilesWide - 1) * tileSpacing;
+        const posZ = room.z + z * tileSpacing;
+        const key = `${posX.toFixed(2)},${posZ.toFixed(2)}`;
+        if (!placedFloors.has(key)) {
+            placedFloors.add(key);
+            loadDungeonTile('wall', posX, posZ, room.theme.color, Math.PI / 2);
+        }
+    }
 }
 
 // Build hallways
