@@ -111,46 +111,11 @@ function generateBSPTree(node, depth = 0, maxDepth = 4) {
 }
 
 function loadDungeonTile(type, x, z, modelName) {
-    pendingLoads++;
-    const path = `/models/environment/dungeon/${type}s/${modelName}.gltf`;
-    
-    window.gltfLoader.load(
-        path,
-        (gltf) => {
-            const model = gltf.scene;
-            model.position.set(x, 0, z);
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-            scene.add(model);
-            
-            // Add collision for walls
-            if (type === 'wall') {
-                const box = new THREE.Box3().setFromObject(model);
-                const collider = {
-                    min: box.min,
-                    max: box.max,
-                    mesh: model
-                };
-                wallColliders.push(collider);
-            }
-            
-            pendingLoads--;
-            checkDungeonReady();
-        },
-        undefined,
-        (error) => {
-            console.warn(`⚠️ Failed to load ${modelName}: ${error.message}`);
-            // Fallback to simple geometry
-            loadDungeonFallback(type, x, z);
-            pendingLoads--;
-            checkDungeonReady();
-        }
-    );
+    // Use simple geometry fallback directly (GLTF loading is slow and unreliable)
+    // This avoids the need to load 200+ GLTF files concurrently
+    loadDungeonFallback(type, x, z);
 }
+
 
 function loadDungeonFallback(type, x, z) {
     let geometry, height, color;
@@ -263,10 +228,9 @@ function buildHallway(hallway) {
 }
 
 function buildWorld() {
-    console.log('🏰 Building dungeon with BSP algorithm...');
+    console.log("🏰 Building dungeon with BSP algorithm...");
     wallColliders.length = 0;  // Clear previous colliders
     placedFloors.clear();
-    pendingLoads = 0;
     dungeonReady = false;
     
     const root = new BSPNode(-30, -30, 60, 60);
@@ -284,12 +248,8 @@ function buildWorld() {
     }
     
     processNode(root);
-    console.log(`📦 Loading ${pendingLoads} dungeon tiles...`);
-    
-    // If no loads pending, dungeon is immediately ready
-    if (pendingLoads === 0) {
-        checkDungeonReady();
-    }
+    console.log("✅ Dungeon built successfully with simple geometry");
+    dungeonReady = true;  // Dungeon is immediately ready (no async GLTF loads)
 }
 
 function checkDungeonReady() {
