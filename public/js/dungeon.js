@@ -4,6 +4,8 @@
 const tileSpacing = 4.1;
 const placedFloors = new Set();
 const wallColliders = [];  // Track walls for collision detection
+let pendingLoads = 0;
+let dungeonReady = false;
 
 const floorModels = [
     'floor_tile_large',
@@ -109,6 +111,7 @@ function generateBSPTree(node, depth = 0, maxDepth = 4) {
 }
 
 function loadDungeonTile(type, x, z, modelName) {
+    pendingLoads++;
     const path = `/models/environment/dungeon/${type}s/${modelName}.gltf`;
     
     window.gltfLoader.load(
@@ -134,12 +137,17 @@ function loadDungeonTile(type, x, z, modelName) {
                 };
                 wallColliders.push(collider);
             }
+            
+            pendingLoads--;
+            checkDungeonReady();
         },
         undefined,
         (error) => {
             console.warn(`⚠️ Failed to load ${modelName}: ${error.message}`);
             // Fallback to simple geometry
             loadDungeonFallback(type, x, z);
+            pendingLoads--;
+            checkDungeonReady();
         }
     );
 }
@@ -258,6 +266,8 @@ function buildWorld() {
     console.log('🏰 Building dungeon with BSP algorithm...');
     wallColliders.length = 0;  // Clear previous colliders
     placedFloors.clear();
+    pendingLoads = 0;
+    dungeonReady = false;
     
     const root = new BSPNode(-30, -30, 60, 60);
     generateBSPTree(root, 0, 3);
@@ -274,7 +284,25 @@ function buildWorld() {
     }
     
     processNode(root);
-    console.log(`✓ Dungeon built with ${wallColliders.length} wall colliders`);
+    console.log(`📦 Loading ${pendingLoads} dungeon tiles...`);
+    
+    // If no loads pending, dungeon is immediately ready
+    if (pendingLoads === 0) {
+        checkDungeonReady();
+    }
+}
+
+function checkDungeonReady() {
+    if (pendingLoads === 0 && !dungeonReady) {
+        dungeonReady = true;
+        console.log(`✓ Dungeon fully loaded with ${wallColliders.length} wall colliders`);
+        window.dungeonReady = true;
+        
+        // Notify listeners that dungeon is ready
+        if (window.onDungeonReady) {
+            window.onDungeonReady();
+        }
+    }
 }
 
 // Collision detection helper
@@ -292,5 +320,6 @@ function checkWallCollision(playerPos, radius = 2) {
     return false;
 }
 
-// Make collision function global so main script can use it
+// Make collision function and ready flag global so main script can use it
 window.checkWallCollision = checkWallCollision;
+window.dungeonReady = false;

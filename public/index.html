@@ -1345,6 +1345,11 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         function updateMovement() {
+            // Don't allow movement until dungeon is fully loaded
+            if (!window.dungeonReady) {
+                return;
+            }
+            
             const speed = 0.15;
             let dx = 0, dz = 0;
             let moved = false;
