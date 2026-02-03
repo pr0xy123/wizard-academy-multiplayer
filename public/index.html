@@ -757,7 +757,7 @@ document.addEventListener('click', function resumeAudioContext() {
         let clock = new THREE.Clock();
         let cameraAngle = Math.PI;
         
-        const gltfLoader = new THREE.GLTFLoader();
+        window.gltfLoader = new THREE.GLTFLoader();
 
         // CHARACTER MODEL PATHS
         const characterModels = {
