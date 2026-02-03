@@ -489,6 +489,10 @@ document.addEventListener('click', function resumeAudioContext() {
                     <div style="font-size: 16px; font-weight: bold; color: #ffd700; margin-bottom: 10px;">🎒 Inventory</div>
                     <div id="inventory-list">
                         <div style="display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-bottom: 5px;">
+                            <span>📚</span>
+                            <span style="font-size: 12px;" id="grade-display">Grade: 1</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-bottom: 5px;">
                             <span>🧪</span>
                             <span style="font-size: 12px;">Health Potions: <span id="potions-count">0</span></span>
                         </div>
@@ -1719,19 +1723,41 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         function updateHUD() {
-            document.getElementById('health-text').textContent = `${GameState.player.health}/${GameState.player.maxHealth}`;
-            document.getElementById('health-fill').style.width = (GameState.player.health / GameState.player.maxHealth * 100) + '%';
-            document.getElementById('mana-text').textContent = `${GameState.player.mana}/${GameState.player.maxMana}`;
-            document.getElementById('mana-fill').style.width = (GameState.player.mana / GameState.player.maxMana * 100) + '%';
-            document.getElementById('xp-text').textContent = `${GameState.player.xp}/${GameState.player.xpToNext}`;
-            document.getElementById('xp-fill').style.width = (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
-            document.getElementById('level-display').textContent = GameState.player.level;
-            document.getElementById('potions-count').textContent = GameState.player.potions;
-            document.getElementById('scrolls-count').textContent = GameState.player.scrolls;
-            document.getElementById('gold-count').textContent = GameState.player.gold;
+            const healthText = document.getElementById('health-text');
+            if (healthText) healthText.textContent = `${GameState.player.health}/${GameState.player.maxHealth}`;
             
-            const gradeInfo = Curriculum.grades[GameState.player.grade - 1];
-            document.getElementById('grade-display').innerHTML = `<span>📚</span><span>Grade: ${gradeInfo.name}</span>`;
+            const healthFill = document.getElementById('health-fill');
+            if (healthFill) healthFill.style.width = (GameState.player.health / GameState.player.maxHealth * 100) + '%';
+            
+            const manaText = document.getElementById('mana-text');
+            if (manaText) manaText.textContent = `${GameState.player.mana}/${GameState.player.maxMana}`;
+            
+            const manaFill = document.getElementById('mana-fill');
+            if (manaFill) manaFill.style.width = (GameState.player.mana / GameState.player.maxMana * 100) + '%';
+            
+            const xpText = document.getElementById('xp-text');
+            if (xpText) xpText.textContent = `${GameState.player.xp}/${GameState.player.xpToNext}`;
+            
+            const xpFill = document.getElementById('xp-fill');
+            if (xpFill) xpFill.style.width = (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
+            
+            const levelDisplay = document.getElementById('level-display');
+            if (levelDisplay) levelDisplay.textContent = GameState.player.level;
+            
+            const potionsCount = document.getElementById('potions-count');
+            if (potionsCount) potionsCount.textContent = GameState.player.potions;
+            
+            const scrollsCount = document.getElementById('scrolls-count');
+            if (scrollsCount) scrollsCount.textContent = GameState.player.scrolls;
+            
+            const goldCount = document.getElementById('gold-count');
+            if (goldCount) goldCount.textContent = GameState.player.gold;
+            
+            const gradeDisplay = document.getElementById('grade-display');
+            if (gradeDisplay && Curriculum && Curriculum.grades) {
+                const gradeInfo = Curriculum.grades[GameState.player.grade - 1];
+                gradeDisplay.textContent = `Grade: ${gradeInfo.name}`;
+            }
         }
 
         function closeModal(modalId) {
