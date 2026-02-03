@@ -1,16 +1,22 @@
 // dungeon-bsp.js - Better dungeon generation using Binary Space Partition algorithm
-// Creates proper rooms connected by hallways in a structured, repeatable way
+// Creates proper rooms connected by hallways with actual 3D models and collision detection
 
 const tileSpacing = 4.1;
 const placedFloors = new Set();
-const roomThemes = [
-    { name: 'Math Chamber', color: 0x3366ff, subject: 'math' },
-    { name: 'Science Lab', color: 0x00ff66, subject: 'science' },
-    { name: 'History Hall', color: 0xff9933, subject: 'history' },
-    { name: 'Literature Library', color: 0xff3366, subject: 'literature' },
-    { name: 'Geography Gallery', color: 0x66ffff, subject: 'geography' },
-    { name: 'Art Atrium', color: 0xff66ff, subject: 'art' },
-    { name: 'Music Conservatory', color: 0xffff33, subject: 'music' }
+const wallColliders = [];  // Track walls for collision detection
+
+const floorModels = [
+    'floor_tile_large',
+    'floor_wood_large', 
+    'floor_dirt_large_rocky',
+    'floor_tile_extralarge_grates'
+];
+
+const wallModels = [
+    'wall_arched',
+    'wall_stone_large',
+    'wall_stone_large_reinforced',
+    'wall_stone_corner'
 ];
 
 // BSP Node for tree structure
@@ -48,7 +54,8 @@ class BSPNode {
             depth: roomDepth,
             centerX: roomX + roomWidth / 2,
             centerZ: roomZ + roomDepth / 2,
-            theme: roomThemes[Math.floor(Math.random() * roomThemes.length)]
+            floorModel: floorModels[Math.floor(Math.random() * floorModels.length)],
+            wallModel: wallModels[Math.floor(Math.random() * wallModels.length)]
         };
     }
 
@@ -85,7 +92,6 @@ class BSPNode {
     }
 }
 
-// Recursively split the dungeon and create rooms
 function generateBSPTree(node, depth = 0, maxDepth = 4) {
     if (depth >= maxDepth || (node.width <= 8 && node.depth <= 8)) {
         node.createRoom();
@@ -102,51 +108,72 @@ function generateBSPTree(node, depth = 0, maxDepth = 4) {
     }
 }
 
-// Build world using BSP-generated rooms
-function buildWorld() {
-    console.log('🏰 Building dungeon world with BSP...');
-    placedFloors.clear();
-
-    const dungeonWidth = 60;
-    const dungeonDepth = 60;
-    const root = new BSPNode(-dungeonWidth / 2, -dungeonDepth / 2, dungeonWidth, dungeonDepth);
-
-    generateBSPTree(root, 0, 3);
-
-    const rooms = [];
-    const hallways = [];
-    collectRoomsAndHallways(root, rooms, hallways);
-
-    console.log(`📍 Generated ${rooms.length} rooms and ${hallways.length} hallways`);
-
-    rooms.forEach((room) => {
-        console.log(`🏛️ Building ${room.theme.name} (${room.width}×${room.depth})`);
-        buildRoom(room);
-    });
-
-    hallways.forEach((hallway) => {
-        console.log(`🚪 Building hallway`);
-        buildHallway(hallway);
-    });
-
-    console.log('✅ Dungeon world complete!');
+function loadDungeonTile(type, x, z, modelName) {
+    const path = `/models/environment/dungeon/${type}s/${modelName}.gltf`;
+    
+    window.gltfLoader.load(
+        path,
+        (gltf) => {
+            const model = gltf.scene;
+            model.position.set(x, 0, z);
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            scene.add(model);
+            
+            // Add collision for walls
+            if (type === 'wall') {
+                const box = new THREE.Box3().setFromObject(model);
+                const collider = {
+                    min: box.min,
+                    max: box.max,
+                    mesh: model
+                };
+                wallColliders.push(collider);
+            }
+        },
+        undefined,
+        (error) => {
+            console.warn(`⚠️ Failed to load ${modelName}: ${error.message}`);
+            // Fallback to simple geometry
+            loadDungeonFallback(type, x, z);
+        }
+    );
 }
 
-// Collect all rooms and hallways from BSP tree
-function collectRoomsAndHallways(node, rooms, hallways) {
-    if (node.room) {
-        rooms.push(node.room);
+function loadDungeonFallback(type, x, z) {
+    let geometry, height, color;
+    
+    if (type === 'floor') {
+        geometry = new THREE.BoxGeometry(3.8, 0.3, 3.8);
+        color = 0x4a4a4a;
+    } else {
+        geometry = new THREE.BoxGeometry(3.8, 3.5, 0.3);
+        color = 0x6a6a6a;
+        height = 1.75;
     }
-
-    if (node.hallway) {
-        hallways.push(node.hallway);
+    
+    const material = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, height || 0, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    
+    // Add wall collider
+    if (type === 'wall') {
+        const box = new THREE.Box3().setFromObject(mesh);
+        wallColliders.push({
+            min: box.min,
+            max: box.max,
+            mesh: mesh
+        });
     }
-
-    if (node.leftChild) collectRoomsAndHallways(node.leftChild, rooms, hallways);
-    if (node.rightChild) collectRoomsAndHallways(node.rightChild, rooms, hallways);
 }
 
-// Build a single room
 function buildRoom(room) {
     for (let x = 0; x < room.width; x++) {
         for (let z = 0; z < room.depth; z++) {
@@ -156,7 +183,7 @@ function buildRoom(room) {
 
             if (!placedFloors.has(key)) {
                 placedFloors.add(key);
-                loadDungeonTile('floor', posX, posZ, room.theme.color);
+                loadDungeonTile('floor', posX, posZ, room.floorModel);
             }
         }
     }
@@ -166,46 +193,23 @@ function buildRoom(room) {
 
     for (let x = 0; x < room.width; x++) {
         const posX = room.x + x * tileSpacing;
-
-        wallPositions.push({
-            x: posX,
-            z: room.z - tileSpacing,
-            rotation: 0
-        });
-
-        wallPositions.push({
-            x: posX,
-            z: room.z + (room.depth - 1) * tileSpacing,
-            rotation: Math.PI
-        });
+        wallPositions.push({ x: posX, z: room.z - tileSpacing, rotation: 0 });
+        wallPositions.push({ x: posX, z: room.z + room.depth * tileSpacing, rotation: 0 });
     }
 
-    for (let z = 0; z < room.depth; z++) {
+    for (let z = 1; z < room.depth; z++) {
         const posZ = room.z + z * tileSpacing;
-
-        wallPositions.push({
-            x: room.x - tileSpacing,
-            z: posZ,
-            rotation: -Math.PI / 2
-        });
-
-        wallPositions.push({
-            x: room.x + (room.width - 1) * tileSpacing,
-            z: posZ,
-            rotation: Math.PI / 2
-        });
+        wallPositions.push({ x: room.x - tileSpacing, z: posZ, rotation: Math.PI / 2 });
+        wallPositions.push({ x: room.x + room.width * tileSpacing, z: posZ, rotation: Math.PI / 2 });
     }
 
-    wallPositions.forEach((pos, idx) => {
-        if (idx % 5 !== 2) {
-            loadDungeonTile('wall', pos.x, pos.z, room.theme.color, pos.rotation);
-        }
-    });
+    for (const pos of wallPositions) {
+        loadDungeonTile('wall', pos.x, pos.z, room.wallModel);
+    }
 }
 
-// Build hallways
 function buildHallway(hallway) {
-    const hallColor = 0x555555;
+    const hallFloor = floorModels[0];  // Use first floor model for hallways
 
     if (hallway.type === 'horizontal') {
         for (let x = 0; x < hallway.width; x++) {
@@ -216,9 +220,16 @@ function buildHallway(hallway) {
 
                 if (!placedFloors.has(key)) {
                     placedFloors.add(key);
-                    loadDungeonTile('floor', posX, posZ, hallColor);
+                    loadDungeonTile('floor', posX, posZ, hallFloor);
                 }
             }
+        }
+        
+        // Walls on sides of horizontal hallway
+        for (let x = 0; x < hallway.width; x++) {
+            const posX = hallway.x + x * tileSpacing;
+            loadDungeonTile('wall', posX, hallway.z - tileSpacing, wallModels[0]);
+            loadDungeonTile('wall', posX, hallway.z + hallway.depth * tileSpacing, wallModels[0]);
         }
     } else {
         for (let x = 0; x < hallway.width; x++) {
@@ -229,45 +240,57 @@ function buildHallway(hallway) {
 
                 if (!placedFloors.has(key)) {
                     placedFloors.add(key);
-                    loadDungeonTile('floor', posX, posZ, hallColor);
+                    loadDungeonTile('floor', posX, posZ, hallFloor);
                 }
             }
+        }
+        
+        // Walls on sides of vertical hallway
+        for (let z = 0; z < hallway.depth; z++) {
+            const posZ = hallway.z + z * tileSpacing;
+            loadDungeonTile('wall', hallway.x - tileSpacing, posZ, wallModels[0]);
+            loadDungeonTile('wall', hallway.x + hallway.width * tileSpacing, posZ, wallModels[0]);
         }
     }
 }
 
-function loadDungeonTile(type, x, z, color, rotation = 0) {
-    let geometry, material, mesh;
-
-    if (type === 'floor') {
-        geometry = new THREE.BoxGeometry(3.8, 0.3, 3.8);
-        material = new THREE.MeshStandardMaterial({
-            color: color,
-            metalness: 0.1,
-            roughness: 0.8,
-            emissive: color,
-            emissiveIntensity: 0.1
-        });
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, 0, z);
-        mesh.receiveShadow = true;
-        scene.add(mesh);
-    } else if (type === 'wall') {
-        geometry = new THREE.BoxGeometry(3.8, 3.5, 0.3);
-        material = new THREE.MeshStandardMaterial({
-            color: color,
-            metalness: 0,
-            roughness: 0.9,
-            emissive: color,
-            emissiveIntensity: 0.05
-        });
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, 1.75, z);
-        mesh.rotation.y = rotation;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
+function buildWorld() {
+    console.log('🏰 Building dungeon with BSP algorithm...');
+    wallColliders.length = 0;  // Clear previous colliders
+    placedFloors.clear();
+    
+    const root = new BSPNode(-30, -30, 60, 60);
+    generateBSPTree(root, 0, 3);
+    
+    function processNode(node) {
+        if (node.room) {
+            buildRoom(node.room);
+        }
+        if (node.hallway) {
+            buildHallway(node.hallway);
+        }
+        if (node.leftChild) processNode(node.leftChild);
+        if (node.rightChild) processNode(node.rightChild);
     }
-
-    return mesh;
+    
+    processNode(root);
+    console.log(`✓ Dungeon built with ${wallColliders.length} wall colliders`);
 }
+
+// Collision detection helper
+function checkWallCollision(playerPos, radius = 2) {
+    for (const wall of wallColliders) {
+        const dx = Math.max(wall.min.x, Math.min(playerPos.x, wall.max.x)) - playerPos.x;
+        const dy = Math.max(wall.min.y, Math.min(playerPos.y, wall.max.y)) - playerPos.y;
+        const dz = Math.max(wall.min.z, Math.min(playerPos.z, wall.max.z)) - playerPos.z;
+        
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance < radius) {
+            return true;  // Collision detected
+        }
+    }
+    return false;
+}
+
+// Make collision function global so main script can use it
+window.checkWallCollision = checkWallCollision;
