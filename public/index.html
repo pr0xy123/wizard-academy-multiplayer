@@ -403,9 +403,9 @@ document.addEventListener('click', function resumeAudioContext() {
             
             <h3 style="color: #ffd700; margin-bottom: 15px;">Choose Your Class</h3>
             <div class="class-selection">
-                <div class="class-card" onclick="selectClass('warrior')" id="class-warrior">
+                <div class="class-card" onclick="selectClass('barbarian')" id="class-barbarian">
                     <div class="class-icon">⚔️</div>
-                    <h3>Warrior</h3>
+                    <h3>Barbarian</h3>
                     <p style="font-size: 12px; color: #888;">High HP • Melee Combat</p>
                 </div>
                 <div class="class-card" onclick="selectClass('mage')" id="class-mage">
@@ -773,7 +773,7 @@ document.addEventListener('click', function resumeAudioContext() {
 
         // CHARACTER MODEL PATHS
         const characterModels = {
-            warrior: '/models/characters/warrior/Barbarian.glb',
+            barbarian: '/models/characters/warrior/Barbarian.glb',
             mage: '/models/characters/mage/Mage.glb',
             rogue: '/models/characters/rogue/Rogue.glb',
             knight: '/models/characters/knight/Knight.glb',
@@ -967,7 +967,7 @@ document.addEventListener('click', function resumeAudioContext() {
             });
             
             function setupAnimations() {
-                const className = GameState.selectedClass || GameState.player.class || 'warrior';
+                const className = GameState.selectedClass || GameState.player.class || 'barbarian';
                 console.log(`🎭 Setting up animations for class: ${className}`);
                 
                 // Find weapon-specific idle animation based on class
@@ -1126,8 +1126,8 @@ document.addEventListener('click', function resumeAudioContext() {
                     const classMatch = weaponPath.match(/\/characters\/(\w+)\//);
                     if (classMatch) {
                         const characterClass = classMatch[1];
-                        // For warrior, use barbarian_texture.png instead of warrior_texture.png
-                        const textureName = characterClass === 'warrior' ? 'barbarian_texture.png' : `${characterClass}_texture.png`;
+                        // Use barbarian_texture.png for barbarian class
+                        const textureName = characterClass === 'warrior' || characterClass === 'barbarian' ? 'barbarian_texture.png' : `${characterClass}_texture.png`;
                         const newUrl = `/models/characters/${characterClass}/${textureName}`;
                         console.log(`🔄 Redirecting texture ${url} to ${newUrl}`);
                         return newUrl;
@@ -1178,7 +1178,7 @@ document.addEventListener('click', function resumeAudioContext() {
                         // NOW adjust position/rotation relative to hand bone
                         // These values are specifically tuned for KayKit weapons
                         const weaponOffsets = {
-                            warrior: { 
+                            barbarian: { 
                                 // Axe needs to be held by handle, blade forward
                                 pos: [0, 0, 0.15],     // Slightly forward in hand
                                 rot: [Math.PI/2, 0, Math.PI/2],  // Rotate to grip properly
@@ -1964,7 +1964,7 @@ document.addEventListener('click', function resumeAudioContext() {
             if (playerNameEl) playerNameEl.textContent = GameState.player.name;
             else console.warn('player-name-display element not found');
             const classIcons = {
-                warrior: '⚔️',
+                barbarian: '⚔️',
                 mage: '🔮',
                 rogue: '🗡️',
                 knight: '🛡️',
@@ -1988,7 +1988,7 @@ document.addEventListener('click', function resumeAudioContext() {
             if (playerNameEl) playerNameEl.textContent = GameState.player.name;
             else console.warn('player-name-display element not found');
             const classIcons = {
-                warrior: '⚔️',
+                barbarian: '⚔️',
                 mage: '🔮',
                 rogue: '🗡️',
                 knight: '🛡️',

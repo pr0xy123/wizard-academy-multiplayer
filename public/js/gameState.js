@@ -2,7 +2,7 @@
 const GameState = {
     player: {
         name: '', 
-        class: 'mage', 
+        class: 'barbarian', 
         level: 1, 
         grade: 1,
         xp: 0, 

@@ -2,7 +2,7 @@
 
 // Character model paths (KayKit Adventurers)
 const characterModels = {
-    warrior: 'models/characters/warrior/Barbarian.glb',
+    barbarian: 'models/characters/warrior/Barbarian.glb',
     mage: 'models/characters/mage/Mage.glb',
     rogue: 'models/characters/rogue/Rogue.glb',
     knight: 'models/characters/knight/Knight.glb',
@@ -11,7 +11,7 @@ const characterModels = {
 
 // Weapon model paths
 const weaponModels = {
-    warrior: 'models/characters/warrior/weapons/axe_2handed.gltf',
+    barbarian: 'models/characters/warrior/weapons/axe_2handed.gltf',
     mage: 'models/characters/mage/weapons/staff.gltf',
     rogue: 'models/characters/rogue/weapons/dagger.gltf',
     knight: 'models/characters/knight/weapons/sword_1handed.gltf',
@@ -85,7 +85,7 @@ function createCharacter(className) {
 // Create a simple cube character as fallback
 function createFallbackCharacter(className) {
     const colors = {
-        warrior: 0xff4444,
+        barbarian: 0xff4444,
         mage: 0x4444ff,
         rogue: 0x44ff44,
         knight: 0xffaa00,
@@ -155,13 +155,13 @@ function setupAnimations(className) {
     // Find weapon-specific idle animation
     let idleFound = false;
     
-    // Warrior: Use 2-handed melee idle
-    if (className === 'warrior') {
+    // Barbarian: Use 2-handed melee idle
+    if (className === 'barbarian') {
         for (let key in window.GameState.animationActions) {
             if (key.toLowerCase().includes('melee_2h_idle')) {
                 window.GameState.idleAction = window.GameState.animationActions[key];
                 idleFound = true;
-                console.log(`✅ Found warrior idle: ${key}`);
+                console.log(`✅ Found barbarian idle: ${key}`);
                 break;
             }
         }
@@ -317,7 +317,7 @@ function loadWeaponForCharacter(model, className) {
         
         // THEN apply class-specific offsets (KayKit pivot adjustments)
         const weaponOffsets = {
-            warrior: { 
+            barbarian: { 
                 pos: [0, 0, 0.15], 
                 rot: [Math.PI/2, 0, Math.PI/2], 
                 scale: 1.0 

@@ -89,8 +89,8 @@ function createTile(type, x, z) {
     if (type === 'floor') {
         const geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 0.2, tileSpacing * 0.95);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x5a5a5a,
-            roughness: 0.9 
+            color: 0x8a8a8a,
+            roughness: 0.8 
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(posX, 0, posZ);
@@ -100,8 +100,8 @@ function createTile(type, x, z) {
     } else {
         const geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 3, tileSpacing * 0.95);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x7a7a7a,
-            roughness: 0.7 
+            color: 0xa0a0a0,
+            roughness: 0.6 
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(posX, 1.5, posZ);
