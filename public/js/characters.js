@@ -11,11 +11,11 @@ const characterModels = {
 
 // Weapon model paths
 const weaponModels = {
-    warrior: 'models/characters/warrior/Weapon_Axe_02.gltf',
-    mage: 'models/characters/mage/Weapon_Staff_03.gltf',
-    rogue: 'models/characters/rogue/Weapon_Dagger_01.gltf',
-    knight: 'models/characters/knight/Weapon_Sword_01.gltf',
-    ranger: 'models/characters/ranger/Weapon_Bow_02.gltf'
+    warrior: 'models/characters/warrior/weapons/axe_2handed.gltf',
+    mage: 'models/characters/mage/weapons/staff.gltf',
+    rogue: 'models/characters/rogue/weapons/dagger.gltf',
+    knight: 'models/characters/knight/weapons/sword_1handed.gltf',
+    ranger: 'models/characters/ranger/weapons/bow.gltf'
 };
 
 // Animation pack paths (using Medium rig for all character types)
@@ -28,6 +28,8 @@ const animationPacks = {
 // Create character with model, animations, and weapon
 function createCharacter(className) {
     console.log(`🎮 Creating character: ${className}`);
+    console.log(`📁 Model path: ${characterModels[className]}`);
+    console.log(`📁 Weapon path: ${weaponModels[className]}`);
     
     const modelPath = characterModels[className];
     if (!modelPath) {
@@ -44,6 +46,17 @@ function createCharacter(className) {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+                
+                // Ensure materials are properly configured
+                if (child.material) {
+                    // Handle array of materials
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    materials.forEach(material => {
+                        if (material.map) {
+                            material.map.anisotropy = 16;
+                        }
+                    });
+                }
             }
         });
 
@@ -107,9 +120,11 @@ function loadAnimationsForCharacter(model, className) {
     
     let packsLoaded = 0;
     const totalPacks = Object.keys(animationPacks).length;
+    console.log(`📁 Loading ${totalPacks} animation packs`);
 
     // Load each animation pack
     for (const [packName, packPath] of Object.entries(animationPacks)) {
+        console.log(`📥 Loading animation pack: ${packName} from ${packPath}`);
         window.gltfLoader.load(packPath, (gltf) => {
             console.log(`📦 Loaded ${packName} pack (${gltf.animations.length} animations)`);
             
@@ -238,6 +253,7 @@ function setupAnimations(className) {
 // Load weapon and attach to character's hand
 function loadWeaponForCharacter(model, className) {
     console.log(`⚔️ Loading weapon for ${className}...`);
+    console.log(`📁 Weapon path: ${weaponModels[className]}`);
     
     const weaponPath = weaponModels[className];
     if (!weaponPath) {
@@ -276,6 +292,25 @@ function loadWeaponForCharacter(model, className) {
         weapon.position.set(0, 0, 0);
         weapon.rotation.set(0, 0, 0);
         weapon.scale.set(1, 1, 1);
+        
+        // Configure weapon materials
+        weapon.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // Ensure materials are properly configured
+                if (child.material) {
+                    // Handle array of materials
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    materials.forEach(material => {
+                        if (material.map) {
+                            material.map.anisotropy = 16;
+                        }
+                    });
+                }
+            }
+        });
         
         // Attach to hand bone FIRST
         rightHand.add(weapon);
@@ -327,6 +362,8 @@ function loadWeaponForCharacter(model, className) {
         console.log(`✅ Weapon attached for ${className}`);
     }, undefined, (error) => {
         console.error(`❌ Error loading weapon:`, error);
+        // Try to load a fallback weapon or continue without weapon
+        console.log(`⚠️ Continuing without weapon for ${className}`);
     });
 }
 

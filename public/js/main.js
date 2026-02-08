@@ -2,17 +2,29 @@
 
 function initGame() {
     console.log('🎮 Initializing Wizard Academy...');
+    console.log(`👤 Selected character class: ${window.GameState.player.class}`);
     
     // Hide start screen properly
     document.getElementById('start-screen').classList.remove('active');
     document.getElementById('ui-layer').style.display = 'flex';
     
     // Initialize systems
+    console.log('🔧 Initializing Three.js...');
     window.initThreeJS();
+    
+    console.log('🏰 Building world...');
     window.buildWorld();
+    
+    console.log('🔮 Adding interactive objects...');
     window.addInteractiveObjects();
+    
+    console.log('🧙 Creating character...');
     window.createCharacter(window.GameState.player.class);
+    
+    console.log('🎮 Setting up input handlers...');
     window.setupInputHandlers();
+    
+    console.log('📊 Updating HUD...');
     window.updateHUD();
     
     // Set initial player position
@@ -20,8 +32,10 @@ function initGame() {
     window.GameState.player.z = 0;
     if (window.playerContainer) {
         window.playerContainer.position.set(0, 0, 0);
+        console.log('📍 Player positioned at origin');
     }
     
+    console.log('🎬 Starting animation loop...');
     animate();
     console.log('✅ Game initialized!');
 }
