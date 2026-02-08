@@ -54,9 +54,41 @@
         .vignette {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 65%, rgba(0,0,0,0.45) 100%);
+            background: radial-gradient(circle, transparent 80%, rgba(0,0,0,0.15) 100%);
             pointer-events: none;
             z-index: 5;
+        }
+        
+        #debug-banner {
+            position: fixed !important;
+            top: 10px !important;
+            left: 10px !important;
+            background: rgba(255, 255, 0, 0.95) !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            padding: 12px 15px !important;
+            border-radius: 6px !important;
+            z-index: 9999 !important;
+            font-size: 13px !important;
+            font-family: monospace !important;
+            border: 3px solid #000 !important;
+        }
+        
+        #debug-log {
+            position: fixed !important;
+            bottom: 10px !important;
+            right: 10px !important;
+            background: rgba(0, 0, 0, 0.95) !important;
+            color: #00ff00 !important;
+            font-family: monospace !important;
+            font-size: 10px !important;
+            padding: 8px !important;
+            border-radius: 6px !important;
+            z-index: 9999 !important;
+            max-width: 350px !important;
+            max-height: 250px !important;
+            overflow-y: auto !important;
+            border: 2px solid #00ff00 !important;
         }
         
         #ui-layer {
@@ -68,6 +100,22 @@
             flex-direction: column;
             justify-content: space-between;
             padding: 20px;
+        }
+
+        #debug-banner {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 0, 0.85);
+            color: #000;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 6px;
+            z-index: 1000;
+            pointer-events: none;
+            font-size: 12px;
+            letter-spacing: 0.5px;
         }
         
         .hud-panel {
@@ -386,6 +434,8 @@ document.addEventListener('click', function resumeAudioContext() {
     </head>
 <body>
     <div id="game-container" class="crt">
+        <div id="debug-banner">🎮 LOADING...</div>
+        <div id="debug-log"></div>
         <canvas id="render-canvas"></canvas>
         <div class="vignette"></div>
         <div id="particle-overlay"></div>
@@ -663,6 +713,9 @@ document.addEventListener('click', function resumeAudioContext() {
     </div>
 
     <script>
+        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); if(logs.length > 12) logs.shift(); const el = document.getElementById('debug-log'); if(el) el.innerHTML = logs.map(l => l + '<br>').join(''); if(document.getElementById('debug-banner')) document.getElementById('debug-banner').textContent = msg; }; })();
+        debugLog('✓ index.html loaded');
+        console.log('DEBUG: index.html active build 2026-02-07');
         // CURRICULUM SYSTEM
         const Curriculum = {
             grades: [
@@ -790,32 +843,35 @@ document.addEventListener('click', function resumeAudioContext() {
         };
 
         function init3D() {
+            debugLog('▶ init3D() called');
             const canvas = document.getElementById('render-canvas');
+            debugLog('Canvas: ' + (canvas ? 'found' : 'MISSING!'));
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x404040);
-            scene.fog = new THREE.FogExp2(0x666666, 0.001);
+            debugLog('Scene created');
+            scene.background = new THREE.Color(0x7a7a7a);
+            scene.fog = null;
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = false;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 4.0;
+            renderer.toneMapping = THREE.LinearToneMapping;
+            renderer.toneMappingExposure = 1.4;
             renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.physicallyCorrectLights = true;
+            renderer.physicallyCorrectLights = false;
 
             gltfLoader = new THREE.GLTFLoader();
             window.gltfLoader = gltfLoader;
             
             // Lights
-            scene.add(new THREE.AmbientLight(0xffffff, 12));
-            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 5.0);
+            scene.add(new THREE.AmbientLight(0xffffff, 2.2));
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 1.2);
             scene.add(hemiLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 5.0);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.6);
             dirLight.position.set(50, 100, 50);
             dirLight.castShadow = false;
             scene.add(dirLight);
-            const fillLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
             fillLight.position.set(-30, 40, -20);
             scene.add(fillLight);
             
@@ -825,13 +881,13 @@ document.addEventListener('click', function resumeAudioContext() {
             GameState.playerMesh = playerContainer; // For compatibility
             
             // Create torch light attached to player
-            const torchLight = new THREE.PointLight(0xffffff, 10, 90);
+            const torchLight = new THREE.PointLight(0xffffff, 2.5, 90);
             torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
-            const overheadLight = new THREE.PointLight(0xffffff, 10, 120);
+            const overheadLight = new THREE.PointLight(0xffffff, 2.0, 120);
             overheadLight.position.set(0, 15, 0);
             scene.add(overheadLight);
-            const cameraLight = new THREE.PointLight(0xffffff, 6, 40);
+            const cameraLight = new THREE.PointLight(0xffffff, 1.5, 40);
             camera.add(cameraLight);
             scene.add(camera);
             
@@ -1986,11 +2042,13 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         function startGame(isMultiplayer = false) {
+            debugLog('▶ startGame() START');
             const name = document.getElementById('player-name').value.trim();
             if (!name || !GameState.selectedClass) {
                 alert('Enter name and select class!');
                 return;
             }
+            debugLog('Player: ' + name + ' | Class: ' + GameState.selectedClass);
             GameState.player.name = name;
             GameState.player.class = GameState.selectedClass;
             GameState.isMultiplayer = isMultiplayer;
@@ -2012,6 +2070,7 @@ document.addEventListener('click', function resumeAudioContext() {
             };
             const classDisplayEl = document.getElementById('player-class-display');
             if (classDisplayEl) classDisplayEl.textContent = classIcons[GameState.selectedClass] || '🎮';
+            debugLog('▶ Calling init3D()');
             init3D();
             GameState.isPlaying = true;
             updateHUD();
