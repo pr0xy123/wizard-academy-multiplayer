@@ -792,18 +792,24 @@ document.addEventListener('click', function resumeAudioContext() {
         function init3D() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1520);
-            scene.fog = new THREE.FogExp2(0x1a1520, 0.02);
+            scene.background = new THREE.Color(0x404040);
+            scene.fog = new THREE.FogExp2(0x666666, 0.006);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.enabled = false;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 2.5;
+            renderer.outputEncoding = THREE.sRGBEncoding;
             
             // Lights
-            scene.add(new THREE.AmbientLight(0x404040, 1.5));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            scene.add(new THREE.AmbientLight(0xffffff, 6));
+            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 2.5);
+            scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
             dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = false;
             scene.add(dirLight);
             
             // Create player container (invisible parent that moves)
@@ -812,9 +818,12 @@ document.addEventListener('click', function resumeAudioContext() {
             GameState.playerMesh = playerContainer; // For compatibility
             
             // Create torch light attached to player
-            const torchLight = new THREE.PointLight(0xffaa44, 1, 20);
-            torchLight.position.set(0, 3, 0);
+            const torchLight = new THREE.PointLight(0xffffff, 6, 60);
+            torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
+            const overheadLight = new THREE.PointLight(0xffffff, 6, 80);
+            overheadLight.position.set(0, 15, 0);
+            scene.add(overheadLight);
             
             createCharacter();
             buildWorld();
