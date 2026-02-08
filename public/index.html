@@ -781,6 +781,7 @@ document.addEventListener('click', function resumeAudioContext() {
 
         // WEAPON MODEL PATHS - using character-specific weapon folders
         const weaponModels = {
+            barbarian: '/models/characters/warrior/weapons/axe_2handed.gltf',
             warrior: '/models/characters/warrior/weapons/axe_2handed.gltf',
             mage: '/models/characters/mage/weapons/staff.gltf',
             rogue: '/models/characters/rogue/weapons/dagger.gltf',
@@ -792,14 +793,14 @@ document.addEventListener('click', function resumeAudioContext() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x404040);
-            scene.fog = new THREE.FogExp2(0x666666, 0.003);
+            scene.fog = new THREE.FogExp2(0x666666, 0.001);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = false;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 3.2;
+            renderer.toneMappingExposure = 4.0;
             renderer.outputEncoding = THREE.sRGBEncoding;
             renderer.physicallyCorrectLights = true;
 
@@ -807,13 +808,16 @@ document.addEventListener('click', function resumeAudioContext() {
             window.gltfLoader = gltfLoader;
             
             // Lights
-            scene.add(new THREE.AmbientLight(0xffffff, 8));
-            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 3.5);
+            scene.add(new THREE.AmbientLight(0xffffff, 12));
+            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 5.0);
             scene.add(hemiLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 4.0);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 5.0);
             dirLight.position.set(50, 100, 50);
             dirLight.castShadow = false;
             scene.add(dirLight);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            fillLight.position.set(-30, 40, -20);
+            scene.add(fillLight);
             
             // Create player container (invisible parent that moves)
             playerContainer = new THREE.Group();
@@ -821,12 +825,15 @@ document.addEventListener('click', function resumeAudioContext() {
             GameState.playerMesh = playerContainer; // For compatibility
             
             // Create torch light attached to player
-            const torchLight = new THREE.PointLight(0xffffff, 8, 70);
+            const torchLight = new THREE.PointLight(0xffffff, 10, 90);
             torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
-            const overheadLight = new THREE.PointLight(0xffffff, 8, 90);
+            const overheadLight = new THREE.PointLight(0xffffff, 10, 120);
             overheadLight.position.set(0, 15, 0);
             scene.add(overheadLight);
+            const cameraLight = new THREE.PointLight(0xffffff, 6, 40);
+            camera.add(cameraLight);
+            scene.add(camera);
             
             createCharacter();
             buildWorld();
@@ -851,6 +858,26 @@ document.addEventListener('click', function resumeAudioContext() {
                 (gltf) => {
                     console.log('Model loaded successfully');
                     const model = gltf.scene;
+
+                    // Ensure meshes are visible and well-lit
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            if (child.material) {
+                                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                                materials.forEach((mat) => {
+                                    mat.transparent = false;
+                                    mat.opacity = 1;
+                                    mat.side = THREE.DoubleSide;
+                                    if (mat.emissive) {
+                                        mat.emissiveIntensity = Math.max(mat.emissiveIntensity || 0, 0.25);
+                                    }
+                                    mat.needsUpdate = true;
+                                });
+                            }
+                        }
+                    });
                     
                     // CRITICAL FIX: Properly center and orient the model
                     const box = new THREE.Box3().setFromObject(model);
@@ -878,6 +905,7 @@ document.addEventListener('click', function resumeAudioContext() {
                     
                     // Add pivot to player container
                     playerContainer.add(pivot);
+                    playerContainer.position.set(0, 0, 0);
                     characterModel = pivot;
                     GameState.characterModel = model; // Store reference to actual model for animation
                     
