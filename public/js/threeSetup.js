@@ -34,52 +34,54 @@ function initThreeJS() {
     };
     
     scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x444444, 10, 80);
-    scene.background = new THREE.Color(0x2a2a2a);
+    scene.fog = new THREE.Fog(0x666666, 20, 100);
+    scene.background = new THREE.Color(0x404040);
     
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 2.5;
+    renderer.outputEncoding = THREE.sRGBEncoding;
     document.getElementById('game-container').appendChild(renderer.domElement);
     
-    const ambientLight = new THREE.AmbientLight(0x808080, 5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 8);
     scene.add(ambientLight);
     
-    const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1.5);
+    const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 3.0);
     scene.add(hemisphereLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
     directionalLight.position.set(10, 20, 10);
-    directionalLight.castShadow = true;
+    directionalLight.castShadow = false;
     scene.add(directionalLight);
     
-    const torchLight1 = new THREE.PointLight(0xff9933, 4, 30);
-    torchLight1.position.set(10, 3, 10);
+    const torchLight1 = new THREE.PointLight(0xffffff, 8, 50);
+    torchLight1.position.set(10, 5, 10);
     scene.add(torchLight1);
     
     // Additional lights for better dungeon illumination
-    const torchLight2 = new THREE.PointLight(0xff9933, 3.5, 25);
-    torchLight2.position.set(-10, 3, -10);
+    const torchLight2 = new THREE.PointLight(0xffffff, 6, 40);
+    torchLight2.position.set(-10, 5, -10);
     scene.add(torchLight2);
     
-    const torchLight3 = new THREE.PointLight(0xff9933, 3.5, 25);
-    torchLight3.position.set(10, 3, -10);
+    const torchLight3 = new THREE.PointLight(0xffffff, 6, 40);
+    torchLight3.position.set(10, 5, -10);
     scene.add(torchLight3);
     
-    const torchLight4 = new THREE.PointLight(0xff9933, 3.5, 25);
-    torchLight4.position.set(-10, 3, 10);
+    const torchLight4 = new THREE.PointLight(0xffffff, 6, 40);
+    torchLight4.position.set(-10, 5, 10);
     scene.add(torchLight4);
     
     // Subtle fill light
-    const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 2.5);
     fillLight.position.set(-5, 10, -5);
     scene.add(fillLight);
     
     // Additional overhead light for better visibility
-    const overheadLight = new THREE.PointLight(0xffffff, 3, 40);
+    const overheadLight = new THREE.PointLight(0xffffff, 6, 60);
     overheadLight.position.set(0, 15, 0);
     scene.add(overheadLight);
     
