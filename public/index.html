@@ -54,7 +54,7 @@
         .vignette {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+            background: radial-gradient(circle, transparent 65%, rgba(0,0,0,0.45) 100%);
             pointer-events: none;
             z-index: 5;
         }
@@ -768,8 +768,7 @@ document.addEventListener('click', function resumeAudioContext() {
         let keys = {};
         let clock = new THREE.Clock();
         let cameraAngle = Math.PI;
-        
-        window.gltfLoader = new THREE.GLTFLoader();
+        let gltfLoader;
 
         // CHARACTER MODEL PATHS
         const characterModels = {
@@ -793,21 +792,25 @@ document.addEventListener('click', function resumeAudioContext() {
             const canvas = document.getElementById('render-canvas');
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x404040);
-            scene.fog = new THREE.FogExp2(0x666666, 0.006);
+            scene.fog = new THREE.FogExp2(0x666666, 0.003);
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = false;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 2.5;
+            renderer.toneMappingExposure = 3.2;
             renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.physicallyCorrectLights = true;
+
+            gltfLoader = new THREE.GLTFLoader();
+            window.gltfLoader = gltfLoader;
             
             // Lights
-            scene.add(new THREE.AmbientLight(0xffffff, 6));
-            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 2.5);
+            scene.add(new THREE.AmbientLight(0xffffff, 8));
+            const hemiLight = new THREE.HemisphereLight(0xffffbb, 0x808080, 3.5);
             scene.add(hemiLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 4.0);
             dirLight.position.set(50, 100, 50);
             dirLight.castShadow = false;
             scene.add(dirLight);
@@ -818,10 +821,10 @@ document.addEventListener('click', function resumeAudioContext() {
             GameState.playerMesh = playerContainer; // For compatibility
             
             // Create torch light attached to player
-            const torchLight = new THREE.PointLight(0xffffff, 6, 60);
+            const torchLight = new THREE.PointLight(0xffffff, 8, 70);
             torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
-            const overheadLight = new THREE.PointLight(0xffffff, 6, 80);
+            const overheadLight = new THREE.PointLight(0xffffff, 8, 90);
             overheadLight.position.set(0, 15, 0);
             scene.add(overheadLight);
             
