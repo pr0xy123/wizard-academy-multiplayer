@@ -1126,13 +1126,22 @@ document.addEventListener('click', function resumeAudioContext() {
                     const classMatch = weaponPath.match(/\/characters\/(\w+)\//);
                     if (classMatch) {
                         const characterClass = classMatch[1];
-                        return `/models/characters/${characterClass}/${characterClass}_texture.png`;
+                        // For warrior, use barbarian_texture.png instead of warrior_texture.png
+                        const textureName = characterClass === 'warrior' ? 'barbarian_texture.png' : `${characterClass}_texture.png`;
+                        const newUrl = `/models/characters/${characterClass}/${textureName}`;
+                        console.log(`🔄 Redirecting texture ${url} to ${newUrl}`);
+                        return newUrl;
                     }
                 }
                 return url;
             });
             manager.onError = function(url) {
                 console.warn(`⚠️ Weapon texture not found: ${url}`);
+                // Try to continue with a fallback texture or without texture
+                console.log('⚠️ Continuing with default material');
+                // Log additional context
+                console.log(`📝 Current weapon path: ${weaponPath}`);
+                console.log(`📝 Character class: ${window.GameState?.player?.class || 'unknown'}`);
             };
             
             const loader = new THREE.GLTFLoader(manager);
@@ -1230,6 +1239,8 @@ document.addEventListener('click', function resumeAudioContext() {
                 undefined,
                 (error) => {
                     console.log('⚔️ Weapon not available:', error.message);
+                    // Continue without weapon if loading fails
+                    console.log('⚠️ Continuing without weapon');
                 }
             );
         }

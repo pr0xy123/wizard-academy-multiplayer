@@ -21,6 +21,18 @@ function initThreeJS() {
     // Set cross-origin attribute for loading textures from different domains
     gltfLoader.crossOrigin = 'anonymous';
     
+    // Override the default texture resolution to handle missing textures gracefully
+    const originalResolveURL = gltfLoader.manager.resolveURL;
+    gltfLoader.manager.resolveURL = function(url, path) {
+        // If the resolved URL is for warrior_texture.png and it doesn't exist,
+        // try to use barbarian_texture.png instead
+        if (url.endsWith('warrior_texture.png')) {
+            console.log('🔄 Redirecting warrior_texture.png to barbarian_texture.png');
+            return url.replace('warrior_texture.png', 'barbarian_texture.png');
+        }
+        return originalResolveURL ? originalResolveURL(url, path) : url;
+    };
+    
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x222222, 5, 50);
     scene.background = new THREE.Color(0x1a1a1a);
