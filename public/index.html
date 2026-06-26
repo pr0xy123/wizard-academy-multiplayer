@@ -589,205 +589,13 @@ document.addEventListener('click', function resumeAudioContext() {
                 Press SPACE to Interact
             </div>
         </div>
-        
-        <div id="potion-modal" class="modal">
-            <h2 style="color: #00ccff; margin-bottom: 10px;">🧪 Potion Brewing</h2>
-            <div class="cauldron"><div class="cauldron-liquid"></div></div>
-            <div id="potion-question" style="font-size: 20px; color: #ffd700; margin: 20px 0;"></div>
-            <div class="potion-brewing" id="ingredients-container"></div>
-            <div>
-                <button class="btn-fantasy" onclick="brewPotion()" style="background: linear-gradient(135deg, #00ccff, #0066cc);">Brew</button>
-                <button class="btn-fantasy" onclick="closeModal('potion-modal')">Cancel</button>
-            </div>
-        </div>
-        
-        <div id="combat-modal" class="modal">
-            <div style="font-size: 60px;" id="enemy-icon">👹</div>
-            <h2 style="color: #ff4444;" id="enemy-name">Goblin</h2>
-            <div style="background: rgba(255,0,0,0.2); border-left: 4px solid #ff4444; padding: 15px; margin: 15px 0; text-align: left;">
-                <div id="combat-question" style="color: #fff; font-weight: bold;"></div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" id="combat-answers"></div>
-            <button class="btn-fantasy" onclick="askTutor()" style="background: linear-gradient(135deg, #9370db, #4a0080); margin-top: 15px;">Ask Tutor (-5 Mana)</button>
-        </div>
-        
-        <div id="tutor-modal" class="modal">
-            <div style="font-size: 40px;">🧙‍♂️</div>
-            <h2 style="color: #9370db;">Professor Arcanum</h2>
-            <div id="tutor-message" style="background: rgba(147, 112, 219, 0.2); padding: 20px; margin: 20px 0;"></div>
-            <button class="btn-fantasy" onclick="closeModal('tutor-modal')">Close</button>
-        </div>
-        
-        <div id="chest-modal" class="modal">
-            <h2 style="color: #ffaa00;">📦 Treasure!</h2>
-            <div id="chest-contents"></div>
-            <button class="btn-fantasy" onclick="closeModal('chest-modal')">Take</button>
-        </div>
-        
-        <!-- Room Designer Modal -->
-        <div id="room-designer-modal" class="modal">
-            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-                <h2>🏰 Dungeon Room Designer</h2>
-                <div style="display: flex; gap: 20px; margin-top: 20px;">
-                    <!-- Canvas Area -->
-                    <div style="flex: 1;">
-                        <canvas id="room-designer-canvas" width="600" height="600" 
-                                style="border: 2px solid #8b7355; background: #6c5885; cursor: crosshair;"></canvas>
-                        <div style="margin-top: 10px; font-size: 12px; color: #b8860b;">
-                            <strong>Controls:</strong> Click to place room | Right-click to remove | Drag to move
-                        </div>
-                    </div>
-                    
-                    <!-- Control Panel -->
-                    <div style="width: 250px;">
-                        <div style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Room Settings</h3>
-                            <label>Room Size:</label>
-                            <input type="range" id="room-size-slider" min="2" max="8" value="4" 
-                                   style="width: 100%;" oninput="updateRoomSizeDisplay(this.value)">
-                            <div id="room-size-display" style="text-align: center; color: #ffd700;">4 tiles</div>
-                            
-                            <label style="margin-top: 15px; display: block;">Theme:</label>
-                            <select id="room-theme-select" style="width: 100%; padding: 5px; background: #2a2520; color: #ffd700; border: 1px solid #8b7355;">
-                                <option value="0">Stone Chamber</option>
-                                <option value="1">Wooden Hall</option>
-                                <option value="2">Ruined Corridor</option>
-                                <option value="3">Earthen Block</option>
-                                <option value="4">Foundation Tower</option>
-                            </select>
-                        </div>
-                        
-                        <div style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Preset Layouts</h3>
-                            <button class="btn-fantasy" onclick="loadPreset('cross')" style="width: 100%; margin-bottom: 5px;">+ Cross Pattern</button>
-                            <button class="btn-fantasy" onclick="loadPreset('grid')" style="width: 100%; margin-bottom: 5px;">+ Grid Layout</button>
-                            <button class="btn-fantasy" onclick="loadPreset('linear')" style="width: 100%; margin-bottom: 5px;">+ Linear Path</button>
-                            <button class="btn-fantasy" onclick="clearDesigner()" style="width: 100%; background: #8b0000;">Clear All</button>
-                        </div>
-                        
-                        <div id="room-list" style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Rooms (0)</h3>
-                            <div id="room-items" style="font-size: 12px;"></div>
-                        </div>
-                        
-                        <button class="btn-fantasy" onclick="applyRoomDesign()" style="width: 100%; font-size: 16px;">✓ Apply & Build</button>
-                        <button class="btn-fantasy" onclick="closeModal('room-designer-modal')" style="width: 100%; margin-top: 10px; background: #666;">Cancel</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div id="skill-tree-modal" class="modal">
-            <h2 style="color: #00ff00;">Skill Tree</h2>
-            <div class="skill-tree">
-                <div class="skill-node" onclick="buySkill('health')" id="skill-health">
-                    <div style="font-size: 30px;">❤️</div>
-                    <div>+20 HP</div>
-                    <div style="color: #ffd700;">1 SP</div>
-                </div>
-                <div class="skill-node" onclick="buySkill('mana')" id="skill-mana">
-                    <div style="font-size: 30px;">💧</div>
-                    <div>+15 Mana</div>
-                    <div style="color: #ffd700;">1 SP</div>
-                </div>
-                <div class="skill-node" onclick="buySkill('power')" id="skill-power">
-                    <div style="font-size: 30px;">⚡</div>
-                    <div>+10 Dmg</div>
-                    <div style="color: #ffd700;">2 SP</div>
-                </div>
-            </div>
-            <div>Skill Points: <span id="skill-points">0</span></div>
-            <button class="btn-fantasy" onclick="closeModal('skill-tree-modal')" style="margin-top: 20px;">Close</button>
-        </div>
-        
-        <div id="multiplayer-modal" class="modal">
-            <h2 style="color: #00ffff;">Multiplayer</h2>
-            <input type="text" id="room-code" placeholder="Room Code (blank for public)" 
-                   style="padding: 12px; font-size: 16px; border-radius: 25px; border: 2px solid #00ffff; 
-                          background: rgba(0,0,0,0.5); color: #f4e4c1; width: 80%; text-align: center; margin: 20px 0;">
-            <div>
-                <button class="btn-fantasy" onclick="joinMultiplayer()" style="background: linear-gradient(135deg, #00ffff, #0066cc);">Join</button>
-                <button class="btn-fantasy" onclick="closeModal('multiplayer-modal')">Cancel</button>
-            </div>
-        </div>
     </div>
 
     <script>
         const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); if(logs.length > 50) logs.shift(); const banner = document.getElementById('debug-banner'); if(banner) banner.textContent = fullMsg; const log = document.getElementById('debug-log'); if(log) log.innerHTML = logs.map(l => l + '<br>').join(''); }; })();
         debugLog('✓ index.html loaded');
         console.log('DEBUG: index.html active build 2026-02-07');
-        // CURRICULUM SYSTEM
-        const Curriculum = {
-            grades: [
-                { name: 'Kindergarten', level: 1, maxNumber: 5 },
-                { name: '1st Grade', level: 2, maxNumber: 10 },
-                { name: '2nd Grade', level: 3, maxNumber: 20 },
-                { name: '3rd Grade', level: 4, maxNumber: 100 },
-                { name: '4th Grade', level: 5, maxNumber: 1000 },
-                { name: '5th Grade', level: 6, maxNumber: 10000 }
-            ],
-            
-            generatePotionQuestion: function(grade) {
-                const g = this.grades[Math.min(grade - 1, this.grades.length - 1)];
-                const max = g.maxNumber;
-                
-                const templates = [
-                    {
-                        setup: `Brew a potion! You have {have} herbs, need {need} total. How many more?`,
-                        generate: () => {
-                            const need = Math.floor(Math.random() * (max - 2)) + 3;
-                            const have = Math.floor(Math.random() * (need - 1)) + 1;
-                            return { have, need, answer: need - have };
-                        }
-                    },
-                    {
-                        setup: `Mix elixir! Add {a} + {b} crystals. Total?`,
-                        generate: () => {
-                            const a = Math.floor(Math.random() * (max/2)) + 1;
-                            const b = Math.floor(Math.random() * (max/2)) + 1;
-                            return { a, b, answer: a + b };
-                        }
-                    }
-                ];
-                
-                const template = templates[Math.floor(Math.random() * templates.length)];
-                const data = template.generate();
-                let question = template.setup;
-                for (let key in data) {
-                    if (key !== 'answer') question = question.replace(`{${key}}`, data[key]);
-                }
-                
-                const answers = [data.answer];
-                while (answers.length < 4) {
-                    const wrong = data.answer + Math.floor(Math.random() * 10) - 5;
-                    if (wrong > 0 && wrong !== data.answer && !answers.includes(wrong)) answers.push(wrong);
-                }
-                
-                return { question, correct: 0, answers: answers.sort(() => Math.random() - 0.5) };
-            },
-            
-            generateCombatQuestion: function(grade) {
-                const g = this.grades[Math.min(grade - 1, this.grades.length - 1)];
-                const max = g.maxNumber;
-                
-                const a = Math.floor(Math.random() * (max/2)) + 1;
-                const b = Math.floor(Math.random() * (max/2)) + 1;
-                const answer = a + b;
-                
-                const answers = [answer];
-                while (answers.length < 4) {
-                    const wrong = answer + Math.floor(Math.random() * 8) - 4;
-                    if (wrong > 0 && wrong !== answer && !answers.includes(wrong)) answers.push(wrong);
-                }
-                
-                return {
-                    question: `Calculate: ${a} + ${b} = ?`,
-                    correct: 0,
-                    answers: answers.sort(() => Math.random() - 0.5)
-                };
-            }
-        };
-
+        
         // GAME STATE
         const GameState = {
             player: {
@@ -832,7 +640,7 @@ document.addEventListener('click', function resumeAudioContext() {
             ranger: '/models/characters/ranger/Ranger.glb'
         };
 
-        // WEAPON MODEL PATHS - using character-specific weapon folders
+        // WEAPON MODEL PATHS
         const weaponModels = {
             barbarian: '/models/characters/warrior/weapons/axe_2handed.gltf',
             warrior: '/models/characters/warrior/weapons/axe_2handed.gltf',
@@ -1011,6 +819,19 @@ document.addEventListener('click', function resumeAudioContext() {
             );
         }
 
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            // Update player movement and camera
+            updatePlayerMovement(delta);
+            updateCamera();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+
         // Placeholder functions that will be defined in dungeon.js
         function buildWorld() { console.log('buildWorld called'); }
         function createCharacter() { console.log('createCharacter called'); }
@@ -1018,7 +839,6 @@ document.addEventListener('click', function resumeAudioContext() {
         function placeEnemies() { console.log('placeEnemies called'); }
         function placeChests() { console.log('placeChests called'); }
         function initParticles() { console.log('initParticles called'); }
-        function animate() { console.log('animate called'); }
     </script>
 </body>
 </html>
