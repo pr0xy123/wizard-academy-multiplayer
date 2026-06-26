@@ -393,6 +393,24 @@
         
         .class-icon { font-size: 48px; margin-bottom: 10px; }
         
+        .btn-fantasy {
+            background: linear-gradient(135deg, #ffd700, #ffaa00);
+            color: #000;
+            font-weight: bold;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+            font-size: 16px;
+        }
+        
+        .btn-fantasy:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        
         .player-nametag {
             position: absolute;
             background: rgba(0,0,0,0.7);
@@ -650,6 +668,246 @@ document.addEventListener('click', function resumeAudioContext() {
             ranger: '/models/characters/ranger/weapons/bow.gltf'
         };
 
+        // ========================================
+        // UI & START SCREEN
+        // ========================================
+        
+        function selectClass(className) {
+            debugLog(`📦 selectClass('${className}') called`);
+            GameState.selectedClass = className;
+            
+            // Update UI
+            document.querySelectorAll('.class-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById(`class-${className}`).classList.add('selected');
+            
+            // Set class stats
+            const classStats = {
+                barbarian: { hp: 150, mana: 30 },
+                mage: { hp: 70, mana: 80 },
+                rogue: { hp: 80, mana: 60 },
+                knight: { hp: 120, mana: 40 },
+                ranger: { hp: 90, mana: 55 }
+            };
+            
+            const stats = classStats[className] || { hp: 100, mana: 50 };
+            GameState.player.maxHealth = stats.hp;
+            GameState.player.health = stats.hp;
+            GameState.player.maxMana = stats.mana;
+            GameState.player.mana = stats.mana;
+            GameState.player.class = className;
+            
+            debugLog(`✓ Class stats set: HP=${stats.hp}, Mana=${stats.mana}`);
+        }
+
+        function startSinglePlayer() {
+            debugLog('▶ startSinglePlayer() called');
+            const name = document.getElementById('player-name').value.trim();
+            
+            if (!name) {
+                alert('⚠️ Please enter your name!');
+                debugLog('✗ No name entered');
+                return;
+            }
+            
+            if (!GameState.selectedClass) {
+                alert('⚠️ Please select a class!');
+                debugLog('✗ No class selected');
+                return;
+            }
+            
+            // SET PLAYER DATA
+            GameState.player.name = name;
+            GameState.player.class = GameState.selectedClass;
+            GameState.isMultiplayer = false;
+            
+            debugLog(`✓ Player: ${name}, Class: ${GameState.selectedClass}`);
+            
+            // HIDE START SCREEN
+            document.getElementById('start-screen').style.display = 'none';
+            debugLog('✓ Start screen hidden');
+            
+            // SHOW UI LAYER
+            document.getElementById('ui-layer').style.display = 'flex';
+            debugLog('✓ UI layer shown');
+            
+            // UPDATE HUD
+            document.getElementById('player-name-display').textContent = name;
+            const classIcons = {
+                barbarian: '⚔️',
+                mage: '🔮',
+                rogue: '🗡️',
+                knight: '🛡️',
+                ranger: '🏹'
+            };
+            document.getElementById('class-icon').textContent = classIcons[GameState.selectedClass] || '🎮';
+            updateHUD();
+            
+            // SET PLAYING STATE
+            GameState.isPlaying = true;
+            debugLog('✓ GameState.isPlaying = true');
+            
+            // INITIALIZE 3D
+            init3D();
+            debugLog('✓ init3D() complete');
+        }
+
+        function showMultiplayer() {
+            debugLog('▶ showMultiplayer() called');
+            const name = document.getElementById('player-name').value.trim();
+            
+            if (!name) {
+                alert('⚠️ Please enter your name first!');
+                return;
+            }
+            
+            if (!GameState.selectedClass) {
+                alert('⚠️ Please select a class first!');
+                return;
+            }
+            
+            // Show multiplayer modal (would be created in HTML)
+            alert('🌐 Multiplayer temporarily disabled - starting single player mode');
+            startSinglePlayer();
+        }
+
+        function joinMultiplayer() {
+            debugLog('▶ joinMultiplayer() called');
+            const name = document.getElementById('player-name').value.trim();
+            const roomCode = document.getElementById('room-code')?.value?.trim() || 'public';
+            
+            if (!name) {
+                alert('⚠️ Please enter your name!');
+                return;
+            }
+            
+            if (!GameState.selectedClass) {
+                alert('⚠️ Please select a class!');
+                return;
+            }
+            
+            // SET MULTIPLAYER STATE
+            GameState.player.name = name;
+            GameState.player.class = GameState.selectedClass;
+            GameState.isMultiplayer = true;
+            
+            debugLog(`✓ Joining multiplayer: ${name} in room ${roomCode}`);
+            
+            // HIDE START SCREEN
+            document.getElementById('start-screen').style.display = 'none';
+            debugLog('✓ Start screen hidden');
+            
+            // SHOW UI LAYER
+            document.getElementById('ui-layer').style.display = 'flex';
+            debugLog('✓ UI layer shown');
+            
+            // SHOW PLAYER LIST
+            document.getElementById('player-list').style.display = 'block';
+            debugLog('✓ Player list shown');
+            
+            // UPDATE HUD
+            document.getElementById('player-name-display').textContent = name;
+            const classIcons = {
+                barbarian: '⚔️',
+                mage: '🔮',
+                rogue: '🗡️',
+                knight: '🛡️',
+                ranger: '🏹'
+            };
+            document.getElementById('class-icon').textContent = classIcons[GameState.selectedClass] || '🎮';
+            updateHUD();
+            
+            // SET PLAYING STATE
+            GameState.isPlaying = true;
+            debugLog('✓ GameState.isPlaying = true');
+            
+            // INITIALIZE 3D
+            init3D();
+            debugLog('✓ init3D() complete');
+        }
+
+        function loadGame() {
+            debugLog('▶ loadGame() called');
+            const saveData = localStorage.getItem('loreAndLegendsSave');
+            
+            if (!saveData) {
+                alert('❌ No save game found!');
+                debugLog('✗ No save data in localStorage');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(saveData);
+                Object.assign(GameState.player, data.player);
+                debugLog('✓ Save data loaded');
+                startSinglePlayer();
+            } catch (e) {
+                alert('❌ Error loading save game');
+                debugLog(`✗ Error parsing save: ${e.message}`);
+            }
+        }
+
+        function saveGame() {
+            const saveData = {
+                player: GameState.player,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('loreAndLegendsSave', JSON.stringify(saveData));
+            debugLog('💾 Game saved to localStorage');
+        }
+
+        function exitGame() {
+            debugLog('▶ exitGame() called');
+            saveGame();
+            GameState.isPlaying = false;
+            document.getElementById('start-screen').style.display = 'flex';
+            document.getElementById('ui-layer').style.display = 'none';
+            debugLog('✓ Returned to start screen');
+        }
+
+        function updateHUD() {
+            if (!document.getElementById('health-fill')) return;
+            
+            // Health
+            document.getElementById('health-text').textContent = 
+                `${GameState.player.health}/${GameState.player.maxHealth}`;
+            document.getElementById('health-fill').style.width = 
+                (GameState.player.health / GameState.player.maxHealth * 100) + '%';
+            
+            // Mana
+            document.getElementById('mana-text').textContent = 
+                `${GameState.player.mana}/${GameState.player.maxMana}`;
+            document.getElementById('mana-fill').style.width = 
+                (GameState.player.mana / GameState.player.maxMana * 100) + '%';
+            
+            // XP
+            document.getElementById('xp-text').textContent = 
+                `${GameState.player.xp}/${GameState.player.xpToNext}`;
+            document.getElementById('xp-fill').style.width = 
+                (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
+            
+            // Level
+            document.getElementById('level-display').textContent = GameState.player.level;
+            
+            // Inventory
+            document.getElementById('potions-count').textContent = GameState.player.potions;
+            document.getElementById('scrolls-count').textContent = GameState.player.scrolls;
+            document.getElementById('gold-count').textContent = GameState.player.gold;
+            document.getElementById('grade-display').textContent = `Grade: ${GameState.player.grade}`;
+        }
+
+        function selectSpell(index) {
+            GameState.selectedSpell = index;
+            document.querySelectorAll('.spell-slot').forEach((slot, i) => {
+                slot.classList.toggle('active', i === index);
+            });
+        }
+
+        // ========================================
+        // 3D INITIALIZATION
+        // ========================================
+
         function init3D() {
             debugLog('▶ init3D() called');
             const canvas = document.getElementById('render-canvas');
@@ -712,6 +970,7 @@ document.addEventListener('click', function resumeAudioContext() {
             
             // Set dungeon as ready
             window.dungeonReady = true;
+            debugLog('✓ Window.dungeonReady = true');
             
             animate();
         }
@@ -732,6 +991,8 @@ document.addEventListener('click', function resumeAudioContext() {
             window.addEventListener('blur', () => {
                 keys = {};
             });
+            
+            debugLog('✓ Input handlers bound');
         }
 
         function isBlocked(x, z, radius = 1.0) {
@@ -833,12 +1094,12 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         // Placeholder functions that will be defined in dungeon.js
-        function buildWorld() { console.log('buildWorld called'); }
-        function createCharacter() { console.log('createCharacter called'); }
-        function placeCrystals() { console.log('placeCrystals called'); }
-        function placeEnemies() { console.log('placeEnemies called'); }
-        function placeChests() { console.log('placeChests called'); }
-        function initParticles() { console.log('initParticles called'); }
+        function buildWorld() { debugLog('buildWorld called'); }
+        function createCharacter() { debugLog('createCharacter called'); }
+        function placeCrystals() { debugLog('placeCrystals called'); }
+        function placeEnemies() { debugLog('placeEnemies called'); }
+        function placeChests() { debugLog('placeChests called'); }
+        function initParticles() { debugLog('initParticles called'); }
     </script>
 </body>
 </html>
