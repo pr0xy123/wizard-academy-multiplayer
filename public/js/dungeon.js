@@ -233,5 +233,7 @@ function checkWallCollision(playerPos, radius = 1) {
     return false;
 }
 
+// CRITICAL FIX: Make wallColliders globally accessible for collision checking
+window.wallColliders = wallColliders;
 window.checkWallCollision = checkWallCollision;
 window.dungeonReady = false;
