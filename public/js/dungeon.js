@@ -186,9 +186,18 @@ function buildWorld() {
     wallColliders.length = 0;
     dungeonReady = false;
     
-    // Clear existing dungeon
-    while(scene.children.length > 0){ 
-        scene.remove(scene.children[0]); 
+    // Clear existing dungeon geometry ONLY (preserve lights and other objects)
+    // Store lights and other non-geometry objects
+    const lightsToKeep = [];
+    for (let i = scene.children.length - 1; i >= 0; i--) {
+        const child = scene.children[i];
+        // Keep lights, camera, and playerContainer
+        if (child instanceof THREE.Light || child === playerContainer || child === camera) {
+            lightsToKeep.push(child);
+        } else if (child.isMesh || child.isGroup) {
+            // Remove geometry (meshes and groups)
+            scene.remove(child);
+        }
     }
     
     const root = new BSPNode(-20, -20, 40, 40);
