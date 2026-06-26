@@ -908,6 +908,109 @@ document.addEventListener('click', function resumeAudioContext() {
             animate();
         }
 
+        function setupInputHandlers() {
+            // Prevent duplicate bindings if init3D is called again
+            if (window.__inputHandlersBound) return;
+            window.__inputHandlersBound = true;
+
+            window.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.key.toLowerCase()] = false;
+            });
+
+            window.addEventListener('blur', () => {
+                keys = {};
+            });
+        }
+
+        function isBlocked(x, z, radius = 1.0) {
+            for (const w of walls) {
+                if (
+                    Math.abs(x - w.x) < (w.halfW + radius) &&
+                    Math.abs(z - w.z) < (w.halfD + radius)
+                ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updatePlayerMovement(delta) {
+            if (!GameState.isPlaying || !playerContainer) return;
+
+            let inputX = 0;
+            let inputZ = 0;
+
+            if (keys['w']) inputZ -= 1;
+            if (keys['s']) inputZ += 1;
+            if (keys['a']) inputX -= 1;
+            if (keys['d']) inputX += 1;
+
+            // Camera rotate with Q/E
+            const camRotSpeed = 1.8;
+            if (keys['q']) cameraAngle += camRotSpeed * delta;
+            if (keys['e']) cameraAngle -= camRotSpeed * delta;
+
+            if (inputX === 0 && inputZ === 0) return;
+
+            // Normalize
+            const len = Math.hypot(inputX, inputZ) || 1;
+            inputX /= len;
+            inputZ /= len;
+
+            // Camera-relative motion
+            const sin = Math.sin(cameraAngle);
+            const cos = Math.cos(cameraAngle);
+            const moveX = inputX * cos - inputZ * sin;
+            const moveZ = inputX * sin + inputZ * cos;
+
+            const speed = 8.0;
+            const nextX = playerContainer.position.x + moveX * speed * delta;
+            const nextZ = playerContainer.position.z + moveZ * speed * delta;
+
+            // Axis-separated collision to allow sliding
+            if (!isBlocked(nextX, playerContainer.position.z)) {
+                playerContainer.position.x = nextX;
+            }
+            if (!isBlocked(playerContainer.position.x, nextZ)) {
+                playerContainer.position.z = nextZ;
+            }
+
+            // Face move direction
+            const targetYaw = Math.atan2(moveX, moveZ);
+            playerContainer.rotation.y = THREE.MathUtils.lerp(
+                playerContainer.rotation.y,
+                targetYaw,
+                Math.min(1, delta * 12)
+            );
+
+            // Sync state
+            GameState.player.x = playerContainer.position.x;
+            GameState.player.z = playerContainer.position.z;
+            GameState.player.rotation = playerContainer.rotation.y;
+        }
+
+        function updateCamera() {
+            if (!camera || !playerContainer) return;
+
+            const distance = 12;
+            const height = 8;
+
+            const cx = playerContainer.position.x + Math.sin(cameraAngle) * distance;
+            const cz = playerContainer.position.z + Math.cos(cameraAngle) * distance;
+            const cy = playerContainer.position.y + height;
+
+            camera.position.set(cx, cy, cz);
+            camera.lookAt(
+                playerContainer.position.x,
+                playerContainer.position.y + 2,
+                playerContainer.position.z
+            );
+        }
+
         // Placeholder functions that will be defined in dungeon.js
         function buildWorld() { console.log('buildWorld called'); }
         function createCharacter() { console.log('createCharacter called'); }
@@ -915,7 +1018,6 @@ document.addEventListener('click', function resumeAudioContext() {
         function placeEnemies() { console.log('placeEnemies called'); }
         function placeChests() { console.log('placeChests called'); }
         function initParticles() { console.log('initParticles called'); }
-        function setupInputHandlers() { console.log('setupInputHandlers called'); }
         function animate() { console.log('animate called'); }
     </script>
 </body>
