@@ -610,7 +610,7 @@ document.addEventListener('click', function resumeAudioContext() {
     </div>
 
     <script>
-        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); if(logs.length > 50) logs.shift(); const banner = document.getElementById('debug-banner'); if(banner) banner.textContent = fullMsg; const log = document.getElementById('debug-log'); if(log) log.innerHTML = logs.map(l => l + '<br>').join(''); }; })();
+        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); const logEl = document.getElementById('debug-log'); if(logEl) logEl.innerHTML = logs.slice(-10).join('<br>'); }; })();
         debugLog('✓ index.html loaded');
         console.log('DEBUG: index.html active build 2026-02-07');
         
@@ -959,7 +959,7 @@ document.addEventListener('click', function resumeAudioContext() {
 
             // Build the world + entities
             buildWorld();
-            createCharacter();
+            createCharacter(GameState.player.class);
             placeCrystals();
             placeEnemies();
             placeChests();
@@ -996,10 +996,10 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         function isBlocked(x, z, radius = 1.0) {
-            for (const w of walls) {
+            for (const w of wallColliders) {
                 if (
-                    Math.abs(x - w.x) < (w.halfW + radius) &&
-                    Math.abs(z - w.z) < (w.halfD + radius)
+                    x + radius > w.min.x && x - radius < w.max.x &&
+                    z + radius > w.min.z && z - radius < w.max.z
                 ) {
                     return true;
                 }
@@ -1093,13 +1093,22 @@ document.addEventListener('click', function resumeAudioContext() {
             renderer.render(scene, camera);
         }
 
-        // Placeholder functions that will be defined in dungeon.js
-        function buildWorld() { debugLog('buildWorld called'); }
-        function createCharacter() { debugLog('createCharacter called'); }
-        function placeCrystals() { debugLog('placeCrystals called'); }
-        function placeEnemies() { debugLog('placeEnemies called'); }
-        function placeChests() { debugLog('placeChests called'); }
-        function initParticles() { debugLog('initParticles called'); }
+        // STUB IMPLEMENTATIONS for required functions
+        function createCharacter(className) { debugLog(`🎭 createCharacter('${className}') - placeholder stub`); }
+        function placeCrystals() { 
+            debugLog('💎 placeCrystals() - placeholder stub');
+            // Create at least one visible crystal so player sees something
+            const crystal = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.8),
+                new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5 })
+            );
+            crystal.position.set(10, 1.5, 0);
+            scene.add(crystal);
+            crystals.push(crystal);
+        }
+        function placeEnemies() { debugLog('👹 placeEnemies() - placeholder stub'); }
+        function placeChests() { debugLog('⛓️ placeChests() - placeholder stub'); }
+        function initParticles() { debugLog('✨ initParticles() - placeholder stub'); }
     </script>
 </body>
 </html>
