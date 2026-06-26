@@ -916,8 +916,8 @@ document.addEventListener('click', function resumeAudioContext() {
             scene = new THREE.Scene();
             debugLog('Scene created');
             
-            // Brighter, readable baseline
-            scene.background = new THREE.Color(0x7a7a7a);
+            // Darker scene background for better contrast
+            scene.background = new THREE.Color(0x2a2a2a);
             scene.fog = null;
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -925,25 +925,25 @@ document.addEventListener('click', function resumeAudioContext() {
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = false;
             renderer.toneMapping = THREE.LinearToneMapping;
-            renderer.toneMappingExposure = 1.4;
+            renderer.toneMappingExposure = 1.0;  // Reduced from 1.4
             renderer.outputEncoding = THREE.sRGBEncoding;
             renderer.physicallyCorrectLights = false;
 
             gltfLoader = new THREE.GLTFLoader();
             window.gltfLoader = gltfLoader;
             
-            // Brighter lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 2.2));
+            // Reduced brightness lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));  // Reduced from 2.2
             
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 1.2);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.6);  // Reduced from 1.2
             scene.add(hemiLight);
             
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.6);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reduced from 1.6
             dirLight.position.set(50, 100, 50);
             dirLight.castShadow = false;
             scene.add(dirLight);
 
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);  // Reduced from 0.8
             fillLight.position.set(-30, 40, -20);
             scene.add(fillLight);
             
@@ -952,8 +952,20 @@ document.addEventListener('click', function resumeAudioContext() {
             scene.add(playerContainer);
             GameState.playerMesh = playerContainer;
             
+            // Create visible player character (colored cube)
+            const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+            const playerMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff00ff,  // Magenta/bright pink for visibility
+                roughness: 0.5,
+                metalness: 0.3
+            });
+            const playerCube = new THREE.Mesh(playerGeometry, playerMaterial);
+            playerCube.position.y = 1;
+            playerContainer.add(playerCube);
+            debugLog('🧙 Player character cube created (magenta)');
+            
             // Keep a strong local player light
-            const torchLight = new THREE.PointLight(0xffffff, 2.5, 90);
+            const torchLight = new THREE.PointLight(0xffffff, 1.5, 60);  // Reduced from 2.5
             torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
 
