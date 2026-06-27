@@ -22,6 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <script src="js/dungeon.js"></script>
+    <script src="js/characters.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@400;700&display=swap');
         
@@ -636,6 +637,7 @@ document.addEventListener('click', function resumeAudioContext() {
             otherPlayers: new Map(),
             lastMoveTime: 0
         };
+        window.GameState = GameState;
 
         // THREE.JS VARIABLES
         let scene, camera, renderer;
@@ -951,18 +953,7 @@ document.addEventListener('click', function resumeAudioContext() {
             playerContainer = new THREE.Group();
             scene.add(playerContainer);
             GameState.playerMesh = playerContainer;
-            
-            // Create visible player character (colored cube)
-            const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
-            const playerMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xff00ff,  // Magenta/bright pink for visibility
-                roughness: 0.5,
-                metalness: 0.3
-            });
-            const playerCube = new THREE.Mesh(playerGeometry, playerMaterial);
-            playerCube.position.y = 1;
-            playerContainer.add(playerCube);
-            debugLog('🧙 Player character cube created (magenta)');
+            window.playerContainer = playerContainer;
             
             // Keep a strong local player light
             const torchLight = new THREE.PointLight(0xffffff, 1.5, 60);  // Reduced from 2.5
@@ -1101,12 +1092,14 @@ document.addEventListener('click', function resumeAudioContext() {
             updatePlayerMovement(delta);
             updateCamera();
             
+            // Update character animations
+            if (GameState.mixer) GameState.mixer.update(delta);
+            
             // Render scene
             renderer.render(scene, camera);
         }
 
         // STUB IMPLEMENTATIONS for required functions
-        function createCharacter(className) { debugLog(`🎭 createCharacter('${className}') - placeholder stub`); }
         function placeCrystals() { 
             debugLog('💎 placeCrystals() - placeholder stub');
             // Create at least one visible crystal so player sees something
