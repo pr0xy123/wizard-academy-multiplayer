@@ -1,7 +1,8 @@
-// dungeon-bsp.js - Fixed dungeon generation
+// dungeon.js - Dungeon generation with BSP
 const tileSpacing = 4;
 const wallColliders = [];
 let dungeonReady = false;
+let scene, playerContainer; // Will be set from index.html
 
 class BSPNode {
     constructor(x, z, width, depth) {
@@ -52,7 +53,7 @@ class BSPNode {
         const minSize = 8;
         if (this.width < minSize * 2 && this.depth < minSize * 2) return false;
         
-        const horizontal = this.width < this.depth; // Split longer axis
+        const horizontal = this.width < this.depth;
         
         if (horizontal) {
             const splitZ = this.z + Math.floor(this.depth / 2) + Math.floor((Math.random() - 0.5) * this.depth * 0.3);
@@ -82,26 +83,26 @@ function generateBSPTree(node, depth = 0, maxDepth = 4) {
     generateBSPTree(node.rightChild, depth + 1, maxDepth);
 }
 
-function createTile(type, x, z, scene) {
+function createTile(type, x, z, sceneRef) {
     const posX = x * tileSpacing;
     const posZ = z * tileSpacing;
     
     if (type === 'floor') {
         const geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 0.2, tileSpacing * 0.95);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x555555,  // Darker grey floor
+            color: 0x555555,
             roughness: 0.8,
             metalness: 0.0
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(posX, 0, posZ);
         mesh.receiveShadow = true;
-        scene.add(mesh);
+        sceneRef.add(mesh);
         return mesh;
     } else {
         const geometry = new THREE.BoxGeometry(tileSpacing * 0.95, 3, tileSpacing * 0.95);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0x444444,  // Darker grey walls
+            color: 0x444444,
             roughness: 0.8,
             metalness: 0.0
         });
@@ -109,7 +110,7 @@ function createTile(type, x, z, scene) {
         mesh.position.set(posX, 1.5, posZ);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-        scene.add(mesh);
+        sceneRef.add(mesh);
         
         const box = new THREE.Box3().setFromObject(mesh);
         wallColliders.push({
@@ -121,79 +122,70 @@ function createTile(type, x, z, scene) {
     }
 }
 
-function buildRoom(room, scene) {
-    // Floor
+function buildRoom(room, sceneRef) {
     for (let x = 0; x < room.width; x++) {
         for (let z = 0; z < room.depth; z++) {
-            createTile('floor', room.x + x, room.z + z, scene);
+            createTile('floor', room.x + x, room.z + z, sceneRef);
         }
     }
     
-    // Walls with doorways
     const doorX = Math.floor(room.width / 2);
     const doorZ = Math.floor(room.depth / 2);
     
     for (let x = 0; x < room.width; x++) {
         if (x !== doorX) {
-            createTile('wall', room.x + x, room.z - 1, scene);
-            createTile('wall', room.x + x, room.z + room.depth, scene);
+            createTile('wall', room.x + x, room.z - 1, sceneRef);
+            createTile('wall', room.x + x, room.z + room.depth, sceneRef);
         }
     }
     
     for (let z = 0; z < room.depth; z++) {
         if (z !== doorZ) {
-            createTile('wall', room.x - 1, room.z + z, scene);
-            createTile('wall', room.x + room.width, room.z + z, scene);
+            createTile('wall', room.x - 1, room.z + z, sceneRef);
+            createTile('wall', room.x + room.width, room.z + z, sceneRef);
         }
     }
 }
 
-function connectRooms(node, scene) {
+function connectRooms(node, sceneRef) {
     if (node.isLeaf()) return;
     
-    connectRooms(node.leftChild, scene);
-    connectRooms(node.rightChild, scene);
+    connectRooms(node.leftChild, sceneRef);
+    connectRooms(node.rightChild, sceneRef);
     
     const leftCenter = node.leftChild.getCenter();
     const rightCenter = node.rightChild.getCenter();
     
-    // Create L-shaped hallway between centers
-    const midX = leftCenter.x;
-    const midZ = rightCenter.z;
-    
-    // Horizontal then vertical (or vice versa)
     const minX = Math.min(leftCenter.x, rightCenter.x);
     const maxX = Math.max(leftCenter.x, rightCenter.x);
     const minZ = Math.min(leftCenter.z, rightCenter.z);
     const maxZ = Math.max(leftCenter.z, rightCenter.z);
     
-    // Build corridor floor
     for (let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
         for (let z = Math.floor(minZ - 1); z <= Math.ceil(maxZ + 1); z++) {
-            // Check if this tile is in the corridor path
             const inHorizontal = z >= Math.floor(leftCenter.z - 1) && z <= Math.ceil(leftCenter.z + 1);
             const inVertical = x >= Math.floor(rightCenter.x - 1) && x <= Math.ceil(rightCenter.x + 1);
             
             if (inHorizontal || inVertical) {
-                createTile('floor', x, z, scene);
+                createTile('floor', x, z, sceneRef);
             }
         }
     }
 }
 
-function initDungeon(scene, playerContainer) {
+function initDungeon(sceneRef, playerContainerRef) {
     console.log("🏰 Building dungeon...");
+    scene = sceneRef;
+    playerContainer = playerContainerRef;
     wallColliders.length = 0;
     dungeonReady = false;
     
-    // Clear existing dungeon geometry ONLY (preserve lights and other objects)
+    // Clear existing dungeon geometry (preserve lights and playerContainer)
     for (let i = scene.children.length - 1; i >= 0; i--) {
         const child = scene.children[i];
-        // Keep lights and playerContainer
         if (child instanceof THREE.Light || child === playerContainer) {
             // Keep it
         } else if (child.isMesh || (child.isGroup && child !== playerContainer)) {
-            // Remove geometry (meshes and groups)
             scene.remove(child);
         }
     }
@@ -201,7 +193,6 @@ function initDungeon(scene, playerContainer) {
     const root = new BSPNode(-20, -20, 40, 40);
     generateBSPTree(root, 0, 3);
     
-    // Build rooms
     function buildNodes(node) {
         if (node.room) buildRoom(node.room, scene);
         if (node.leftChild) buildNodes(node.leftChild);
@@ -209,7 +200,6 @@ function initDungeon(scene, playerContainer) {
     }
     buildNodes(root);
     
-    // Connect with hallways
     connectRooms(root, scene);
     
     dungeonReady = true;
@@ -231,7 +221,6 @@ function checkWallCollision(playerPos, radius = 1) {
     return false;
 }
 
-// CRITICAL FIX: Make functions and wallColliders globally accessible
 window.wallColliders = wallColliders;
 window.checkWallCollision = checkWallCollision;
 window.initDungeon = initDungeon;
