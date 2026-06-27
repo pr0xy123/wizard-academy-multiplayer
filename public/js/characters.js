@@ -270,8 +270,13 @@ function loadWeaponForCharacter(model, className) {
             boneNames.push(child.name);
             // Check for various right hand bone naming conventions
             const lowerName = child.name.toLowerCase();
-            if (lowerName.includes('hand') && (lowerName.includes('right') || lowerName.includes('.r') || lowerName.includes('_r'))) {
+            // Look for: handr, hand_r, hand.r, right hand, etc.
+            if (lowerName.includes('hand') && (
+                lowerName.includes('r') || 
+                lowerName.includes('right')
+            )) {
                 rightHand = child;
+                console.log(`🤚 Found potential hand bone: ${child.name}`);
             }
         }
     });
@@ -279,10 +284,11 @@ function loadWeaponForCharacter(model, className) {
     if (!rightHand) {
         console.error(`❌ Could not find right hand bone for ${className}`);
         console.log(`📋 Available bones:`, boneNames);
+        console.log(`⚠️ Skipping weapon attachment`);
         return;
     }
 
-    console.log(`🤚 Found hand bone: ${rightHand.name}`);
+    console.log(`🤚 Using hand bone: ${rightHand.name}`);
 
     // Load weapon model
     window.gltfLoader.load(weaponPath, (gltf) => {
