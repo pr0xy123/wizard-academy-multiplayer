@@ -611,7 +611,7 @@ document.addEventListener('click', function resumeAudioContext() {
     </div>
 
     <script>
-        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); const logEl = document.getElementById('debug-log'); if(logEl) logEl.innerHTML = logs.slice(-10).join('<br>'); }; })();
+        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); const el = document.getElementById('debug-log'); if (el) { el.innerHTML = logs.slice(-8).map(l => `<div>${l}</div>`).join(''); el.scrollTop = el.scrollHeight; } }; })();
         debugLog('✓ index.html loaded');
         console.log('DEBUG: index.html active build 2026-02-07');
         
@@ -651,25 +651,6 @@ document.addEventListener('click', function resumeAudioContext() {
         let cameraAngle = Math.PI;
         let gltfLoader;
 
-        // CHARACTER MODEL PATHS
-        const characterModels = {
-            barbarian: '/models/characters/warrior/Barbarian.glb',
-            mage: '/models/characters/mage/Mage.glb',
-            rogue: '/models/characters/rogue/Rogue.glb',
-            knight: '/models/characters/knight/Knight.glb',
-            ranger: '/models/characters/ranger/Ranger.glb'
-        };
-
-        // WEAPON MODEL PATHS
-        const weaponModels = {
-            barbarian: '/models/characters/warrior/weapons/axe_2handed.gltf',
-            warrior: '/models/characters/warrior/weapons/axe_2handed.gltf',
-            mage: '/models/characters/mage/weapons/staff.gltf',
-            rogue: '/models/characters/rogue/weapons/dagger.gltf',
-            knight: '/models/characters/knight/weapons/sword_1handed.gltf',
-            ranger: '/models/characters/ranger/weapons/bow.gltf'
-        };
-
         // ========================================
         // UI & START SCREEN
         // ========================================
@@ -702,6 +683,7 @@ document.addEventListener('click', function resumeAudioContext() {
             
             debugLog(`✓ Class stats set: HP=${stats.hp}, Mana=${stats.mana}`);
         }
+        window.selectClass = selectClass;
 
         function startSinglePlayer() {
             debugLog('▶ startSinglePlayer() called');
@@ -754,6 +736,7 @@ document.addEventListener('click', function resumeAudioContext() {
             init3D();
             debugLog('✓ init3D() complete');
         }
+        window.startSinglePlayer = startSinglePlayer;
 
         function showMultiplayer() {
             debugLog('▶ showMultiplayer() called');
@@ -773,6 +756,7 @@ document.addEventListener('click', function resumeAudioContext() {
             alert('🌐 Multiplayer temporarily disabled - starting single player mode');
             startSinglePlayer();
         }
+        window.showMultiplayer = showMultiplayer;
 
         function joinMultiplayer() {
             debugLog('▶ joinMultiplayer() called');
@@ -828,6 +812,7 @@ document.addEventListener('click', function resumeAudioContext() {
             init3D();
             debugLog('✓ init3D() complete');
         }
+        window.joinMultiplayer = joinMultiplayer;
 
         function loadGame() {
             debugLog('▶ loadGame() called');
@@ -849,6 +834,7 @@ document.addEventListener('click', function resumeAudioContext() {
                 debugLog(`✗ Error parsing save: ${e.message}`);
             }
         }
+        window.loadGame = loadGame;
 
         function saveGame() {
             const saveData = {
@@ -867,6 +853,7 @@ document.addEventListener('click', function resumeAudioContext() {
             document.getElementById('ui-layer').style.display = 'none';
             debugLog('✓ Returned to start screen');
         }
+        window.exitGame = exitGame;
 
         function updateHUD() {
             if (!document.getElementById('health-fill')) return;
@@ -898,6 +885,7 @@ document.addEventListener('click', function resumeAudioContext() {
             document.getElementById('gold-count').textContent = GameState.player.gold;
             document.getElementById('grade-display').textContent = `Grade: ${GameState.player.grade}`;
         }
+        window.updateHUD = updateHUD;
 
         function selectSpell(index) {
             GameState.selectedSpell = index;
@@ -905,6 +893,7 @@ document.addEventListener('click', function resumeAudioContext() {
                 slot.classList.toggle('active', i === index);
             });
         }
+        window.selectSpell = selectSpell;
 
         // ========================================
         // 3D INITIALIZATION
@@ -977,6 +966,7 @@ document.addEventListener('click', function resumeAudioContext() {
             
             animate();
         }
+        window.init3D = init3D;
 
         function setupInputHandlers() {
             // Prevent duplicate bindings if init3D is called again
@@ -998,122 +988,97 @@ document.addEventListener('click', function resumeAudioContext() {
             debugLog('✓ Input handlers bound');
         }
 
-        function isBlocked(x, z, radius = 1.0) {
-            for (const w of wallColliders) {
-                if (
-                    x + radius > w.min.x && x - radius < w.max.x &&
-                    z + radius > w.min.z && z - radius < w.max.z
-                ) {
-                    return true;
-                }
+        // ========================================
+        // WORLD BUILDING (delegated to dungeon.js)
+        // ========================================
+
+        function buildWorld() {
+            if (window.initDungeon) {
+                window.initDungeon(scene, playerContainer);
+                debugLog('✓ buildWorld: dungeon.js initialized');
+            } else {
+                debugLog('⚠️ buildWorld: dungeon.js not loaded yet');
             }
-            return false;
         }
 
-        function updatePlayerMovement(delta) {
-            if (!GameState.isPlaying || !playerContainer) return;
-
-            let inputX = 0;
-            let inputZ = 0;
-
-            if (keys['w']) inputZ -= 1;
-            if (keys['s']) inputZ += 1;
-            if (keys['a']) inputX -= 1;
-            if (keys['d']) inputX += 1;
-
-            // Camera rotate with Q/E
-            const camRotSpeed = 1.8;
-            if (keys['q']) cameraAngle += camRotSpeed * delta;
-            if (keys['e']) cameraAngle -= camRotSpeed * delta;
-
-            if (inputX === 0 && inputZ === 0) return;
-
-            // Normalize
-            const len = Math.hypot(inputX, inputZ) || 1;
-            inputX /= len;
-            inputZ /= len;
-
-            // Camera-relative motion
-            const sin = Math.sin(cameraAngle);
-            const cos = Math.cos(cameraAngle);
-            const moveX = inputX * cos - inputZ * sin;
-            const moveZ = inputX * sin + inputZ * cos;
-
-            const speed = 8.0;
-            const nextX = playerContainer.position.x + moveX * speed * delta;
-            const nextZ = playerContainer.position.z + moveZ * speed * delta;
-
-            // Axis-separated collision to allow sliding
-            if (!isBlocked(nextX, playerContainer.position.z)) {
-                playerContainer.position.x = nextX;
+        function placeEnemies() {
+            if (window.populateEnemies) {
+                window.populateEnemies(scene, playerContainer);
+                debugLog('✓ placeEnemies: enemies placed');
             }
-            if (!isBlocked(playerContainer.position.x, nextZ)) {
-                playerContainer.position.z = nextZ;
-            }
-
-            // Face move direction
-            const targetYaw = Math.atan2(moveX, moveZ);
-            playerContainer.rotation.y = THREE.MathUtils.lerp(
-                playerContainer.rotation.y,
-                targetYaw,
-                Math.min(1, delta * 12)
-            );
-
-            // Sync state
-            GameState.player.x = playerContainer.position.x;
-            GameState.player.z = playerContainer.position.z;
-            GameState.player.rotation = playerContainer.rotation.y;
         }
 
-        function updateCamera() {
-            if (!camera || !playerContainer) return;
-
-            const distance = 12;
-            const height = 8;
-
-            const cx = playerContainer.position.x + Math.sin(cameraAngle) * distance;
-            const cz = playerContainer.position.z + Math.cos(cameraAngle) * distance;
-            const cy = playerContainer.position.y + height;
-
-            camera.position.set(cx, cy, cz);
-            camera.lookAt(
-                playerContainer.position.x,
-                playerContainer.position.y + 2,
-                playerContainer.position.z
-            );
+        function placeChests() {
+            if (window.populateChests) {
+                window.populateChests(scene, playerContainer);
+                debugLog('✓ placeChests: chests placed');
+            }
         }
+
+        function placeCrystals() {
+            if (window.populateCrystals) {
+                window.populateCrystals(scene, playerContainer);
+                debugLog('✓ placeCrystals: crystals placed');
+            }
+        }
+
+        function initParticles() {
+            if (window.initParticleSystem) {
+                window.initParticleSystem(scene);
+                debugLog('✓ initParticles: particle system initialized');
+            }
+        }
+
+        // ========================================
+        // ANIMATION LOOP
+        // ========================================
 
         function animate() {
             requestAnimationFrame(animate);
             
             const delta = clock.getDelta();
             
-            // Update player movement and camera
-            updatePlayerMovement(delta);
-            updateCamera();
+            // Update character animation
+            if (GameState.mixer) {
+                GameState.mixer.update(delta);
+            }
             
-            // Update character animations
-            if (GameState.mixer) GameState.mixer.update(delta);
+            // Update character animation based on movement
+            const isMoving = keys['w'] || keys['a'] || keys['s'] || keys['d'];
+            if (typeof window.updateCharacterAnimation === 'function') {
+                window.updateCharacterAnimation(isMoving);
+            }
             
-            // Render scene
+            // Handle movement
+            const moveSpeed = 8;
+            const movementTime = Date.now() * 0.001;
+            
+            if (keys['w']) playerContainer.position.z -= moveSpeed * delta;
+            if (keys['s']) playerContainer.position.z += moveSpeed * delta;
+            if (keys['a']) playerContainer.position.x -= moveSpeed * delta;
+            if (keys['d']) playerContainer.position.x += moveSpeed * delta;
+            
+            // Update camera to follow player
+            const targetX = playerContainer.position.x;
+            const targetZ = playerContainer.position.z + 8;
+            const targetY = playerContainer.position.y + 4;
+            
+            camera.position.x += (targetX - camera.position.x) * 0.1;
+            camera.position.y += (targetY - camera.position.y) * 0.1;
+            camera.position.z += (targetZ - camera.position.z) * 0.1;
+            camera.lookAt(playerContainer.position.x, playerContainer.position.y + 1, playerContainer.position.z);
+            
+            // Render
             renderer.render(scene, camera);
         }
 
-        // STUB IMPLEMENTATIONS for required functions
-        function placeCrystals() { 
-            debugLog('💎 placeCrystals() - placeholder stub');
-            // Create at least one visible crystal so player sees something
-            const crystal = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.8),
-                new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5 })
-            );
-            crystal.position.set(10, 1.5, 0);
-            scene.add(crystal);
-            crystals.push(crystal);
-        }
-        function placeEnemies() { debugLog('👹 placeEnemies() - placeholder stub'); }
-        function placeChests() { debugLog('⛓️ placeChests() - placeholder stub'); }
-        function initParticles() { debugLog('✨ initParticles() - placeholder stub'); }
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
