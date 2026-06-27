@@ -82,7 +82,7 @@ function generateBSPTree(node, depth = 0, maxDepth = 4) {
     generateBSPTree(node.rightChild, depth + 1, maxDepth);
 }
 
-function createTile(type, x, z) {
+function createTile(type, x, z, scene) {
     const posX = x * tileSpacing;
     const posZ = z * tileSpacing;
     
@@ -121,11 +121,11 @@ function createTile(type, x, z) {
     }
 }
 
-function buildRoom(room) {
+function buildRoom(room, scene) {
     // Floor
     for (let x = 0; x < room.width; x++) {
         for (let z = 0; z < room.depth; z++) {
-            createTile('floor', room.x + x, room.z + z);
+            createTile('floor', room.x + x, room.z + z, scene);
         }
     }
     
@@ -135,24 +135,24 @@ function buildRoom(room) {
     
     for (let x = 0; x < room.width; x++) {
         if (x !== doorX) {
-            createTile('wall', room.x + x, room.z - 1);
-            createTile('wall', room.x + x, room.z + room.depth);
+            createTile('wall', room.x + x, room.z - 1, scene);
+            createTile('wall', room.x + x, room.z + room.depth, scene);
         }
     }
     
     for (let z = 0; z < room.depth; z++) {
         if (z !== doorZ) {
-            createTile('wall', room.x - 1, room.z + z);
-            createTile('wall', room.x + room.width, room.z + z);
+            createTile('wall', room.x - 1, room.z + z, scene);
+            createTile('wall', room.x + room.width, room.z + z, scene);
         }
     }
 }
 
-function connectRooms(node) {
+function connectRooms(node, scene) {
     if (node.isLeaf()) return;
     
-    connectRooms(node.leftChild);
-    connectRooms(node.rightChild);
+    connectRooms(node.leftChild, scene);
+    connectRooms(node.rightChild, scene);
     
     const leftCenter = node.leftChild.getCenter();
     const rightCenter = node.rightChild.getCenter();
@@ -175,26 +175,24 @@ function connectRooms(node) {
             const inVertical = x >= Math.floor(rightCenter.x - 1) && x <= Math.ceil(rightCenter.x + 1);
             
             if (inHorizontal || inVertical) {
-                createTile('floor', x, z);
+                createTile('floor', x, z, scene);
             }
         }
     }
 }
 
-function buildWorld() {
+function initDungeon(scene, playerContainer) {
     console.log("🏰 Building dungeon...");
     wallColliders.length = 0;
     dungeonReady = false;
     
     // Clear existing dungeon geometry ONLY (preserve lights and other objects)
-    // Store lights and other non-geometry objects
-    const lightsToKeep = [];
     for (let i = scene.children.length - 1; i >= 0; i--) {
         const child = scene.children[i];
-        // Keep lights, camera, and playerContainer
-        if (child instanceof THREE.Light || child === playerContainer || child === camera) {
-            lightsToKeep.push(child);
-        } else if (child.isMesh || child.isGroup) {
+        // Keep lights and playerContainer
+        if (child instanceof THREE.Light || child === playerContainer) {
+            // Keep it
+        } else if (child.isMesh || (child.isGroup && child !== playerContainer)) {
             // Remove geometry (meshes and groups)
             scene.remove(child);
         }
@@ -205,14 +203,14 @@ function buildWorld() {
     
     // Build rooms
     function buildNodes(node) {
-        if (node.room) buildRoom(node.room);
+        if (node.room) buildRoom(node.room, scene);
         if (node.leftChild) buildNodes(node.leftChild);
         if (node.rightChild) buildNodes(node.rightChild);
     }
     buildNodes(root);
     
     // Connect with hallways
-    connectRooms(root);
+    connectRooms(root, scene);
     
     dungeonReady = true;
     window.dungeonReady = true;
@@ -233,7 +231,8 @@ function checkWallCollision(playerPos, radius = 1) {
     return false;
 }
 
-// CRITICAL FIX: Make wallColliders globally accessible for collision checking
+// CRITICAL FIX: Make functions and wallColliders globally accessible
 window.wallColliders = wallColliders;
 window.checkWallCollision = checkWallCollision;
+window.initDungeon = initDungeon;
 window.dungeonReady = false;
