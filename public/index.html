@@ -15,8 +15,6 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="js/dungeon.js"></script>
-    <script src="js/characters.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@400;700&display=swap');
         
@@ -570,7 +568,7 @@
         </div>
     </div>
 
-    <!-- MAIN SCRIPT - All functions defined first, then initialization at end -->
+    <!-- MAIN GAME SCRIPT -->
     <script>
         const debugLog = (() => { 
             const logs = []; 
@@ -619,7 +617,7 @@
         };
         window.GameState = GameState;
 
-        // THREE.JS VARIABLES
+        // THREE.JS VARIABLES (declared once, never redeclared)
         let scene, camera, renderer;
         let playerContainer;
         let characterModel = null;
@@ -864,6 +862,7 @@
             const canvas = document.getElementById('render-canvas');
             debugLog('Canvas: ' + (canvas ? 'found' : 'MISSING!'));
             
+            // Use existing global variables, don't redeclare
             scene = new THREE.Scene();
             debugLog('Scene created');
             
@@ -941,7 +940,7 @@
         }
 
         // ========================================
-        // WORLD BUILDING (stub - delegated to dungeon.js)
+        // WORLD BUILDING (stubs - delegated to dungeon.js)
         // ========================================
 
         function buildWorld() {
@@ -997,23 +996,25 @@
             
             const delta = clock.getDelta();
             
-            // Update animation mixer if exists
             if (animationMixer) {
                 animationMixer.update(delta);
             }
             
-            // Render scene
-            camera.position.copy(playerContainer.position);
-            camera.position.y += 5;
-            camera.position.z += 8;
-            camera.lookAt(playerContainer.position);
+            if (camera && playerContainer) {
+                camera.position.copy(playerContainer.position);
+                camera.position.y += 5;
+                camera.position.z += 8;
+                camera.lookAt(playerContainer.position);
+            }
             
-            renderer.render(scene, camera);
+            if (renderer) {
+                renderer.render(scene, camera);
+            }
         }
         window.animate = animate;
 
         // ========================================
-        // AUDIO CONTEXT RESUME (single handler)
+        // AUDIO CONTEXT RESUME
         // ========================================
         
         document.addEventListener('click', function resumeAudioContext() {
@@ -1036,5 +1037,9 @@
             renderer.setSize(width, height);
         });
     </script>
+
+    <!-- EXTERNAL GAME MODULES (load after main script) -->
+    <script src="js/dungeon.js" defer></script>
+    <script src="js/characters.js" defer></script>
 </body>
 </html>
