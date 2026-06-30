@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lore & Legends Academy - Mystic Dungeons</title>
     <!-- TODO: Replace CDN with npm package for production: npm install -D tailwindcss -->
-    <!-- TODO: Replace CDN with npm package for production: npm install -D tailwindcss -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      if (typeof tailwind === 'undefined') {
-        console.warn('Tailwind CSS CDN failed to load. Please use production setup: https://tailwindcss.com/docs/installation');
-      }
-    </script>
     <script>
       if (typeof tailwind === 'undefined') {
         console.warn('Tailwind CSS CDN failed to load. Please use production setup: https://tailwindcss.com/docs/installation');
@@ -63,15 +57,17 @@
         #debug-banner {
             position: fixed !important;
             top: 10px !important;
-            left: 10px !important;
-            background: rgba(255, 255, 0, 0.95) !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            background: rgba(255, 255, 0, 0.85) !important;
             color: #000 !important;
             font-weight: bold !important;
-            padding: 12px 15px !important;
+            padding: 6px 12px !important;
             border-radius: 6px !important;
-            z-index: 9999 !important;
-            font-size: 13px !important;
-            font-family: monospace !important;
+            z-index: 1000 !important;
+            pointer-events: none !important;
+            font-size: 12px !important;
+            letter-spacing: 0.5px !important;
             border: 3px solid #000 !important;
         }
         
@@ -101,22 +97,6 @@
             flex-direction: column;
             justify-content: space-between;
             padding: 20px;
-        }
-
-        #debug-banner {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 0, 0.85);
-            color: #000;
-            font-weight: bold;
-            padding: 6px 12px;
-            border-radius: 6px;
-            z-index: 1000;
-            pointer-events: none;
-            font-size: 12px;
-            letter-spacing: 0.5px;
         }
         
         .hud-panel {
@@ -430,27 +410,7 @@
             .spell-book { transform: translateX(-50%) scale(0.8); bottom: 80px; }
         }
     </style>
-    <script>
-// Resume AudioContext on user interaction to comply with autoplay policy
-document.addEventListener('click', function resumeAudioContext() {
-    if (typeof Tone !== 'undefined' && Tone.context && Tone.context.state === 'suspended') {
-        Tone.context.resume().catch(err => console.log('Audio context already resumed or unavailable:', err));
-    }
-    document.removeEventListener('click', resumeAudioContext);
-}, { once: true });
-
-    </script>
-        <script>
-// Resume AudioContext on user interaction to comply with autoplay policy
-document.addEventListener('click', function resumeAudioContext() {
-    if (typeof Tone !== 'undefined' && Tone.context && Tone.context.state === 'suspended') {
-        Tone.context.resume().catch(err => console.log('Audio context already resumed or unavailable:', err));
-    }
-    document.removeEventListener('click', resumeAudioContext);
-}, { once: true });
-
-    </script>
-    </head>
+</head>
 <body>
     <div id="game-container" class="crt">
         <div id="debug-banner">🎮 LOADING...</div>
@@ -610,12 +570,32 @@ document.addEventListener('click', function resumeAudioContext() {
         </div>
     </div>
 
+    <!-- MAIN SCRIPT - All functions defined first, then initialization at end -->
     <script>
-        const debugLog = (() => { const logs = []; return (msg) => { const ts = new Date().toLocaleTimeString(); const fullMsg = `[${ts}] ${msg}`; console.log(fullMsg); logs.push(fullMsg); const el = document.getElementById('debug-log'); if (el) { el.innerHTML = logs.slice(-8).map(l => `<div>${l}</div>`).join(''); el.scrollTop = el.scrollHeight; } }; })();
+        const debugLog = (() => { 
+            const logs = []; 
+            return (msg) => { 
+                const ts = new Date().toLocaleTimeString(); 
+                const fullMsg = `[${ts}] ${msg}`; 
+                console.log(fullMsg); 
+                logs.push(fullMsg); 
+                const el = document.getElementById('debug-log');
+                if (el) {
+                    el.textContent = logs.slice(-15).join('\n');
+                    el.scrollTop = el.scrollHeight;
+                }
+                const banner = document.getElementById('debug-banner');
+                if (banner) banner.textContent = msg;
+            };
+        })();
+        
         debugLog('✓ index.html loaded');
         console.log('DEBUG: index.html active build 2026-02-07');
         
+        // ========================================
         // GAME STATE
+        // ========================================
+        
         const GameState = {
             player: {
                 name: '', class: 'mage', level: 1, grade: 1,
@@ -641,8 +621,8 @@ document.addEventListener('click', function resumeAudioContext() {
 
         // THREE.JS VARIABLES
         let scene, camera, renderer;
-        let playerContainer; // This moves - holds everything
-        let characterModel = null; // The visible mesh
+        let playerContainer;
+        let characterModel = null;
         let animationMixer = null;
         let walls = [], enemies = [], chests = [], crystals = [];
         let particles = [];
@@ -652,20 +632,18 @@ document.addEventListener('click', function resumeAudioContext() {
         let gltfLoader;
 
         // ========================================
-        // UI & START SCREEN
+        // UI & START SCREEN FUNCTIONS
         // ========================================
         
         function selectClass(className) {
             debugLog(`📦 selectClass('${className}') called`);
             GameState.selectedClass = className;
             
-            // Update UI
             document.querySelectorAll('.class-card').forEach(card => {
                 card.classList.remove('selected');
             });
             document.getElementById(`class-${className}`).classList.add('selected');
             
-            // Set class stats
             const classStats = {
                 barbarian: { hp: 150, mana: 30 },
                 mage: { hp: 70, mana: 80 },
@@ -701,22 +679,18 @@ document.addEventListener('click', function resumeAudioContext() {
                 return;
             }
             
-            // SET PLAYER DATA
             GameState.player.name = name;
             GameState.player.class = GameState.selectedClass;
             GameState.isMultiplayer = false;
             
             debugLog(`✓ Player: ${name}, Class: ${GameState.selectedClass}`);
             
-            // HIDE START SCREEN
             document.getElementById('start-screen').style.display = 'none';
             debugLog('✓ Start screen hidden');
             
-            // SHOW UI LAYER
             document.getElementById('ui-layer').style.display = 'flex';
             debugLog('✓ UI layer shown');
             
-            // UPDATE HUD
             document.getElementById('player-name-display').textContent = name;
             const classIcons = {
                 barbarian: '⚔️',
@@ -728,11 +702,9 @@ document.addEventListener('click', function resumeAudioContext() {
             document.getElementById('class-icon').textContent = classIcons[GameState.selectedClass] || '🎮';
             updateHUD();
             
-            // SET PLAYING STATE
             GameState.isPlaying = true;
             debugLog('✓ GameState.isPlaying = true');
             
-            // INITIALIZE 3D
             init3D();
             debugLog('✓ init3D() complete');
         }
@@ -752,7 +724,6 @@ document.addEventListener('click', function resumeAudioContext() {
                 return;
             }
             
-            // Show multiplayer modal (would be created in HTML)
             alert('🌐 Multiplayer temporarily disabled - starting single player mode');
             startSinglePlayer();
         }
@@ -773,26 +744,21 @@ document.addEventListener('click', function resumeAudioContext() {
                 return;
             }
             
-            // SET MULTIPLAYER STATE
             GameState.player.name = name;
             GameState.player.class = GameState.selectedClass;
             GameState.isMultiplayer = true;
             
             debugLog(`✓ Joining multiplayer: ${name} in room ${roomCode}`);
             
-            // HIDE START SCREEN
             document.getElementById('start-screen').style.display = 'none';
             debugLog('✓ Start screen hidden');
             
-            // SHOW UI LAYER
             document.getElementById('ui-layer').style.display = 'flex';
             debugLog('✓ UI layer shown');
             
-            // SHOW PLAYER LIST
             document.getElementById('player-list').style.display = 'block';
             debugLog('✓ Player list shown');
             
-            // UPDATE HUD
             document.getElementById('player-name-display').textContent = name;
             const classIcons = {
                 barbarian: '⚔️',
@@ -804,11 +770,9 @@ document.addEventListener('click', function resumeAudioContext() {
             document.getElementById('class-icon').textContent = classIcons[GameState.selectedClass] || '🎮';
             updateHUD();
             
-            // SET PLAYING STATE
             GameState.isPlaying = true;
             debugLog('✓ GameState.isPlaying = true');
             
-            // INITIALIZE 3D
             init3D();
             debugLog('✓ init3D() complete');
         }
@@ -827,6 +791,7 @@ document.addEventListener('click', function resumeAudioContext() {
             try {
                 const data = JSON.parse(saveData);
                 Object.assign(GameState.player, data.player);
+                GameState.selectedClass = GameState.player.class;
                 debugLog('✓ Save data loaded');
                 startSinglePlayer();
             } catch (e) {
@@ -858,28 +823,23 @@ document.addEventListener('click', function resumeAudioContext() {
         function updateHUD() {
             if (!document.getElementById('health-fill')) return;
             
-            // Health
             document.getElementById('health-text').textContent = 
                 `${GameState.player.health}/${GameState.player.maxHealth}`;
             document.getElementById('health-fill').style.width = 
                 (GameState.player.health / GameState.player.maxHealth * 100) + '%';
             
-            // Mana
             document.getElementById('mana-text').textContent = 
                 `${GameState.player.mana}/${GameState.player.maxMana}`;
             document.getElementById('mana-fill').style.width = 
                 (GameState.player.mana / GameState.player.maxMana * 100) + '%';
             
-            // XP
             document.getElementById('xp-text').textContent = 
                 `${GameState.player.xp}/${GameState.player.xpToNext}`;
             document.getElementById('xp-fill').style.width = 
                 (GameState.player.xp / GameState.player.xpToNext * 100) + '%';
             
-            // Level
             document.getElementById('level-display').textContent = GameState.player.level;
             
-            // Inventory
             document.getElementById('potions-count').textContent = GameState.player.potions;
             document.getElementById('scrolls-count').textContent = GameState.player.scrolls;
             document.getElementById('gold-count').textContent = GameState.player.gold;
@@ -907,7 +867,6 @@ document.addEventListener('click', function resumeAudioContext() {
             scene = new THREE.Scene();
             debugLog('Scene created');
             
-            // Darker scene background for better contrast
             scene.background = new THREE.Color(0x2a2a2a);
             scene.fog = null;
             
@@ -916,40 +875,36 @@ document.addEventListener('click', function resumeAudioContext() {
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = false;
             renderer.toneMapping = THREE.LinearToneMapping;
-            renderer.toneMappingExposure = 1.0;  // Reduced from 1.4
+            renderer.toneMappingExposure = 1.0;
             renderer.outputEncoding = THREE.sRGBEncoding;
             renderer.physicallyCorrectLights = false;
 
             gltfLoader = new THREE.GLTFLoader();
             window.gltfLoader = gltfLoader;
             
-            // Reduced brightness lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));  // Reduced from 2.2
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
             
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.6);  // Reduced from 1.2
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.6);
             scene.add(hemiLight);
             
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);  // Reduced from 1.6
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
             dirLight.position.set(50, 100, 50);
             dirLight.castShadow = false;
             scene.add(dirLight);
 
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);  // Reduced from 0.8
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
             fillLight.position.set(-30, 40, -20);
             scene.add(fillLight);
             
-            // Create player container
             playerContainer = new THREE.Group();
             scene.add(playerContainer);
             GameState.playerMesh = playerContainer;
             window.playerContainer = playerContainer;
             
-            // Keep a strong local player light
-            const torchLight = new THREE.PointLight(0xffffff, 1.5, 60);  // Reduced from 2.5
+            const torchLight = new THREE.PointLight(0xffffff, 1.5, 60);
             torchLight.position.set(0, 4, 0);
             playerContainer.add(torchLight);
 
-            // Build the world + entities
             buildWorld();
             createCharacter(GameState.player.class);
             placeCrystals();
@@ -957,10 +912,8 @@ document.addEventListener('click', function resumeAudioContext() {
             placeChests();
             initParticles();
 
-            // Input handlers (important for movement)
             setupInputHandlers();
             
-            // Set dungeon as ready
             window.dungeonReady = true;
             debugLog('✓ Window.dungeonReady = true');
             
@@ -969,7 +922,6 @@ document.addEventListener('click', function resumeAudioContext() {
         window.init3D = init3D;
 
         function setupInputHandlers() {
-            // Prevent duplicate bindings if init3D is called again
             if (window.__inputHandlersBound) return;
             window.__inputHandlersBound = true;
 
@@ -989,7 +941,7 @@ document.addEventListener('click', function resumeAudioContext() {
         }
 
         // ========================================
-        // WORLD BUILDING (delegated to dungeon.js)
+        // WORLD BUILDING (stub - delegated to dungeon.js)
         // ========================================
 
         function buildWorld() {
@@ -1001,83 +953,87 @@ document.addEventListener('click', function resumeAudioContext() {
             }
         }
 
-        function placeEnemies() {
-            if (window.populateEnemies) {
-                window.populateEnemies(scene, playerContainer);
-                debugLog('✓ placeEnemies: enemies placed');
-            }
-        }
-
-        function placeChests() {
-            if (window.populateChests) {
-                window.populateChests(scene, playerContainer);
-                debugLog('✓ placeChests: chests placed');
+        function createCharacter(className) {
+            if (window.createCharacter_dungeon) {
+                window.createCharacter_dungeon(playerContainer, className);
+                debugLog('✓ Character created from dungeon.js');
+            } else {
+                debugLog('⚠️ Character creation delegated to dungeon.js');
             }
         }
 
         function placeCrystals() {
-            if (window.populateCrystals) {
-                window.populateCrystals(scene, playerContainer);
-                debugLog('✓ placeCrystals: crystals placed');
+            if (window.placeCrystals_dungeon) {
+                window.placeCrystals_dungeon(scene);
+                debugLog('✓ Crystals placed from dungeon.js');
+            }
+        }
+
+        function placeEnemies() {
+            if (window.placeEnemies_dungeon) {
+                window.placeEnemies_dungeon(scene);
+                debugLog('✓ Enemies placed from dungeon.js');
+            }
+        }
+
+        function placeChests() {
+            if (window.placeChests_dungeon) {
+                window.placeChests_dungeon(scene);
+                debugLog('✓ Chests placed from dungeon.js');
             }
         }
 
         function initParticles() {
-            if (window.initParticleSystem) {
-                window.initParticleSystem(scene);
-                debugLog('✓ initParticles: particle system initialized');
+            if (window.initParticles_dungeon) {
+                window.initParticles_dungeon(scene);
+                debugLog('✓ Particles initialized from dungeon.js');
             }
         }
-
-        // ========================================
-        // ANIMATION LOOP
-        // ========================================
 
         function animate() {
             requestAnimationFrame(animate);
             
+            if (!GameState.isPlaying || !scene) return;
+            
             const delta = clock.getDelta();
             
-            // Update character animation
-            if (GameState.mixer) {
-                GameState.mixer.update(delta);
+            // Update animation mixer if exists
+            if (animationMixer) {
+                animationMixer.update(delta);
             }
             
-            // Update character animation based on movement
-            const isMoving = keys['w'] || keys['a'] || keys['s'] || keys['d'];
-            if (typeof window.updateCharacterAnimation === 'function') {
-                window.updateCharacterAnimation(isMoving);
-            }
+            // Render scene
+            camera.position.copy(playerContainer.position);
+            camera.position.y += 5;
+            camera.position.z += 8;
+            camera.lookAt(playerContainer.position);
             
-            // Handle movement
-            const moveSpeed = 8;
-            const movementTime = Date.now() * 0.001;
-            
-            if (keys['w']) playerContainer.position.z -= moveSpeed * delta;
-            if (keys['s']) playerContainer.position.z += moveSpeed * delta;
-            if (keys['a']) playerContainer.position.x -= moveSpeed * delta;
-            if (keys['d']) playerContainer.position.x += moveSpeed * delta;
-            
-            // Update camera to follow player
-            const targetX = playerContainer.position.x;
-            const targetZ = playerContainer.position.z + 8;
-            const targetY = playerContainer.position.y + 4;
-            
-            camera.position.x += (targetX - camera.position.x) * 0.1;
-            camera.position.y += (targetY - camera.position.y) * 0.1;
-            camera.position.z += (targetZ - camera.position.z) * 0.1;
-            camera.lookAt(playerContainer.position.x, playerContainer.position.y + 1, playerContainer.position.z);
-            
-            // Render
             renderer.render(scene, camera);
         }
+        window.animate = animate;
 
-        // Handle window resize
+        // ========================================
+        // AUDIO CONTEXT RESUME (single handler)
+        // ========================================
+        
+        document.addEventListener('click', function resumeAudioContext() {
+            if (typeof Tone !== 'undefined' && Tone.context && Tone.context.state === 'suspended') {
+                Tone.context.resume().catch(err => console.log('Audio context already resumed or unavailable:', err));
+            }
+            document.removeEventListener('click', resumeAudioContext);
+        }, { once: true });
+
+        // ========================================
+        // WINDOW RESIZE
+        // ========================================
+        
         window.addEventListener('resize', () => {
-            if (!camera || !renderer) return;
-            camera.aspect = window.innerWidth / window.innerHeight;
+            if (!renderer || !camera) return;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            camera.aspect = width / height;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(width, height);
         });
     </script>
 </body>
