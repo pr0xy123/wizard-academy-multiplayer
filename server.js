@@ -149,6 +149,11 @@ io.on('connection', (socket) => {
                 room.delete(socket.id);
                 socket.to(roomId).emit('player-left', socket.id);
                 console.log(`Player left room ${roomId}`);
+                // Remove room once it becomes empty to prevent memory accumulation
+                if (room.size === 0) {
+                    rooms.delete(roomId);
+                    console.log(`Room ${roomId} removed (empty)`);
+                }
             }
         });
     });

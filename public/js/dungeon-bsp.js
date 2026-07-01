@@ -245,39 +245,59 @@ function buildHallway(hallway) {
     }
 }
 
-// Load a dungeon tile
-function loadDungeonTile(type, x, z, color, rotation = 0) {
-    let geometry, material, mesh;
+// Shared geometries — created once, reused for every tile
+const _bspGeometries = {
+    floor: new THREE.BoxGeometry(3.8, 0.3, 3.8),
+    wall: new THREE.BoxGeometry(3.8, 3.5, 0.3)
+};
 
+// Material cache keyed by "type_color" — reuses materials for matching tiles
+const _bspMaterialCache = new Map();
+
+function _getBSPMaterial(type, color) {
+    const key = `${type}_${color}`;
+    if (_bspMaterialCache.has(key)) return _bspMaterialCache.get(key);
+    let mat;
     if (type === 'floor') {
-        geometry = new THREE.BoxGeometry(3.8, 0.3, 3.8);
-        material = new THREE.MeshStandardMaterial({
+        mat = new THREE.MeshStandardMaterial({
             color: color,
             metalness: 0.1,
             roughness: 0.8,
             emissive: color,
             emissiveIntensity: 0.1
         });
-        mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(x, 0, z);
-        mesh.receiveShadow = true;
-        scene.add(mesh);
-    } else if (type === 'wall') {
-        geometry = new THREE.BoxGeometry(3.8, 3.5, 0.3);
-        material = new THREE.MeshStandardMaterial({
+    } else {
+        mat = new THREE.MeshStandardMaterial({
             color: color,
             metalness: 0,
             roughness: 0.9,
             emissive: color,
             emissiveIntensity: 0.05
         });
-        mesh = new THREE.Mesh(geometry, material);
+    }
+    _bspMaterialCache.set(key, mat);
+    return mat;
+}
+
+// Load a dungeon tile (pooled geometry + cached material)
+function loadDungeonTile(type, x, z, color, rotation = 0) {
+    const geometry = _bspGeometries[type];
+    if (!geometry) return null;
+
+    const material = _getBSPMaterial(type, color);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.userData.isDungeonTile = true;
+
+    if (type === 'floor') {
+        mesh.position.set(x, 0, z);
+        mesh.receiveShadow = true;
+    } else if (type === 'wall') {
         mesh.position.set(x, 1.75, z);
         mesh.rotation.y = rotation;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-        scene.add(mesh);
     }
 
+    scene.add(mesh);
     return mesh;
 }
