@@ -730,8 +730,50 @@
         let keys = {};
         let clock = new THREE.Clock();
         let cameraAngle = Math.PI;
+        let animationFrameId = null; // track for cancellation
+        let saveInterval = null;     // track auto-save interval
         
         const gltfLoader = new THREE.GLTFLoader();
+
+        // Asset caches for GLTF dungeon models
+        // Maps asset path -> THREE.Object3D template (loaded once, cloned on reuse)
+        const _dungeonModelCache = new Map();
+        // Maps asset path -> array of pending callbacks (handles concurrent requests)
+        const _dungeonModelPending = new Map();
+
+        // Reusable shared geometries for fallback dungeon tiles
+        const _fallbackGeo = {
+            floor: new THREE.BoxGeometry(4, 0.2, 4),
+            wall: new THREE.BoxGeometry(4, 6, 1)
+        };
+        // Material pool keyed by hex color integer
+        const _dungeonMatPool = new Map();
+        function _getDungeonMat(color) {
+            if (_dungeonMatPool.has(color)) return _dungeonMatPool.get(color);
+            const m = new THREE.MeshStandardMaterial({ color });
+            _dungeonMatPool.set(color, m);
+            return m;
+        }
+
+        // Dispose a THREE.Object3D tree, freeing GPU resources for objects that
+        // own their geometry/material (not shared clones).
+        function disposeObject(obj) {
+            if (!obj) return;
+            obj.traverse((child) => {
+                if (!child.isMesh) return;
+                if (child.userData.sharedGeometry !== true && child.geometry) {
+                    child.geometry.dispose();
+                }
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach((mat) => {
+                    if (!mat || child.userData.sharedMaterial === true) return;
+                    Object.values(mat).forEach((v) => {
+                        if (v && typeof v === 'object' && v.isTexture) v.dispose();
+                    });
+                    mat.dispose();
+                });
+            });
+        }
 
         // CHARACTER MODEL PATHS
         const characterModels = {
@@ -761,6 +803,17 @@
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
+
+            // WebGL context loss / restore handling
+            canvas.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault();
+                console.warn('⚠️ WebGL context lost – pausing render loop');
+                GameState.contextLost = true;
+            }, false);
+            canvas.addEventListener('webglcontextrestored', () => {
+                console.log('✓ WebGL context restored – resuming render loop');
+                GameState.contextLost = false;
+            }, false);
             
             // Lights
             scene.add(new THREE.AmbientLight(0x404040, 1.5));
@@ -1409,16 +1462,31 @@
             }
         }
         
-        // Helper to load dungeon tiles with caching
+        // Helper to load dungeon tiles with caching.
+        // The first request for a given path loads the GLTF and stores the template.
+        // Subsequent requests – including those already in-flight – receive clones of
+        // the cached template instead of re-parsing the asset.
         function loadDungeonTile(type, name, callback) {
             const path = `/models/environment/dungeon/${type}s/${name}.gltf`;
             
-            console.log(`🔨 Loading ${type}:`, path);
-            
-            // Create a manager to handle texture loading from parent directory
+            // Return a clone of the cached template immediately
+            if (_dungeonModelCache.has(path)) {
+                callback(_dungeonModelCache.get(path).clone());
+                return;
+            }
+
+            // Asset is currently being fetched – queue the callback
+            if (_dungeonModelPending.has(path)) {
+                _dungeonModelPending.get(path).push(callback);
+                return;
+            }
+
+            // First request: start loading and register pending queue
+            console.log(`🔨 Loading ${type} (first time):`, path);
+            _dungeonModelPending.set(path, [callback]);
+
             const manager = new THREE.LoadingManager();
             manager.setURLModifier(function(url) {
-                // Redirect texture requests to parent dungeon folder
                 if (url.includes('dungeon_texture.png')) {
                     return '/models/environment/dungeon/dungeon_texture.png';
                 }
@@ -1438,41 +1506,36 @@
                         if (child.isMesh) {
                             child.castShadow = true;
                             child.receiveShadow = true;
-                            
-                            // If texture failed to load, apply default material
                             if (child.material && child.material.map === null) {
-                                child.material = new THREE.MeshStandardMaterial({
-                                    color: type === 'floor' ? 0x4a4a4a : 0x6a6a6a,
-                                    roughness: 0.8
-                                });
+                                child.material = _getDungeonMat(
+                                    type === 'floor' ? 0x4a4a4a : 0x6a6a6a
+                                );
+                                child.userData.sharedMaterial = true;
                             }
                         }
                     });
-                    console.log(`✓ Loaded ${type}: ${name}`);
-                    callback(model);
+                    console.log(`✓ Cached ${type}: ${name}`);
+                    _dungeonModelCache.set(path, model);
+                    const pending = _dungeonModelPending.get(path) || [];
+                    _dungeonModelPending.delete(path);
+                    pending.forEach(cb => cb(model.clone()));
                 },
-                (progress) => {
-                    // Loading progress
-                },
+                undefined,
                 (error) => {
                     console.error(`❌ Failed to load ${name}:`, error.message);
-                    console.log(`   Trying fallback geometry for ${type}`);
-                    
-                    // Fallback to simple geometry
-                    let fallback;
-                    if (type === 'floor') {
-                        fallback = new THREE.Mesh(
-                            new THREE.BoxGeometry(4, 0.2, 4),
-                            new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
-                        );
-                    } else {
-                        fallback = new THREE.Mesh(
-                            new THREE.BoxGeometry(4, 6, 1),
-                            new THREE.MeshStandardMaterial({ color: 0x5a5a5a })
-                        );
-                        fallback.position.y = 3;
-                    }
-                    callback(fallback);
+                    console.log(`   Using fallback geometry for ${type}`);
+                    // Build a shared-geometry fallback and cache it so later
+                    // requests also get cheap clones.
+                    const geo = _fallbackGeo[type] || _fallbackGeo.floor;
+                    const mat = _getDungeonMat(type === 'floor' ? 0x3a3a3a : 0x5a5a5a);
+                    const fallbackTemplate = new THREE.Mesh(geo, mat);
+                    fallbackTemplate.userData.sharedGeometry = true;
+                    fallbackTemplate.userData.sharedMaterial = true;
+                    if (type !== 'floor') fallbackTemplate.position.y = 3;
+                    _dungeonModelCache.set(path, fallbackTemplate);
+                    const pending = _dungeonModelPending.get(path) || [];
+                    _dungeonModelPending.delete(path);
+                    pending.forEach(cb => cb(fallbackTemplate.clone()));
                 }
             );
         }
@@ -1555,8 +1618,11 @@
         }
 
         function animate() {
-            requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate);
             
+            // Skip rendering while WebGL context is lost
+            if (GameState.contextLost) return;
+
             const delta = clock.getDelta();
             
             // Animate crystals
@@ -2011,59 +2077,95 @@
                     console.log('📡 Receiving dungeon from teacher:', dungeonData.name);
                     
                     if (dungeonData.tiles && dungeonData.tiles.length > 0) {
-                        // Clear existing world objects
+                        // Clear game-object arrays
                         walls = [];
                         enemies = [];
                         chests = [];
                         crystals = [];
                         
-                        // Remove old dungeon objects from scene
+                        // Remove and dispose old dungeon scene objects
                         const toRemove = [];
                         scene.children.forEach(child => {
                             if (child.userData.isDungeonTile || child.userData.type) {
                                 toRemove.push(child);
                             }
                         });
-                        toRemove.forEach(obj => scene.remove(obj));
-                        
+                        toRemove.forEach(obj => {
+                            disposeObject(obj);
+                            scene.remove(obj);
+                        });
+
+                        // Shared geometry for all broadcast tiles (never disposed)
+                        const broadcastFloorGeo = new THREE.BoxGeometry(4, 0.2, 4);
+                        broadcastFloorGeo.userData.sharedGeometry = true;
+                        const broadcastWallGeo  = new THREE.BoxGeometry(4, 6, 4);
+                        broadcastWallGeo.userData.sharedGeometry = true;
+                        const broadcastChestGeo = new THREE.BoxGeometry(1.5, 1, 1);
+                        broadcastChestGeo.userData.sharedGeometry = true;
+                        const broadcastCrystalGeo = new THREE.OctahedronGeometry(0.6);
+                        broadcastCrystalGeo.userData.sharedGeometry = true;
+
+                        // Colour map for room types that may arrive from the teacher
+                        const tileColorFallback = {
+                            floor: 0x4a4a4a,
+                            wall:  0x666666,
+                            chest: 0xffaa00,
+                            crystal: 0x00ffff,
+                            spawn: null
+                        };
+
                         // Build from teacher's dungeon
                         dungeonData.tiles.forEach(tile => {
                             if (tile.type === 'floor' || tile.type.startsWith('room')) {
-                                const color = tileTypes[tile.type].color;
-                                const geo = new THREE.BoxGeometry(4, 0.2, 4);
-                                const mat = new THREE.MeshStandardMaterial({ color });
-                                const floor = new THREE.Mesh(geo, mat);
+                                // Resolve colour: teacher may send a hex or we fall back
+                                const rawColor = (tile.color !== undefined) ? tile.color
+                                              : (typeof tileTypes !== 'undefined' && tileTypes[tile.type])
+                                              ? tileTypes[tile.type].color
+                                              : tileColorFallback.floor;
+                                const floor = new THREE.Mesh(
+                                    broadcastFloorGeo,
+                                    _getDungeonMat(rawColor)
+                                );
                                 floor.position.set(tile.x, 0, tile.z);
                                 floor.receiveShadow = true;
                                 floor.userData.isDungeonTile = true;
+                                floor.userData.sharedGeometry = true;
+                                floor.userData.sharedMaterial = true;
                                 scene.add(floor);
                             } else if (tile.type === 'wall') {
-                                const geo = new THREE.BoxGeometry(4, 6, 4);
-                                const mat = new THREE.MeshStandardMaterial({ color: 0x666666 });
-                                const wall = new THREE.Mesh(geo, mat);
+                                const wall = new THREE.Mesh(
+                                    broadcastWallGeo,
+                                    _getDungeonMat(0x666666)
+                                );
                                 wall.position.set(tile.x, 3, tile.z);
                                 wall.castShadow = true;
                                 wall.userData.isDungeonTile = true;
+                                wall.userData.sharedGeometry = true;
+                                wall.userData.sharedMaterial = true;
                                 scene.add(wall);
                                 walls.push({ mesh: wall, x: tile.x, z: tile.z, size: 4 });
                             } else if (tile.type === 'chest') {
-                                const geo = new THREE.BoxGeometry(1.5, 1, 1);
-                                const mat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
-                                const chest = new THREE.Mesh(geo, mat);
+                                const chest = new THREE.Mesh(
+                                    broadcastChestGeo,
+                                    _getDungeonMat(0xffaa00)
+                                );
                                 chest.position.set(tile.x, 0.5, tile.z);
-                                chest.userData = { type: 'chest', opened: false };
+                                chest.userData = { type: 'chest', opened: false,
+                                                   sharedGeometry: true, sharedMaterial: true };
                                 scene.add(chest);
                                 chests.push(chest);
                             } else if (tile.type === 'crystal') {
-                                const geo = new THREE.OctahedronGeometry(0.6);
-                                const mat = new THREE.MeshStandardMaterial({ 
-                                    color: 0x00ffff, 
-                                    emissive: 0x00ffff,
-                                    emissiveIntensity: 0.5 
-                                });
-                                const crystal = new THREE.Mesh(geo, mat);
+                                const crystalMat = _getDungeonMat(0x00ffff);
+                                crystalMat.emissive = new THREE.Color(0x00ffff);
+                                crystalMat.emissiveIntensity = 0.5;
+                                const crystal = new THREE.Mesh(
+                                    broadcastCrystalGeo,
+                                    crystalMat
+                                );
                                 crystal.position.set(tile.x, 1.5, tile.z);
-                                crystal.userData = { type: 'crystal', id: crystals.length, collected: false };
+                                crystal.userData = { type: 'crystal', id: crystals.length,
+                                                     collected: false, sharedGeometry: true,
+                                                     sharedMaterial: true };
                                 scene.add(crystal);
                                 crystals.push(crystal);
                             } else if (tile.type === 'spawn') {
@@ -2155,7 +2257,8 @@
             init3D();
             GameState.isPlaying = true;
             updateHUD();
-            setInterval(saveGame, 60000);
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(saveGame, 60000);
         }
 
         function startSinglePlayer() {
@@ -2177,12 +2280,32 @@
             init3D();
             GameState.isPlaying = true;
             updateHUD();
-            setInterval(saveGame, 60000);
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(saveGame, 60000);
         }
 
         function exitGame() {
             if (confirm('Exit? Progress saved.')) {
                 saveGame();
+                // Stop auto-save interval
+                if (saveInterval) {
+                    clearInterval(saveInterval);
+                    saveInterval = null;
+                }
+                // Cancel animation loop
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                // Disconnect socket gracefully
+                if (GameState.socket) {
+                    GameState.socket.disconnect();
+                    GameState.socket = null;
+                }
+                // Release WebGL context
+                if (renderer) {
+                    renderer.dispose();
+                }
                 location.reload();
             }
         }
