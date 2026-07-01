@@ -754,6 +754,15 @@
             _dungeonMatPool.set(color, m);
             return m;
         }
+        
+        const DUNGEON_TILE_SIZE = 4;
+        const DUNGEON_ROOM_TYPES = {
+            safe: { enemyWeight: 0, chestWeight: 0.1, crystalWeight: 0.5 },
+            normal: { enemyWeight: 1, chestWeight: 0.35, crystalWeight: 0.6 },
+            arena: { enemyWeight: 1.75, chestWeight: 0.25, crystalWeight: 0.45 },
+            treasure: { enemyWeight: 0.55, chestWeight: 1.6, crystalWeight: 0.8 }
+        };
+        let currentDungeonLayout = null;
 
         // Dispose a THREE.Object3D tree, freeing GPU resources for objects that
         // own their geometry/material (not shared clones).
@@ -1257,209 +1266,340 @@
         // GAME WORLD BUILDING
         // ==========================================
         
+        function randomInt(min, max) {
+            if (max <= min) return min;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function shuffleArray(array) {
+            const copy = array.slice();
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
         function buildWorld() {
-            console.log('🏰 Building dungeon maze with GLTF models...');
-            
-            // Define room themes with model names
+            console.log('🏰 Building balanced BSP dungeon...');
+
             const roomThemes = [
-                { 
-                    floor: 'floor_tile_large',
-                    wall: 'wall_corner',
-                    name: 'Stone Chamber'
-                },
-                { 
-                    floor: 'floor_wood_large',
-                    wall: 'wall_wood',
-                    name: 'Wooden Hall'
-                },
-                { 
-                    floor: 'floor_tile_grate',
-                    wall: 'wall_broken',
-                    name: 'Ruined Corridor'
-                },
-                { 
-                    floor: 'floor_dirt_large',
-                    wall: 'wall_cracked',
-                    name: 'Earthen Block'
-                },
-                { 
-                    floor: 'floor_foundation_front',
-                    wall: 'wall_archedwindow_open',
-                    name: 'Foundation Tower'
+                { floor: 'floor_tile_large', wall: 'wall_corner', name: 'Stone Chamber' },
+                { floor: 'floor_wood_large', wall: 'wall_wood', name: 'Wooden Hall' },
+                { floor: 'floor_tile_grate', wall: 'wall_broken', name: 'Ruined Corridor' },
+                { floor: 'floor_dirt_large', wall: 'wall_cracked', name: 'Earthen Block' },
+                { floor: 'floor_foundation_front', wall: 'wall_archedwindow_open', name: 'Foundation Tower' }
+            ];
+            const corridorTheme = roomThemes[0];
+
+            function tileKey(gx, gz) {
+                return `${gx},${gz}`;
+            }
+
+            function gridToWorld(gx, gz) {
+                return { x: gx * DUNGEON_TILE_SIZE, z: gz * DUNGEON_TILE_SIZE };
+            }
+
+            function addWalkableTile(tileMap, gx, gz, data) {
+                const key = tileKey(gx, gz);
+                const world = gridToWorld(gx, gz);
+                const existing = tileMap.get(key);
+                if (existing) {
+                    if (existing.kind === 'corridor' && data.kind === 'room') {
+                        Object.assign(existing, data);
+                    }
+                    return existing;
                 }
-            ];
-            
-            // Use default cross pattern layout
-            const rooms = [
-                { x: 0, z: 0, size: 5, theme: 0 },
-                { x: 30, z: 0, size: 4, theme: 1 },
-                { x: -30, z: 0, size: 4, theme: 2 },
-                { x: 0, z: 30, size: 4, theme: 3 },
-                { x: 0, z: -30, size: 4, theme: 4 }
-            ];
-            
-            // Track placed tiles to prevent overlaps
-            const placedFloors = new Set();
-            const TILE_SIZE = 4; // Consistent tile size (was 4.02, causing issues)
-            
-            let loadedRooms = 0;
-            const totalRooms = rooms.length;
-            
-            // Build each room with GLTF models
-            rooms.forEach((room, roomIndex) => {
-                const theme = roomThemes[room.theme];
-                console.log(`🚪 Room ${roomIndex}: ${theme.name}`);
-                
-                // Create floor grid for this room
-                for (let x = -room.size; x <= room.size; x++) {
-                    for (let z = -room.size; z <= room.size; z++) {
-                        const posX = room.x + x * TILE_SIZE;
-                        const posZ = room.z + z * TILE_SIZE;
-                        const key = `${posX},${posZ}`; // Exact positioning, no rounding
-                        
-                        // Skip if tile already placed here
-                        if (placedFloors.has(key)) continue;
-                        placedFloors.add(key);
-                        
-                        // Load floor tile model
-                        loadDungeonTile('floor', theme.floor, (floorModel) => {
-                            floorModel.position.set(posX, 0, posZ);
-                            scene.add(floorModel);
-                        });
+
+                const tile = { gx, gz, x: world.x, z: world.z, ...data };
+                tileMap.set(key, tile);
+                return tile;
+            }
+
+            function createDungeonLayout() {
+                const tileMap = new Map();
+                const rooms = [];
+                const corridors = [];
+                const maxDepth = 3;
+                const minLeafSize = 5;
+                const minRoomSize = 3;
+                let roomId = 0;
+
+                class LayoutNode {
+                    constructor(x, z, width, depth) {
+                        this.x = x;
+                        this.z = z;
+                        this.width = width;
+                        this.depth = depth;
+                        this.left = null;
+                        this.right = null;
+                        this.room = null;
+                    }
+
+                    isLeaf() {
+                        return !this.left && !this.right;
                     }
                 }
-                
-                // Create perimeter walls for this room
-                for (let i = -room.size; i <= room.size; i++) {
-                    // Leave gap ONLY at center (i === 0) for doorways - no randomness
-                    const isDoorway = (i === 0);
-                    
-                    if (!isDoorway) {
-                        // North wall
-                        loadDungeonTile('wall', theme.wall, (wallModel) => {
-                            wallModel.position.set(room.x + i * TILE_SIZE, 0, room.z + room.size * TILE_SIZE);
-                            wallModel.rotation.y = 0;
-                            scene.add(wallModel);
-                            walls.push({ 
-                                mesh: wallModel, 
-                                x: room.x + i * TILE_SIZE, 
-                                z: room.z + room.size * TILE_SIZE, 
-                                size: 2 
-                            });
-                        });
-                        
-                        // South wall
-                        loadDungeonTile('wall', theme.wall, (wallModel) => {
-                            wallModel.position.set(room.x + i * TILE_SIZE, 0, room.z - room.size * TILE_SIZE);
-                            wallModel.rotation.y = Math.PI;
-                            scene.add(wallModel);
-                            walls.push({ 
-                                mesh: wallModel, 
-                                x: room.x + i * TILE_SIZE, 
-                                z: room.z - room.size * TILE_SIZE, 
-                                size: 2 
-                            });
-                        });
-                        
-                        // East wall
-                        loadDungeonTile('wall', theme.wall, (wallModel) => {
-                            wallModel.position.set(room.x + room.size * TILE_SIZE, 0, room.z + i * TILE_SIZE);
-                            wallModel.rotation.y = Math.PI / 2;
-                            scene.add(wallModel);
-                            walls.push({ 
-                                mesh: wallModel, 
-                                x: room.x + room.size * TILE_SIZE, 
-                                z: room.z + i * TILE_SIZE, 
-                                size: 2 
-                            });
-                        });
-                        
-                        // West wall
-                        loadDungeonTile('wall', theme.wall, (wallModel) => {
-                            wallModel.position.set(room.x - room.size * TILE_SIZE, 0, room.z + i * TILE_SIZE);
-                            wallModel.rotation.y = -Math.PI / 2;
-                            scene.add(wallModel);
-                            walls.push({ 
-                                mesh: wallModel, 
-                                x: room.x - room.size * TILE_SIZE, 
-                                z: room.z + i * TILE_SIZE, 
-                                size: 2 
-                            });
-                        });
-                    }
+
+                function roomCenter(room) {
+                    return {
+                        gx: room.x + Math.floor(room.width / 2),
+                        gz: room.z + Math.floor(room.depth / 2)
+                    };
                 }
-                
-                loadedRooms++;
-                if (loadedRooms === totalRooms) {
-                    buildCorridors();
+
+                function pickSplitAxis(node) {
+                    if (node.width / node.depth > 1.2) return 'vertical';
+                    if (node.depth / node.width > 1.2) return 'horizontal';
+                    return Math.random() < 0.5 ? 'vertical' : 'horizontal';
                 }
-            });
-            
-            // Build corridors connecting rooms
-            function buildCorridors() {
-                console.log('🛤️ Building corridors...');
-                
-                const corridors = [
-                    { from: 0, to: 1 },  // Center to East
-                    { from: 0, to: 2 },  // Center to West
-                    { from: 0, to: 3 },  // Center to North
-                    { from: 0, to: 4 }   // Center to South
-                ];
-                
-                corridors.forEach(corridor => {
-                    const roomA = rooms[corridor.from];
-                    const roomB = rooms[corridor.to];
-                    
-                    // Skip if room doesn't exist
-                    if (!roomA || !roomB) return;
-                    const corridorTheme = roomThemes[0]; // Use stone for corridors
-                    
-                    // Simple corridor - straight line between room centers
-                    const dx = roomB.x - roomA.x;
-                    const dz = roomB.z - roomA.z;
-                    const distance = Math.sqrt(dx * dx + dz * dz);
-                    const steps = Math.ceil(distance / TILE_SIZE);
-                    
-                    for (let i = 0; i <= steps; i++) {
-                        const t = i / steps;
-                        const x = roomA.x + dx * t;
-                        const z = roomA.z + dz * t;
-                        
-                        // Place corridor floor (2 tiles wide)
-                        for (let offset = -1; offset <= 1; offset += 2) {
-                            let posX, posZ;
-                            
-                            if (Math.abs(dx) > Math.abs(dz)) {
-                                // Horizontal corridor
-                                posX = Math.round(x / TILE_SIZE) * TILE_SIZE;
-                                posZ = Math.round(z / TILE_SIZE) * TILE_SIZE + offset * TILE_SIZE;
-                            } else {
-                                // Vertical corridor
-                                posX = Math.round(x / TILE_SIZE) * TILE_SIZE + offset * TILE_SIZE;
-                                posZ = Math.round(z / TILE_SIZE) * TILE_SIZE;
-                            }
-                            
-                            const key = `${posX},${posZ}`;
-                            if (placedFloors.has(key)) continue;
-                            placedFloors.add(key);
-                            
-                            loadDungeonTile('floor', corridorTheme.floor, (floorModel) => {
-                                floorModel.position.set(posX, 0, posZ);
-                                scene.add(floorModel);
+
+                function createRoom(node) {
+                    const maxRoomWidth = Math.max(minRoomSize, node.width - 2);
+                    const maxRoomDepth = Math.max(minRoomSize, node.depth - 2);
+                    const roomWidth = randomInt(Math.max(minRoomSize, maxRoomWidth - 1), maxRoomWidth);
+                    const roomDepth = randomInt(Math.max(minRoomSize, maxRoomDepth - 1), maxRoomDepth);
+                    const roomX = randomInt(node.x + 1, node.x + node.width - roomWidth - 1);
+                    const roomZ = randomInt(node.z + 1, node.z + node.depth - roomDepth - 1);
+                    const theme = roomThemes[roomId % roomThemes.length];
+
+                    node.room = {
+                        id: roomId++,
+                        x: roomX,
+                        z: roomZ,
+                        width: roomWidth,
+                        depth: roomDepth,
+                        theme,
+                        roomType: 'normal',
+                        floorTiles: []
+                    };
+
+                    for (let gx = roomX; gx < roomX + roomWidth; gx++) {
+                        for (let gz = roomZ; gz < roomZ + roomDepth; gz++) {
+                            const tile = addWalkableTile(tileMap, gx, gz, {
+                                kind: 'room',
+                                roomId: node.room.id,
+                                theme,
+                                roomType: 'normal'
                             });
+                            node.room.floorTiles.push(tile);
                         }
                     }
+
+                    rooms.push(node.room);
+                }
+
+                function getAnchorRoom(node) {
+                    if (!node) return null;
+                    if (node.room) return node.room;
+                    return getAnchorRoom(node.left) || getAnchorRoom(node.right);
+                }
+
+                function carveLine(start, end, corridor) {
+                    let gx = start.gx;
+                    let gz = start.gz;
+                    const stepX = Math.sign(end.gx - start.gx);
+                    const stepZ = Math.sign(end.gz - start.gz);
+
+                    while (gx !== end.gx || gz !== end.gz) {
+                        const offsets = stepX !== 0 ? [-1, 0, 1] : [0];
+                        const depthOffsets = stepZ !== 0 ? [-1, 0, 1] : [0];
+
+                        offsets.forEach((offsetX) => {
+                            depthOffsets.forEach((offsetZ) => {
+                                const tile = addWalkableTile(tileMap, gx + offsetX, gz + offsetZ, {
+                                    kind: 'corridor',
+                                    theme: corridorTheme,
+                                    roomType: 'normal'
+                                });
+                                corridor.tiles.push(tile);
+                            });
+                        });
+
+                        if (gx !== end.gx) gx += stepX;
+                        if (gz !== end.gz) gz += stepZ;
+                    }
+                }
+
+                function carveCorridor(roomA, roomB) {
+                    if (!roomA || !roomB) return;
+                    const start = roomCenter(roomA);
+                    const end = roomCenter(roomB);
+                    const corridor = { from: roomA.id, to: roomB.id, tiles: [], theme: corridorTheme };
+                    const horizontalFirst = Math.abs(end.gx - start.gx) >= Math.abs(end.gz - start.gz);
+                    const pivot = horizontalFirst
+                        ? { gx: end.gx, gz: start.gz }
+                        : { gx: start.gx, gz: end.gz };
+
+                    carveLine(start, pivot, corridor);
+                    carveLine(pivot, end, corridor);
+                    corridors.push(corridor);
+                }
+
+                function splitNode(node, depth = 0) {
+                    const canSplitVertically = node.width >= minLeafSize * 2;
+                    const canSplitHorizontally = node.depth >= minLeafSize * 2;
+
+                    if (depth >= maxDepth || (!canSplitVertically && !canSplitHorizontally)) {
+                        createRoom(node);
+                        return;
+                    }
+
+                    let axis = pickSplitAxis(node);
+                    if (axis === 'vertical' && !canSplitVertically) axis = 'horizontal';
+                    if (axis === 'horizontal' && !canSplitHorizontally) axis = 'vertical';
+
+                    if (axis === 'vertical') {
+                        const center = Math.floor(node.width / 2);
+                        const variance = Math.min(1, Math.floor(node.width * 0.1));
+                        const splitAt = randomInt(center - variance, center + variance);
+                        node.left = new LayoutNode(node.x, node.z, splitAt, node.depth);
+                        node.right = new LayoutNode(node.x + splitAt, node.z, node.width - splitAt, node.depth);
+                    } else {
+                        const center = Math.floor(node.depth / 2);
+                        const variance = Math.min(1, Math.floor(node.depth * 0.1));
+                        const splitAt = randomInt(center - variance, center + variance);
+                        node.left = new LayoutNode(node.x, node.z, node.width, splitAt);
+                        node.right = new LayoutNode(node.x, node.z + splitAt, node.width, node.depth - splitAt);
+                    }
+
+                    splitNode(node.left, depth + 1);
+                    splitNode(node.right, depth + 1);
+                    carveCorridor(getAnchorRoom(node.left), getAnchorRoom(node.right));
+                }
+
+                const root = new LayoutNode(-7, -7, 14, 14);
+                splitNode(root);
+
+                const centerRoom = rooms.reduce((best, room) => {
+                    const roomPoint = roomCenter(room);
+                    const distance = Math.hypot(roomPoint.gx, roomPoint.gz);
+                    if (!best || distance < best.distance) return { room, distance };
+                    return best;
+                }, null)?.room;
+
+                if (centerRoom) centerRoom.roomType = 'safe';
+
+                const nonSafeRooms = rooms.filter(room => room !== centerRoom);
+                const treasureRoom = nonSafeRooms.reduce((best, room) => {
+                    const roomPoint = roomCenter(room);
+                    const distance = Math.hypot(
+                        roomPoint.gx - roomCenter(centerRoom || room).gx,
+                        roomPoint.gz - roomCenter(centerRoom || room).gz
+                    );
+                    if (!best || distance > best.distance) return { room, distance };
+                    return best;
+                }, null)?.room;
+
+                if (treasureRoom) treasureRoom.roomType = 'treasure';
+
+                const arenaRoom = nonSafeRooms
+                    .filter(room => room !== treasureRoom)
+                    .reduce((best, room) => {
+                        const area = room.width * room.depth;
+                        if (!best || area > best.area) return { room, area };
+                        return best;
+                    }, null)?.room;
+
+                if (arenaRoom) arenaRoom.roomType = 'arena';
+
+                rooms.forEach((room) => {
+                    room.floorTiles.forEach((tile) => {
+                        tile.theme = room.theme;
+                        tile.roomType = room.roomType;
+                    });
                 });
-                
-                console.log('✓ Dungeon maze complete!');
-                
-                // Place items after everything is built
-                setTimeout(() => {
-                    placeCrystals();
-                    placeEnemies();
-                    placeChests();
-                }, 1000);
+
+                const directions = [
+                    { dx: 0, dz: -1, ox: 0, oz: -0.5, rotation: 0 },
+                    { dx: 0, dz: 1, ox: 0, oz: 0.5, rotation: Math.PI },
+                    { dx: -1, dz: 0, ox: -0.5, oz: 0, rotation: -Math.PI / 2 },
+                    { dx: 1, dz: 0, ox: 0.5, oz: 0, rotation: Math.PI / 2 }
+                ];
+                const wallSegments = [];
+
+                tileMap.forEach((tile) => {
+                    const wallTheme = tile.theme || corridorTheme;
+                    directions.forEach((direction) => {
+                        if (tileMap.has(tileKey(tile.gx + direction.dx, tile.gz + direction.dz))) return;
+                        wallSegments.push({
+                            x: tile.x + direction.ox * DUNGEON_TILE_SIZE,
+                            z: tile.z + direction.oz * DUNGEON_TILE_SIZE,
+                            rotation: direction.rotation,
+                            theme: wallTheme
+                        });
+                    });
+                });
+
+                const startRoom = centerRoom || rooms[0];
+                const startTile = startRoom ? roomCenter(startRoom) : { gx: 0, gz: 0 };
+                const startPosition = gridToWorld(startTile.gx, startTile.gz);
+
+                return {
+                    rooms,
+                    corridors,
+                    walkableTiles: Array.from(tileMap.values()),
+                    wallSegments,
+                    startPosition,
+                    reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
+                };
             }
+
+            const toRemove = [];
+            scene.children.forEach((child) => {
+                if (child === playerContainer || child.isLight) return;
+                if (child.userData.isDungeonTile || child.userData.type) {
+                    toRemove.push(child);
+                }
+            });
+            toRemove.forEach((obj) => {
+                disposeObject(obj);
+                scene.remove(obj);
+            });
+
+            walls = [];
+            enemies = [];
+            chests = [];
+            crystals = [];
+
+            currentDungeonLayout = createDungeonLayout();
+            window.currentDungeonLayout = currentDungeonLayout;
+
+            console.log(`📍 Generated ${currentDungeonLayout.rooms.length} rooms and ${currentDungeonLayout.corridors.length} corridors`);
+
+            currentDungeonLayout.walkableTiles.forEach((tile) => {
+                loadDungeonTile('floor', tile.theme.floor, (floorModel) => {
+                    floorModel.position.set(tile.x, 0, tile.z);
+                    floorModel.userData.isDungeonTile = true;
+                    scene.add(floorModel);
+                });
+            });
+
+            currentDungeonLayout.wallSegments.forEach((wallSegment) => {
+                loadDungeonTile('wall', wallSegment.theme.wall, (wallModel) => {
+                    wallModel.position.set(wallSegment.x, 0, wallSegment.z);
+                    wallModel.rotation.y = wallSegment.rotation;
+                    wallModel.userData.isDungeonTile = true;
+                    scene.add(wallModel);
+                    walls.push({
+                        mesh: wallModel,
+                        x: wallSegment.x,
+                        z: wallSegment.z,
+                        size: 2
+                    });
+                });
+            });
+
+            if (playerContainer) {
+                playerContainer.position.set(currentDungeonLayout.startPosition.x, 0, currentDungeonLayout.startPosition.z);
+                GameState.player.x = currentDungeonLayout.startPosition.x;
+                GameState.player.z = currentDungeonLayout.startPosition.z;
+            }
+
+            placeCrystals();
+            placeEnemies();
+            placeChests();
+            console.log('✓ Dungeon maze complete!');
         }
         
         // Helper to load dungeon tiles with caching.
@@ -1541,7 +1681,8 @@
         }
 
         function placeCrystals() {
-            for (let i = 0; i < 6; i++) {
+            const crystalsToPlace = getDungeonSpawnTiles(6, 'crystalWeight', 10);
+            crystalsToPlace.forEach((tile, i) => {
                 const crystal = new THREE.Mesh(
                     new THREE.OctahedronGeometry(0.6),
                     new THREE.MeshStandardMaterial({ 
@@ -1550,48 +1691,194 @@
                         emissiveIntensity: 0.5 
                     })
                 );
-                const x = (Math.random() - 0.5) * 60;
-                const z = (Math.random() - 0.5) * 60;
-                crystal.position.set(x, 1.5, z);
+                crystal.position.set(tile.x, 1.5, tile.z);
                 crystal.userData = { type: 'crystal', id: i, collected: false };
                 scene.add(crystal);
                 crystals.push(crystal);
+            });
+        }
+
+        function getDungeonSpawnTiles(count, weightKey, minDistance = 8) {
+            if (!currentDungeonLayout) return [];
+
+            const candidates = currentDungeonLayout.walkableTiles
+                .filter((tile) => tile.kind === 'room')
+                .map((tile) => ({
+                    tile,
+                    weight: DUNGEON_ROOM_TYPES[tile.roomType]?.[weightKey] || 0
+                }))
+                .filter((candidate) => candidate.weight > 0);
+
+            const selected = [];
+            while (selected.length < count && candidates.length > 0) {
+                const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+                let target = Math.random() * totalWeight;
+                let chosenIndex = 0;
+
+                for (let i = 0; i < candidates.length; i++) {
+                    target -= candidates[i].weight;
+                    if (target <= 0) {
+                        chosenIndex = i;
+                        break;
+                    }
+                }
+
+                const [{ tile }] = candidates.splice(chosenIndex, 1);
+                const key = `${tile.gx},${tile.gz}`;
+                const nearStart = Math.hypot(
+                    tile.x - currentDungeonLayout.startPosition.x,
+                    tile.z - currentDungeonLayout.startPosition.z
+                ) < DUNGEON_TILE_SIZE * 2;
+                const tooCloseToOtherSpawn = selected.some((selectedTile) =>
+                    Math.hypot(tile.x - selectedTile.x, tile.z - selectedTile.z) < minDistance
+                );
+
+                if (nearStart || tooCloseToOtherSpawn || currentDungeonLayout.reservedSpawnKeys.has(key)) {
+                    continue;
+                }
+
+                currentDungeonLayout.reservedSpawnKeys.add(key);
+                selected.push(tile);
             }
+
+            return selected;
+        }
+
+        function createEnemyMesh(typeConfig) {
+            const enemy = new THREE.Group();
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: typeConfig.color,
+                roughness: 0.55,
+                metalness: 0.2
+            });
+            const accentMaterial = new THREE.MeshStandardMaterial({
+                color: typeConfig.accent,
+                emissive: typeConfig.accent,
+                emissiveIntensity: 0.15,
+                roughness: 0.35,
+                metalness: 0.5
+            });
+
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.55 * typeConfig.scale, 0.75 * typeConfig.scale, 1.8 * typeConfig.scale, 10),
+                bodyMaterial
+            );
+            body.position.y = 1.1 * typeConfig.scale;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            enemy.add(body);
+
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.45 * typeConfig.scale, 12, 12),
+                bodyMaterial.clone()
+            );
+            head.position.y = 2.15 * typeConfig.scale;
+            head.castShadow = true;
+            enemy.add(head);
+
+            const crest = new THREE.Mesh(
+                new THREE.ConeGeometry(0.22 * typeConfig.scale, 0.7 * typeConfig.scale, 8),
+                accentMaterial
+            );
+            crest.position.y = 2.75 * typeConfig.scale;
+            crest.castShadow = true;
+            enemy.add(crest);
+
+            const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), accentMaterial.clone());
+            const rightEye = leftEye.clone();
+            leftEye.position.set(-0.16 * typeConfig.scale, 2.18 * typeConfig.scale, 0.36 * typeConfig.scale);
+            rightEye.position.set(0.16 * typeConfig.scale, 2.18 * typeConfig.scale, 0.36 * typeConfig.scale);
+            enemy.add(leftEye);
+            enemy.add(rightEye);
+
+            const leftArm = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12 * typeConfig.scale, 0.16 * typeConfig.scale, 1.1 * typeConfig.scale, 8),
+                bodyMaterial
+            );
+            const rightArm = leftArm.clone();
+            leftArm.position.set(-0.72 * typeConfig.scale, 1.3 * typeConfig.scale, 0);
+            rightArm.position.set(0.72 * typeConfig.scale, 1.3 * typeConfig.scale, 0);
+            leftArm.rotation.z = Math.PI / 6;
+            rightArm.rotation.z = -Math.PI / 6;
+            enemy.add(leftArm);
+            enemy.add(rightArm);
+
+            return enemy;
         }
 
         function placeEnemies() {
-            for (let i = 0; i < 5; i++) {
-                const enemy = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.6, 2, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xff0000 })
-                );
-                const x = (Math.random() - 0.5) * 50;
-                const z = (Math.random() - 0.5) * 50;
-                enemy.position.set(x, 1, z);
+            const enemyTypes = [
+                { name: 'Goblin', color: 0x55aa44, accent: 0xd8ff6b, scale: 0.95, hp: 25 },
+                { name: 'Orc', color: 0x7d4b2a, accent: 0xff8844, scale: 1.1, hp: 35 },
+                { name: 'Troll', color: 0x556b7a, accent: 0x99ddff, scale: 1.3, hp: 45 }
+            ];
+            const spawnTiles = getDungeonSpawnTiles(5, 'enemyWeight', 12);
+
+            spawnTiles.forEach((tile) => {
+                const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                const enemy = createEnemyMesh(enemyType);
+                enemy.position.set(tile.x, 0, tile.z);
                 enemy.userData = { 
                     type: 'enemy', 
-                    name: ['Goblin', 'Orc', 'Troll'][Math.floor(Math.random() * 3)],
-                    hp: 30,
+                    name: enemyType.name,
+                    hp: enemyType.hp,
                     active: true 
                 };
                 scene.add(enemy);
                 enemies.push(enemy);
-            }
+            });
+        }
+
+        function createChestMesh() {
+            const chest = new THREE.Group();
+            const woodMaterial = new THREE.MeshStandardMaterial({
+                color: 0x7a4b1f,
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            const metalMaterial = new THREE.MeshStandardMaterial({
+                color: 0xe0b84f,
+                emissive: 0x7a5a16,
+                emissiveIntensity: 0.25,
+                roughness: 0.35,
+                metalness: 0.8
+            });
+
+            const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 1.1), woodMaterial);
+            base.position.y = 0.45;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            chest.add(base);
+
+            const lid = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.45, 1.15), woodMaterial.clone());
+            lid.position.set(0, 1.0, -0.08);
+            lid.rotation.x = -0.28;
+            lid.castShadow = true;
+            chest.add(lid);
+
+            const bandFront = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.14, 0.14), metalMaterial);
+            bandFront.position.set(0, 0.55, 0.57);
+            const bandBack = bandFront.clone();
+            bandBack.position.z = -0.57;
+            const latch = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.16), metalMaterial.clone());
+            latch.position.set(0, 0.58, 0.62);
+            chest.add(bandFront);
+            chest.add(bandBack);
+            chest.add(latch);
+
+            return chest;
         }
 
         function placeChests() {
-            for (let i = 0; i < 4; i++) {
-                const chest = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.5, 1, 1),
-                    new THREE.MeshStandardMaterial({ color: 0xffaa00 })
-                );
-                const x = (Math.random() - 0.5) * 60;
-                const z = (Math.random() - 0.5) * 60;
-                chest.position.set(x, 0.5, z);
+            const chestTiles = getDungeonSpawnTiles(4, 'chestWeight', 10);
+
+            chestTiles.forEach((tile) => {
+                const chest = createChestMesh();
+                chest.position.set(tile.x, 0, tile.z);
                 chest.userData = { type: 'chest', opened: false };
                 scene.add(chest);
                 chests.push(chest);
-            }
+            });
         }
 
         function initParticles() {
