@@ -744,11 +744,18 @@
         // Reusable shared geometries for fallback dungeon tiles
         const _fallbackGeo = {
             floor: new THREE.BoxGeometry(4, 0.2, 4),
-            wall: new THREE.BoxGeometry(4, 6, 1)
+            wall: new THREE.BoxGeometry(4, 6, 1),
+            door: new THREE.BoxGeometry(4, 6, 1),
+            prop: new THREE.BoxGeometry(0.8, 1.2, 0.8)
         };
+        // Maps missing asset names to available alternatives, keyed by tile type
         const _dungeonModelAliases = {
             wall: {
                 wall_wood: 'wall'
+            },
+            door: {
+                // Doors load from the walls folder since no door GLTFs exist yet
+                wall_doorway: 'wall_doorway'
             }
         };
         // Material pool keyed by hex color integer
@@ -1269,11 +1276,7 @@
         // ==========================================
         // GAME WORLD BUILDING
         // ==========================================
-        
-        // ==========================================
-        // GAME WORLD BUILDING
-        // ==========================================
-        
+
         function randomInt(min, max) {
             if (max <= min) return min;
             return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -1288,6 +1291,13 @@
             return copy;
         }
 
+        // Tile grid key helper — used both inside buildWorld() and by standalone
+        // spawn helpers (getCardinalWalkableNeighborCount, etc.) that run after
+        // buildWorld() has already returned.
+        function tileKey(gx, gz) {
+            return `${gx},${gz}`;
+        }
+
         function buildWorld() {
             console.log('🏰 Building balanced BSP dungeon...');
 
@@ -1299,10 +1309,6 @@
                 { floor: 'floor_foundation_front', wall: 'wall_archedwindow_open', name: 'Foundation Tower' }
             ];
             const corridorTheme = roomThemes[0];
-
-            function tileKey(gx, gz) {
-                return `${gx},${gz}`;
-            }
 
             function gridToWorld(gx, gz) {
                 return { x: gx * DUNGEON_TILE_SIZE, z: gz * DUNGEON_TILE_SIZE };
@@ -1525,18 +1531,61 @@
                     { dx: 1, dz: 0, ox: 0.5, oz: 0, rotation: Math.PI / 2 }
                 ];
                 const wallSegments = [];
+                const doorSegments = [];
+                const doorSegmentSet = new Set();
 
                 tileMap.forEach((tile) => {
                     const wallTheme = tile.theme || corridorTheme;
                     directions.forEach((direction) => {
                         if (tileMap.has(tileKey(tile.gx + direction.dx, tile.gz + direction.dz))) return;
-                        wallSegments.push({
-                            x: tile.x + direction.ox * DUNGEON_TILE_SIZE,
-                            z: tile.z + direction.oz * DUNGEON_TILE_SIZE,
-                            rotation: direction.rotation,
-                            theme: wallTheme
+
+                        // Wall position in grid coordinates (just past the current tile)
+                        const wallGx = tile.gx + direction.dx;
+                        const wallGz = tile.gz + direction.dz;
+
+                        // A doorway is placed where a room-edge wall has a corridor tile
+                        // adjacent to the wall position (i.e. the corridor meets the room wall).
+                        const isDoorway = tile.kind === 'room' && directions.some((d) => {
+                            // Don't look back through the current tile
+                            if (d.dx === -direction.dx && d.dz === -direction.dz) return false;
+                            const adjKey = tileKey(wallGx + d.dx, wallGz + d.dz);
+                            const adjTile = tileMap.get(adjKey);
+                            return adjTile && adjTile.kind === 'corridor';
                         });
+
+                        const wx = tile.x + direction.ox * DUNGEON_TILE_SIZE;
+                        const wz = tile.z + direction.oz * DUNGEON_TILE_SIZE;
+                        const segKey = `${wx.toFixed(3)},${wz.toFixed(3)}`;
+
+                        if (isDoorway && !doorSegmentSet.has(segKey)) {
+                            doorSegmentSet.add(segKey);
+                            doorSegments.push({
+                                x: wx,
+                                z: wz,
+                                rotation: direction.rotation,
+                                theme: wallTheme
+                            });
+                        } else if (!isDoorway) {
+                            wallSegments.push({
+                                x: wx,
+                                z: wz,
+                                rotation: direction.rotation,
+                                theme: wallTheme
+                            });
+                        }
                     });
+                });
+
+                // Prop spawn candidates: interior room tiles with 4 walkable neighbours
+                // (tiles fully surrounded by other walkable tiles make safe prop spots).
+                const walkableKeys = new Set(tileMap.keys());
+                const propSpawnTiles = [];
+                tileMap.forEach((tile) => {
+                    if (tile.kind !== 'room') return;
+                    const allNeighborsWalkable = directions.every((d) =>
+                        walkableKeys.has(tileKey(tile.gx + d.dx, tile.gz + d.dz))
+                    );
+                    if (allNeighborsWalkable) propSpawnTiles.push(tile);
                 });
 
                 const startRoom = centerRoom || rooms[0];
@@ -1549,6 +1598,8 @@
                     walkableTiles: Array.from(tileMap.values()),
                     walkableTileKeys: new Set(tileMap.keys()),
                     wallSegments,
+                    doorSegments,
+                    propSpawnTiles,
                     startPosition,
                     reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
                 };
@@ -1601,6 +1652,16 @@
                 });
             });
 
+            currentDungeonLayout.doorSegments.forEach((doorSegment) => {
+                loadDungeonTile('door', 'wall_doorway', (doorModel) => {
+                    doorModel.position.set(doorSegment.x, 0, doorSegment.z);
+                    doorModel.rotation.y = doorSegment.rotation;
+                    doorModel.userData.isDungeonTile = true;
+                    doorModel.userData.tileType = 'door';
+                    scene.add(doorModel);
+                });
+            });
+
             if (playerContainer) {
                 playerContainer.position.set(currentDungeonLayout.startPosition.x, 0, currentDungeonLayout.startPosition.z);
                 GameState.player.x = currentDungeonLayout.startPosition.x;
@@ -1610,6 +1671,7 @@
             placeCrystals();
             placeEnemies();
             placeChests();
+            placeProps();
             console.log('✓ Dungeon maze complete!');
         }
         
@@ -1619,7 +1681,10 @@
         // the cached template instead of re-parsing the asset.
         function loadDungeonTile(type, name, callback) {
             const resolvedName = _dungeonModelAliases[type]?.[name] || name;
-            const path = `/models/environment/dungeon/${type}s/${resolvedName}.gltf`;
+            // Doors use the walls folder (no dedicated door GLTFs exist yet).
+            // Props already include their subfolder in the name (e.g. "barrel/barrel_large").
+            const folderType = type === 'door' ? 'wall' : type;
+            const path = `/models/environment/dungeon/${folderType}s/${resolvedName}.gltf`;
 
             if (resolvedName !== name) {
                 console.warn(`⚠️ Missing ${type} model "${name}", using "${resolvedName}" instead`);
@@ -1684,11 +1749,15 @@
                     // Build a shared-geometry fallback and cache it so later
                     // requests also get cheap clones.
                     const geo = _fallbackGeo[type] || _fallbackGeo.floor;
-                    const mat = _getDungeonMat(type === 'floor' ? 0x3a3a3a : 0x5a5a5a);
+                    const propColor = 0x8a5a2a;
+                    const mat = _getDungeonMat(
+                        type === 'floor' ? 0x3a3a3a :
+                        type === 'prop' ? propColor : 0x5a5a5a
+                    );
                     const fallbackTemplate = new THREE.Mesh(geo, mat);
                     fallbackTemplate.userData.sharedGeometry = true;
                     fallbackTemplate.userData.sharedMaterial = true;
-                    if (type !== 'floor') fallbackTemplate.position.y = 3;
+                    if (type !== 'floor' && type !== 'prop') fallbackTemplate.position.y = 3;
                     _dungeonModelCache.set(path, fallbackTemplate);
                     const pending = _dungeonModelPending.get(path) || [];
                     _dungeonModelPending.delete(path);
@@ -1928,6 +1997,45 @@
                 scene.add(chest);
                 chests.push(chest);
             });
+        }
+
+        // Scatter decorative props (barrels, banners, etc.) into rooms.
+        // Props are placed on interior floor tiles (4 walkable neighbours) so they
+        // never block narrow corridors or room entrances.
+        function placeProps() {
+            if (!currentDungeonLayout) return;
+
+            // Prop asset entries: [subfolder/name, yOffset]
+            const propAssets = [
+                ['barrel/barrel_large', 0],
+                ['barrel/barrel_small', 0],
+                ['barrel/barrel_small_stack', 0],
+                ['banner/banner_blue', 0],
+                ['banner/banner_red', 0],
+                ['banner/banner_green', 0],
+                ['barrier/barrier_column', 0]
+            ];
+
+            // Use ~15% of eligible interior tiles, capped to keep performance reasonable
+            const candidates = shuffleArray(currentDungeonLayout.propSpawnTiles);
+            const propCount = Math.min(Math.floor(candidates.length * 0.15), 20);
+            const selectedTiles = candidates.slice(0, propCount);
+
+            selectedTiles.forEach((tile) => {
+                const [assetName, yOff] = propAssets[Math.floor(Math.random() * propAssets.length)];
+
+                loadDungeonTile('prop', assetName, (propModel) => {
+                    // Small random rotation for visual variety
+                    const angle = Math.floor(Math.random() * 4) * (Math.PI / 2);
+                    propModel.position.set(tile.x, yOff, tile.z);
+                    propModel.rotation.y = angle;
+                    propModel.userData.isDungeonTile = true;
+                    propModel.userData.tileType = 'prop';
+                    scene.add(propModel);
+                });
+            });
+
+            console.log(`🪣 Placed ${propCount} props in dungeon rooms`);
         }
 
         function initParticles() {
