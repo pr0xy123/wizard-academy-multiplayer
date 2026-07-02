@@ -756,6 +756,9 @@
         }
         
         const DUNGEON_TILE_SIZE = 4;
+        const PLAYER_COLLISION_RADIUS = 0.45;
+        const WALL_COLLISION_BUFFER = 0.2;
+        const WALL_COLLIDER_THICKNESS = 0.45;
         const DUNGEON_ROOM_TYPES = {
             safe: { enemyWeight: 0, chestWeight: 0.1, crystalWeight: 0.5 },
             normal: { enemyWeight: 1, chestWeight: 0.35, crystalWeight: 0.6 },
@@ -1539,6 +1542,7 @@
                     rooms,
                     corridors,
                     walkableTiles: Array.from(tileMap.values()),
+                    walkableTileKeys: new Set(tileMap.keys()),
                     wallSegments,
                     startPosition,
                     reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
@@ -1581,11 +1585,13 @@
                     wallModel.rotation.y = wallSegment.rotation;
                     wallModel.userData.isDungeonTile = true;
                     scene.add(wallModel);
+                    const isEastWestWall = Math.abs(Math.abs(wallSegment.rotation) - Math.PI / 2) < 0.001;
                     walls.push({
                         mesh: wallModel,
                         x: wallSegment.x,
                         z: wallSegment.z,
-                        size: 2
+                        halfWidth: isEastWestWall ? WALL_COLLIDER_THICKNESS : DUNGEON_TILE_SIZE / 2,
+                        halfDepth: isEastWestWall ? DUNGEON_TILE_SIZE / 2 : WALL_COLLIDER_THICKNESS
                     });
                 });
             });
@@ -1681,7 +1687,7 @@
         }
 
         function placeCrystals() {
-            const crystalsToPlace = getDungeonSpawnTiles(6, 'crystalWeight', 10);
+            const crystalsToPlace = getDungeonSpawnTiles(6, 'crystalWeight', 10, ['room', 'corridor']);
             crystalsToPlace.forEach((tile, i) => {
                 const crystal = new THREE.Mesh(
                     new THREE.OctahedronGeometry(0.6),
@@ -1698,16 +1704,48 @@
             });
         }
 
-        function getDungeonSpawnTiles(count, weightKey, minDistance = 8) {
+        function getCardinalWalkableNeighborCount(tile, walkableTileKeys) {
+            const directions = [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1]
+            ];
+
+            return directions.reduce((count, [dx, dz]) => {
+                return count + (walkableTileKeys.has(tileKey(tile.gx + dx, tile.gz + dz)) ? 1 : 0);
+            }, 0);
+        }
+
+        function buildSpawnCandidates(weightKey, allowedKinds, requireClearance) {
+            const walkableTileKeys = currentDungeonLayout.walkableTileKeys
+                || new Set(currentDungeonLayout.walkableTiles.map((tile) => tileKey(tile.gx, tile.gz)));
+
+            return currentDungeonLayout.walkableTiles
+                .filter((tile) => allowedKinds.includes(tile.kind))
+                .filter((tile) => {
+                    if (!requireClearance) return true;
+                    const neighborCount = getCardinalWalkableNeighborCount(tile, walkableTileKeys);
+                    return tile.kind === 'corridor' ? neighborCount >= 2 : neighborCount === 4;
+                })
+                .map((tile) => {
+                    const roomWeight = DUNGEON_ROOM_TYPES[tile.roomType]?.[weightKey] || 0;
+                    const corridorWeight = weightKey === 'crystalWeight' ? 0.25 : 0;
+                    return {
+                        tile,
+                        weight: tile.kind === 'corridor' ? corridorWeight : roomWeight
+                    };
+                })
+                .filter((candidate) => candidate.weight > 0);
+        }
+
+        function getDungeonSpawnTiles(count, weightKey, minDistance = 8, allowedKinds = ['room']) {
             if (!currentDungeonLayout) return [];
 
-            const candidates = currentDungeonLayout.walkableTiles
-                .filter((tile) => tile.kind === 'room')
-                .map((tile) => ({
-                    tile,
-                    weight: DUNGEON_ROOM_TYPES[tile.roomType]?.[weightKey] || 0
-                }))
-                .filter((candidate) => candidate.weight > 0);
+            const candidates = buildSpawnCandidates(weightKey, allowedKinds, true);
+            if (candidates.length === 0) {
+                candidates.push(...buildSpawnCandidates(weightKey, allowedKinds, false));
+            }
 
             const selected = [];
             while (selected.length < count && candidates.length > 0) {
@@ -2006,10 +2044,9 @@
         }
 
         function checkCollision(x, z) {
-            const buffer = 1.0;
             for (let wall of walls) {
-                if (Math.abs(x - wall.x) < wall.size/2 + buffer && 
-                    Math.abs(z - wall.z) < wall.size/2 + buffer) {
+                if (Math.abs(x - wall.x) < wall.halfWidth + PLAYER_COLLISION_RADIUS + WALL_COLLISION_BUFFER &&
+                    Math.abs(z - wall.z) < wall.halfDepth + PLAYER_COLLISION_RADIUS + WALL_COLLISION_BUFFER) {
                     return true;
                 }
             }
@@ -2034,7 +2071,7 @@
         
         function checkInteractions() {
             nearestInteractable = null;
-            let nearestDist = 3;
+            let nearestDist = 3.5;
             
             // Check crystals
             crystals.forEach(crystal => {
@@ -2069,7 +2106,12 @@
             const prompt = document.getElementById('interaction-prompt');
             if (nearestInteractable) {
                 prompt.style.display = 'block';
-                prompt.textContent = `Press SPACE to ${nearestInteractable.type === 'enemy' ? 'Fight' : nearestInteractable.type === 'crystal' ? 'Collect' : 'Open'}`;
+                const label = nearestInteractable.type === 'enemy'
+                    ? nearestInteractable.object.userData.name || 'Monster'
+                    : nearestInteractable.type === 'chest'
+                        ? 'Treasure Chest'
+                        : 'Crystal';
+                prompt.textContent = `Press SPACE to ${nearestInteractable.type === 'enemy' ? 'Fight' : nearestInteractable.type === 'crystal' ? 'Collect' : 'Open'} ${label}`;
             } else {
                 prompt.style.display = 'none';
             }
