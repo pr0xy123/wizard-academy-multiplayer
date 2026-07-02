@@ -401,6 +401,7 @@
                 <button class="btn-fantasy" onclick="startSinglePlayer()">🎮 Single Player</button>
                 <button class="btn-fantasy" onclick="showMultiplayer()">🌐 Multiplayer</button>
                 <button class="btn-fantasy" onclick="loadGame()">💾 Load Game</button>
+                <button class="btn-fantasy" onclick="openRoomDesigner()" style="background: linear-gradient(135deg, #1a4a8a, #0a2244);">🏰 Design Dungeon</button>
             </div>
             
             <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.5); border-radius: 10px; max-width: 600px;">
@@ -470,7 +471,10 @@
                     <div style="margin-top: 10px; font-size: 10px; color: #888;">
                         H: Heal • T: Tutor • K: Skills
                     </div>
-                    <button class="btn-fantasy" onclick="exitGame()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b0000, #4a0000);">
+                    <button class="btn-fantasy" onclick="openRoomDesigner()" style="width: 100%; margin-top: 6px; font-size: 11px; background: linear-gradient(135deg, #1a4a8a, #0a2244);">
+                        🏰 Design Dungeon
+                    </button>
+                    <button class="btn-fantasy" onclick="exitGame()" style="width: 100%; margin-top: 6px; font-size: 12px; background: linear-gradient(135deg, #8b0000, #4a0000);">
                         🚪 Exit
                     </button>
                 </div>
@@ -538,28 +542,32 @@
         
         <!-- Room Designer Modal -->
         <div id="room-designer-modal" class="modal">
-            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-                <h2>🏰 Dungeon Room Designer</h2>
+            <div class="modal-content" style="max-width: 960px; max-height: 90vh; overflow-y: auto;">
+                <h2>🏰 Dungeon Designer</h2>
                 <div style="display: flex; gap: 20px; margin-top: 20px;">
                     <!-- Canvas Area -->
                     <div style="flex: 1;">
-                        <canvas id="room-designer-canvas" width="600" height="600" 
-                                style="border: 2px solid #8b7355; background: #1a1520; cursor: crosshair;"></canvas>
-                        <div style="margin-top: 10px; font-size: 12px; color: #b8860b;">
-                            <strong>Controls:</strong> Click to place room | Right-click to remove | Drag to move
+                        <canvas id="room-designer-canvas" width="560" height="560"
+                                style="border: 2px solid #8b7355; background: #1a1520; cursor: crosshair; display:block;"></canvas>
+                        <!-- Tile tool selector -->
+                        <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px;">
+                            <button class="btn-fantasy designer-tool-btn" data-tool="floor"   onclick="setDesignerTool('floor')"   style="padding:5px 8px; font-size:12px; outline: 2px solid #ffd700;">🟫 Floor</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="wall"    onclick="setDesignerTool('wall')"    style="padding:5px 8px; font-size:12px;">⬛ Wall</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="door"    onclick="setDesignerTool('door')"    style="padding:5px 8px; font-size:12px;">🚪 Door</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="spawn"   onclick="setDesignerTool('spawn')"   style="padding:5px 8px; font-size:12px;">★ Spawn</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="enemy"   onclick="setDesignerTool('enemy')"   style="padding:5px 8px; font-size:12px;">👹 Enemy</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="chest"   onclick="setDesignerTool('chest')"   style="padding:5px 8px; font-size:12px;">📦 Chest</button>
+                            <button class="btn-fantasy designer-tool-btn" data-tool="crystal" onclick="setDesignerTool('crystal')" style="padding:5px 8px; font-size:12px;">💎 Crystal</button>
+                        </div>
+                        <div style="margin-top: 6px; font-size: 11px; color: #b8860b;">
+                            Left-click/drag to paint • Right-click to erase • Walls auto-generate at floor edges
                         </div>
                     </div>
                     
                     <!-- Control Panel -->
-                    <div style="width: 250px;">
-                        <div style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Room Settings</h3>
-                            <label>Room Size:</label>
-                            <input type="range" id="room-size-slider" min="2" max="8" value="4" 
-                                   style="width: 100%;" oninput="updateRoomSizeDisplay(this.value)">
-                            <div id="room-size-display" style="text-align: center; color: #ffd700;">4 tiles</div>
-                            
-                            <label style="margin-top: 15px; display: block;">Theme:</label>
+                    <div style="width: 260px; flex-shrink: 0;">
+                        <div style="background: rgba(139, 115, 85, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                            <h3 style="margin-top: 0; font-size: 14px;">Theme</h3>
                             <select id="room-theme-select" style="width: 100%; padding: 5px; background: #2a2520; color: #ffd700; border: 1px solid #8b7355;">
                                 <option value="0">Stone Chamber</option>
                                 <option value="1">Wooden Hall</option>
@@ -568,22 +576,28 @@
                                 <option value="4">Foundation Tower</option>
                             </select>
                         </div>
-                        
-                        <div style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Preset Layouts</h3>
-                            <button class="btn-fantasy" onclick="loadPreset('cross')" style="width: 100%; margin-bottom: 5px;">+ Cross Pattern</button>
-                            <button class="btn-fantasy" onclick="loadPreset('grid')" style="width: 100%; margin-bottom: 5px;">+ Grid Layout</button>
-                            <button class="btn-fantasy" onclick="loadPreset('linear')" style="width: 100%; margin-bottom: 5px;">+ Linear Path</button>
-                            <button class="btn-fantasy" onclick="clearDesigner()" style="width: 100%; background: #8b0000;">Clear All</button>
+
+                        <div style="background: rgba(139, 115, 85, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                            <h3 style="margin-top: 0; font-size: 14px;">Preset Layouts</h3>
+                            <button class="btn-fantasy" onclick="loadPreset('cross')"  style="width: 100%; margin-bottom: 4px; font-size:12px;">✦ Cross</button>
+                            <button class="btn-fantasy" onclick="loadPreset('grid')"   style="width: 100%; margin-bottom: 4px; font-size:12px;">⊞ Grid</button>
+                            <button class="btn-fantasy" onclick="loadPreset('linear')" style="width: 100%; margin-bottom: 4px; font-size:12px;">→ Linear</button>
+                            <button class="btn-fantasy" onclick="clearDesigner()" style="width: 100%; background: #8b0000; font-size:12px;">✕ Clear All</button>
                         </div>
-                        
-                        <div id="room-list" style="background: rgba(139, 115, 85, 0.2); padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
-                            <h3 style="margin-top: 0;">Rooms (0)</h3>
-                            <div id="room-items" style="font-size: 12px;"></div>
+
+                        <div style="background: rgba(139, 115, 85, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                            <h3 style="margin-top: 0; font-size: 14px;">Save / Load</h3>
+                            <button class="btn-fantasy" onclick="saveDesignToJSON()"  style="width: 100%; margin-bottom: 4px; font-size:12px;">💾 Export JSON</button>
+                            <button class="btn-fantasy" onclick="loadDesignFromFile()" style="width: 100%; font-size:12px;">📂 Import JSON</button>
+                            <input type="file" id="design-file-input" accept=".json" style="display:none;" onchange="loadDesignFromFileInput(event)">
                         </div>
-                        
-                        <button class="btn-fantasy" onclick="applyRoomDesign()" style="width: 100%; font-size: 16px;">✓ Apply & Build</button>
-                        <button class="btn-fantasy" onclick="closeModal('room-designer-modal')" style="width: 100%; margin-top: 10px; background: #666;">Cancel</button>
+
+                        <div id="room-list" style="background: rgba(139, 115, 85, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px; max-height: 120px; overflow-y: auto;">
+                            <div id="room-tile-count" style="font-size: 12px; color: #c8a96e;">Tiles placed: 0</div>
+                        </div>
+
+                        <button class="btn-fantasy" onclick="applyRoomDesign()" style="width: 100%; font-size: 15px; margin-bottom: 6px;">✓ Apply & Build</button>
+                        <button class="btn-fantasy" onclick="closeModal('room-designer-modal')" style="width: 100%; background: #555; font-size:12px;">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -732,6 +746,7 @@
         let cameraAngle = Math.PI;
         let animationFrameId = null; // track for cancellation
         let saveInterval = null;     // track auto-save interval
+        let enemyMixers = [];        // AnimationMixer for each KayKit enemy model
         
         const gltfLoader = new THREE.GLTFLoader();
 
@@ -815,6 +830,25 @@
             rogue: '/models/characters/rogue/weapons/dagger.gltf',
             knight: '/models/characters/knight/weapons/sword_1handed.gltf',
             ranger: '/models/characters/ranger/weapons/bow.gltf'
+        };
+
+        // MONSTER MODEL PATHS — KayKit Dungeon Remastered monster pack
+        // Place KayKit monster .glb files in these paths for animated models.
+        // If a file is missing the game falls back to a procedural mesh.
+        const monsterModels = {
+            goblin:   '/models/monsters/goblin/Goblin.glb',
+            orc:      '/models/monsters/orc/Orc.glb',
+            skeleton: '/models/monsters/skeleton/Skeleton.glb',
+            troll:    '/models/monsters/troll/Troll.glb'
+        };
+
+        // KayKit embedded animation clip name hints (case-insensitive partial match)
+        const MONSTER_ANIM_HINTS = {
+            idle:   ['idle'],
+            walk:   ['walk'],
+            attack: ['attack', 'slash', 'swing'],
+            run:    ['run'],
+            die:    ['die', 'death']
         };
 
         function init3D() {
@@ -1621,6 +1655,7 @@
             enemies = [];
             chests = [];
             crystals = [];
+            enemyMixers = [];
 
             currentDungeonLayout = createDungeonLayout();
             window.currentDungeonLayout = currentDungeonLayout;
@@ -1926,24 +1961,125 @@
 
         function placeEnemies() {
             const enemyTypes = [
-                { name: 'Goblin', color: 0x55aa44, accent: 0xd8ff6b, scale: 0.95, hp: 25 },
-                { name: 'Orc', color: 0x7d4b2a, accent: 0xff8844, scale: 1.1, hp: 35 },
-                { name: 'Troll', color: 0x556b7a, accent: 0x99ddff, scale: 1.3, hp: 45 }
+                { name: 'Goblin', modelKey: 'goblin',   color: 0x55aa44, accent: 0xd8ff6b, scale: 0.95, hp: 25 },
+                { name: 'Orc',    modelKey: 'orc',      color: 0x7d4b2a, accent: 0xff8844, scale: 1.1,  hp: 35 },
+                { name: 'Troll',  modelKey: 'troll',    color: 0x556b7a, accent: 0x99ddff, scale: 1.3,  hp: 45 }
             ];
             const spawnTiles = getDungeonSpawnTiles(5, 'enemyWeight', 12);
 
             spawnTiles.forEach((tile) => {
                 const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-                const enemy = createEnemyMesh(enemyType);
-                enemy.position.set(tile.x, 0, tile.z);
-                enemy.userData = { 
-                    type: 'enemy', 
+                // Create a container group immediately so the enemy slot is reserved
+                const enemyGroup = new THREE.Group();
+                enemyGroup.position.set(tile.x, 0, tile.z);
+                enemyGroup.userData = {
+                    type: 'enemy',
                     name: enemyType.name,
                     hp: enemyType.hp,
-                    active: true 
+                    active: true,
+                    mixer: null,
+                    animIdle: null,
+                    animWalk: null,
+                    animAttack: null
                 };
-                scene.add(enemy);
-                enemies.push(enemy);
+                scene.add(enemyGroup);
+                enemies.push(enemyGroup);
+
+                // Try to load KayKit monster model with embedded animations
+                const modelPath = monsterModels[enemyType.modelKey];
+                if (modelPath) {
+                    gltfLoader.load(
+                        modelPath,
+                        (gltf) => {
+                            const model = gltf.scene;
+
+                            // Scale and orient the model
+                            const box = new THREE.Box3().setFromObject(model);
+                            const size = box.getSize(new THREE.Vector3());
+                            const height = size.y || 2;
+                            const targetHeight = 2.5 * enemyType.scale;
+                            const s = targetHeight / height;
+                            model.scale.set(s, s, s);
+
+                            // Feet on ground
+                            const box2 = new THREE.Box3().setFromObject(model);
+                            model.position.y = -box2.min.y;
+
+                            model.traverse((child) => {
+                                if (child.isMesh) {
+                                    child.castShadow = true;
+                                    child.receiveShadow = true;
+                                }
+                            });
+
+                            enemyGroup.add(model);
+
+                            // Set up embedded animation mixer
+                            if (gltf.animations && gltf.animations.length > 0) {
+                                const mixer = new THREE.AnimationMixer(model);
+                                enemyGroup.userData.mixer = mixer;
+                                enemyMixers.push(mixer);
+
+                                // Index clips by type using hints
+                                const findClip = (hints) => {
+                                    for (const hint of hints) {
+                                        const clip = gltf.animations.find(
+                                            c => c.name.toLowerCase().includes(hint)
+                                        );
+                                        if (clip) return clip;
+                                    }
+                                    return null;
+                                };
+
+                                const idleClip   = findClip(MONSTER_ANIM_HINTS.idle);
+                                const walkClip   = findClip(MONSTER_ANIM_HINTS.walk);
+                                const attackClip = findClip(MONSTER_ANIM_HINTS.attack);
+
+                                if (idleClip) {
+                                    const action = mixer.clipAction(idleClip);
+                                    action.setLoop(THREE.LoopRepeat, Infinity);
+                                    action.play();
+                                    enemyGroup.userData.animIdle = action;
+                                } else if (gltf.animations.length > 0) {
+                                    // Fallback: play first available clip as idle
+                                    const action = mixer.clipAction(gltf.animations[0]);
+                                    action.setLoop(THREE.LoopRepeat, Infinity);
+                                    action.play();
+                                    enemyGroup.userData.animIdle = action;
+                                }
+
+                                if (walkClip) {
+                                    const action = mixer.clipAction(walkClip);
+                                    action.setLoop(THREE.LoopRepeat, Infinity);
+                                    enemyGroup.userData.animWalk = action;
+                                }
+
+                                if (attackClip) {
+                                    const action = mixer.clipAction(attackClip);
+                                    action.setLoop(THREE.LoopOnce, 1);
+                                    action.clampWhenFinished = true;
+                                    enemyGroup.userData.animAttack = action;
+                                }
+
+                                console.log(`🎬 ${enemyType.name}: loaded ${gltf.animations.length} embedded animations`);
+                            }
+                        },
+                        undefined,
+                        () => {
+                            // Model not found — add fallback procedural mesh
+                            const fallback = createEnemyMesh(enemyType);
+                            while (fallback.children.length) {
+                                enemyGroup.add(fallback.children[0]);
+                            }
+                        }
+                    );
+                } else {
+                    // No model path defined — add procedural mesh immediately
+                    const fallback = createEnemyMesh(enemyType);
+                    while (fallback.children.length) {
+                        enemyGroup.add(fallback.children[0]);
+                    }
+                }
             });
         }
 
@@ -2087,6 +2223,11 @@
             // Update skeletal animations if available
             if (animationMixer) {
                 animationMixer.update(delta);
+            }
+
+            // Update enemy KayKit animation mixers
+            for (let i = 0; i < enemyMixers.length; i++) {
+                enemyMixers[i].update(delta);
             }
             
             if (GameState.isPlaying && !GameState.inCombat) {
@@ -2474,6 +2615,470 @@
             document.getElementById(modalId).style.display = 'none';
         }
 
+        // ============================================================
+        // DUNGEON DESIGNER
+        // ============================================================
+
+        const DESIGNER_COLS = 20;
+        const DESIGNER_ROWS = 20;
+
+        let designerGrid = [];          // 2-D array [row][col] = tile type string
+        let designerCurrentTool = 'floor';
+        let designerIsDrawing = false;
+        let _designerCanvasReady = false;
+
+        const _designerTileColors = {
+            empty:   '#1a1520',
+            floor:   '#6b4f2c',
+            wall:    '#555566',
+            door:    '#8b5a1f',
+            spawn:   '#1a8a44',
+            enemy:   '#aa2222',
+            chest:   '#bb9900',
+            crystal: '#007799'
+        };
+
+        const _designerThemes = [
+            { floor: 'floor_tile_large',       wall: 'wall_corner',           name: 'Stone Chamber' },
+            { floor: 'floor_wood_large',        wall: 'wall_wood',             name: 'Wooden Hall' },
+            { floor: 'floor_tile_grate',        wall: 'wall_broken',           name: 'Ruined Corridor' },
+            { floor: 'floor_dirt_large',        wall: 'wall_cracked',          name: 'Earthen Block' },
+            { floor: 'floor_foundation_front',  wall: 'wall_archedwindow_open',name: 'Foundation Tower' }
+        ];
+
+        function _initDesignerGrid() {
+            designerGrid = [];
+            for (let r = 0; r < DESIGNER_ROWS; r++) {
+                const row = [];
+                for (let c = 0; c < DESIGNER_COLS; c++) row.push('empty');
+                designerGrid.push(row);
+            }
+        }
+
+        function openRoomDesigner() {
+            if (!designerGrid.length) _initDesignerGrid();
+            document.getElementById('room-designer-modal').style.display = 'block';
+            if (!_designerCanvasReady) {
+                _initDesignerCanvas();
+                _designerCanvasReady = true;
+            }
+            _renderDesignerCanvas();
+            _updateDesignerTileCount();
+        }
+
+        function clearDesigner() {
+            _initDesignerGrid();
+            _renderDesignerCanvas();
+            _updateDesignerTileCount();
+        }
+
+        function updateRoomSizeDisplay(value) {
+            const el = document.getElementById('room-size-display');
+            if (el) el.textContent = `${value} tiles`;
+        }
+
+        function setDesignerTool(tool) {
+            designerCurrentTool = tool;
+            document.querySelectorAll('.designer-tool-btn').forEach(btn => {
+                btn.style.outline = btn.dataset.tool === tool ? '2px solid #ffd700' : 'none';
+            });
+        }
+
+        function _renderDesignerCanvas() {
+            const canvas = document.getElementById('room-designer-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width;
+            const H = canvas.height;
+            const cellW = W / DESIGNER_COLS;
+            const cellH = H / DESIGNER_ROWS;
+
+            ctx.fillStyle = '#1a1520';
+            ctx.fillRect(0, 0, W, H);
+
+            for (let r = 0; r < DESIGNER_ROWS; r++) {
+                for (let c = 0; c < DESIGNER_COLS; c++) {
+                    const tile = designerGrid[r][c];
+                    if (tile === 'empty') continue;
+                    const x = c * cellW;
+                    const y = r * cellH;
+                    ctx.fillStyle = _designerTileColors[tile] || '#666';
+                    ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+                    // Icon overlay for special marker tiles
+                    const icons = { spawn: '★', enemy: '⚔', chest: '■', crystal: '◆' };
+                    if (icons[tile]) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${Math.floor(cellH * 0.55)}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(icons[tile], x + cellW / 2, y + cellH / 2);
+                    }
+                }
+            }
+
+            // Grid lines
+            ctx.strokeStyle = '#2a2030';
+            ctx.lineWidth = 0.5;
+            for (let c = 0; c <= DESIGNER_COLS; c++) {
+                ctx.beginPath(); ctx.moveTo(c * cellW, 0); ctx.lineTo(c * cellW, H); ctx.stroke();
+            }
+            for (let r = 0; r <= DESIGNER_ROWS; r++) {
+                ctx.beginPath(); ctx.moveTo(0, r * cellH); ctx.lineTo(W, r * cellH); ctx.stroke();
+            }
+        }
+
+        function _getCellFromEvent(e) {
+            const canvas = document.getElementById('room-designer-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width  / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const col = Math.floor((e.clientX - rect.left) * scaleX / (canvas.width  / DESIGNER_COLS));
+            const row = Math.floor((e.clientY - rect.top)  * scaleY / (canvas.height / DESIGNER_ROWS));
+            if (col < 0 || col >= DESIGNER_COLS || row < 0 || row >= DESIGNER_ROWS) return null;
+            return { row, col };
+        }
+
+        function _designerPaint(e) {
+            const cell = _getCellFromEvent(e);
+            if (!cell) return;
+            const erase = e.button === 2;
+            designerGrid[cell.row][cell.col] = erase ? 'empty' : designerCurrentTool;
+            _renderDesignerCanvas();
+            _updateDesignerTileCount();
+        }
+
+        function _initDesignerCanvas() {
+            const canvas = document.getElementById('room-designer-canvas');
+            if (!canvas) return;
+            canvas.addEventListener('mousedown',  (e) => { designerIsDrawing = true;  _designerPaint(e); e.preventDefault(); });
+            canvas.addEventListener('mousemove',  (e) => { if (designerIsDrawing) _designerPaint(e); });
+            canvas.addEventListener('mouseup',    ()  => { designerIsDrawing = false; });
+            canvas.addEventListener('mouseleave', ()  => { designerIsDrawing = false; });
+            canvas.addEventListener('contextmenu',(e) => { e.preventDefault(); _designerPaint(e); });
+        }
+
+        function _fillRect(col, row, w, h, tile) {
+            for (let r = row; r < row + h && r < DESIGNER_ROWS; r++) {
+                for (let c = col; c < col + w && c < DESIGNER_COLS; c++) {
+                    if (r >= 0 && c >= 0) designerGrid[r][c] = tile;
+                }
+            }
+        }
+
+        function loadPreset(type) {
+            _initDesignerGrid();
+            const cx = Math.floor(DESIGNER_COLS / 2);
+            const cy = Math.floor(DESIGNER_ROWS / 2);
+
+            if (type === 'cross') {
+                _fillRect(cx - 3, cy - 3, 7, 7, 'floor');       // centre room
+                _fillRect(cx - 1, cy - 9, 3, 6, 'floor');        // north arm
+                _fillRect(cx - 1, cy + 4, 3, 6, 'floor');        // south arm
+                _fillRect(cx - 9, cy - 1, 6, 3, 'floor');        // west arm
+                _fillRect(cx + 4, cy - 1, 6, 3, 'floor');        // east arm
+                designerGrid[cy][cx]         = 'spawn';
+                designerGrid[cy - 7][cx]     = 'enemy';
+                designerGrid[cy + 7][cx]     = 'enemy';
+                designerGrid[cy][cx - 7]     = 'chest';
+                designerGrid[cy][cx + 7]     = 'crystal';
+            } else if (type === 'grid') {
+                for (let ry = 0; ry < 3; ry++) {
+                    for (let rx = 0; rx < 3; rx++) {
+                        const sx = 1 + rx * 7;
+                        const sz = 1 + ry * 7;
+                        _fillRect(sx, sz, 5, 5, 'floor');
+                        if (rx < 2) _fillRect(sx + 5, sz + 2, 2, 1, 'floor'); // horizontal corridor
+                        if (ry < 2) _fillRect(sx + 2, sz + 5, 1, 2, 'floor'); // vertical corridor
+                    }
+                }
+                designerGrid[3][3]   = 'spawn';
+                designerGrid[3][10]  = 'enemy';
+                designerGrid[10][3]  = 'enemy';
+                designerGrid[10][10] = 'enemy';
+                designerGrid[3][17]  = 'chest';
+                designerGrid[17][17] = 'crystal';
+            } else if (type === 'linear') {
+                for (let i = 0; i < 5; i++) {
+                    _fillRect(1 + i * 4, 8, 3, 4, 'floor');
+                    if (i < 4) _fillRect(4 + i * 4, 9, 1, 2, 'floor');
+                }
+                designerGrid[9][2]  = 'spawn';
+                designerGrid[9][6]  = 'enemy';
+                designerGrid[9][10] = 'enemy';
+                designerGrid[9][14] = 'chest';
+                designerGrid[9][18] = 'crystal';
+            }
+
+            _renderDesignerCanvas();
+            _updateDesignerTileCount();
+        }
+
+        function _updateDesignerTileCount() {
+            const el = document.getElementById('room-tile-count');
+            if (!el) return;
+            let n = 0;
+            designerGrid.forEach(row => row.forEach(c => { if (c !== 'empty') n++; }));
+            el.textContent = `Tiles placed: ${n}`;
+        }
+
+        function applyRoomDesign() {
+            if (!designerGrid.length) { alert('Open the designer first.'); return; }
+            const hasContent = designerGrid.some(row => row.some(c => c !== 'empty'));
+            if (!hasContent) { alert('Place some floor tiles first!'); return; }
+            closeModal('room-designer-modal');
+            _buildWorldFromDesign();
+        }
+
+        function _buildWorldFromDesign() {
+            if (!scene) return;
+
+            const themeIndex = parseInt(document.getElementById('room-theme-select').value) || 0;
+            const theme = _designerThemes[themeIndex];
+            const TS = DUNGEON_TILE_SIZE;
+
+            // ---- Clear scene ----
+            const toRemove = [];
+            scene.children.forEach(child => {
+                if (child === playerContainer || child.isLight) return;
+                if (child.userData.isDungeonTile || child.userData.type) toRemove.push(child);
+            });
+            toRemove.forEach(obj => { disposeObject(obj); scene.remove(obj); });
+
+            walls = [];
+            enemies = [];
+            chests = [];
+            crystals = [];
+            enemyMixers = [];
+
+            let startPos = { x: 0, z: 0 };
+            let startSet = false;
+
+            const WALK = new Set(['floor', 'door', 'spawn', 'enemy', 'chest', 'crystal']);
+
+            // ---- Place floors ----
+            for (let r = 0; r < DESIGNER_ROWS; r++) {
+                for (let c = 0; c < DESIGNER_COLS; c++) {
+                    const tile = designerGrid[r][c];
+                    if (!WALK.has(tile) && tile !== 'floor') continue;
+                    const wx = (c - DESIGNER_COLS / 2) * TS;
+                    const wz = (r - DESIGNER_ROWS / 2) * TS;
+                    loadDungeonTile('floor', theme.floor, (m) => {
+                        m.position.set(wx, 0, wz);
+                        m.userData.isDungeonTile = true;
+                        scene.add(m);
+                    });
+                    if (tile === 'spawn' && !startSet) {
+                        startPos = { x: wx, z: wz };
+                        startSet = true;
+                    }
+                }
+            }
+
+            // ---- Auto-generate boundary walls ----
+            const dirs = [
+                { dr: -1, dc: 0, rot: 0 },
+                { dr:  1, dc: 0, rot: Math.PI },
+                { dr:  0, dc: -1, rot: -Math.PI / 2 },
+                { dr:  0, dc:  1, rot:  Math.PI / 2 }
+            ];
+            const wallSet = new Set();
+
+            for (let r = 0; r < DESIGNER_ROWS; r++) {
+                for (let c = 0; c < DESIGNER_COLS; c++) {
+                    const tile = designerGrid[r][c];
+                    if (tile !== 'wall' && !WALK.has(tile)) continue;
+
+                    const wx = (c - DESIGNER_COLS / 2) * TS;
+                    const wz = (r - DESIGNER_ROWS / 2) * TS;
+
+                    if (tile === 'wall') {
+                        // Explicitly placed wall
+                        const wk = `${c},${r}`;
+                        if (!wallSet.has(wk)) {
+                            wallSet.add(wk);
+                            loadDungeonTile('wall', theme.wall, (wm) => {
+                                wm.position.set(wx, 0, wz);
+                                wm.userData.isDungeonTile = true;
+                                scene.add(wm);
+                                walls.push({ mesh: wm, x: wx, z: wz,
+                                    halfWidth: TS / 2, halfDepth: TS / 2 });
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Floor / walkable — generate boundary walls
+                    for (const d of dirs) {
+                        const nr = r + d.dr;
+                        const nc = c + d.dc;
+                        const neighbor = (nr >= 0 && nr < DESIGNER_ROWS && nc >= 0 && nc < DESIGNER_COLS)
+                            ? designerGrid[nr][nc] : 'empty';
+                        if (WALK.has(neighbor) || neighbor === 'wall') continue;
+
+                        const wwx = wx + d.dc * TS * 0.5;
+                        const wwz = wz + d.dr * TS * 0.5;
+                        const wk  = `${wwx.toFixed(1)},${wwz.toFixed(1)}`;
+                        if (wallSet.has(wk)) continue;
+                        wallSet.add(wk);
+
+                        const rot = d.rot;
+                        loadDungeonTile('wall', theme.wall, (wm) => {
+                            wm.position.set(wwx, 0, wwz);
+                            wm.rotation.y = rot;
+                            wm.userData.isDungeonTile = true;
+                            scene.add(wm);
+                            const eww = Math.abs(Math.abs(rot) - Math.PI / 2) < 0.001;
+                            walls.push({ mesh: wm, x: wwx, z: wwz,
+                                halfWidth:  eww ? WALL_COLLIDER_THICKNESS : TS / 2,
+                                halfDepth: !eww ? WALL_COLLIDER_THICKNESS : TS / 2 });
+                        });
+                    }
+                }
+            }
+
+            // ---- Player start ----
+            if (playerContainer) {
+                playerContainer.position.set(startPos.x, 0, startPos.z);
+                GameState.player.x = startPos.x;
+                GameState.player.z = startPos.z;
+            }
+            currentDungeonLayout = {
+                startPosition: startPos,
+                walkableTiles: [], wallSegments: [], doorSegments: [],
+                rooms: [], corridors: [], propSpawnTiles: [],
+                reservedSpawnKeys: new Set()
+            };
+            window.currentDungeonLayout = currentDungeonLayout;
+
+            // ---- Entity markers ----
+            const enemyTypeList = [
+                { name: 'Goblin', modelKey: 'goblin',  color: 0x55aa44, accent: 0xd8ff6b, scale: 0.95, hp: 25 },
+                { name: 'Orc',    modelKey: 'orc',     color: 0x7d4b2a, accent: 0xff8844, scale: 1.1,  hp: 35 },
+                { name: 'Troll',  modelKey: 'troll',   color: 0x556b7a, accent: 0x99ddff, scale: 1.3,  hp: 45 }
+            ];
+
+            for (let r = 0; r < DESIGNER_ROWS; r++) {
+                for (let c = 0; c < DESIGNER_COLS; c++) {
+                    const tile = designerGrid[r][c];
+                    if (tile === 'empty' || WALK.has(tile) === false && tile !== 'floor') continue;
+                    const wx = (c - DESIGNER_COLS / 2) * TS;
+                    const wz = (r - DESIGNER_ROWS / 2) * TS;
+
+                    if (tile === 'enemy') {
+                        const eType = enemyTypeList[Math.floor(Math.random() * enemyTypeList.length)];
+                        const eg = new THREE.Group();
+                        eg.position.set(wx, 0, wz);
+                        eg.userData = { type: 'enemy', name: eType.name, hp: eType.hp, active: true, mixer: null };
+                        scene.add(eg);
+                        enemies.push(eg);
+
+                        const mPath = monsterModels[eType.modelKey];
+                        if (mPath) {
+                            gltfLoader.load(mPath, (gltf) => {
+                                const model = gltf.scene;
+                                const box = new THREE.Box3().setFromObject(model);
+                                const h = box.getSize(new THREE.Vector3()).y || 2;
+                                const s = (2.5 * eType.scale) / h;
+                                model.scale.set(s, s, s);
+                                const box2 = new THREE.Box3().setFromObject(model);
+                                model.position.y = -box2.min.y;
+                                model.traverse(ch => { if (ch.isMesh) { ch.castShadow = true; ch.receiveShadow = true; } });
+                                eg.add(model);
+                                if (gltf.animations && gltf.animations.length) {
+                                    const mixer = new THREE.AnimationMixer(model);
+                                    eg.userData.mixer = mixer;
+                                    enemyMixers.push(mixer);
+                                    const idleClip = gltf.animations.find(a => a.name.toLowerCase().includes('idle'))
+                                        || gltf.animations[0];
+                                    const idleAct = mixer.clipAction(idleClip);
+                                    idleAct.setLoop(THREE.LoopRepeat, Infinity);
+                                    idleAct.play();
+                                }
+                            }, undefined, () => {
+                                const fb = createEnemyMesh(eType);
+                                while (fb.children.length) eg.add(fb.children[0]);
+                            });
+                        } else {
+                            const fb = createEnemyMesh(eType);
+                            while (fb.children.length) eg.add(fb.children[0]);
+                        }
+                    } else if (tile === 'chest') {
+                        const chest = createChestMesh();
+                        chest.position.set(wx, 0, wz);
+                        chest.userData = { type: 'chest', opened: false };
+                        scene.add(chest);
+                        chests.push(chest);
+                    } else if (tile === 'crystal') {
+                        const crystal = new THREE.Mesh(
+                            new THREE.OctahedronGeometry(0.6),
+                            new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5 })
+                        );
+                        crystal.position.set(wx, 1.5, wz);
+                        crystal.userData = { type: 'crystal', id: crystals.length, collected: false };
+                        scene.add(crystal);
+                        crystals.push(crystal);
+                    }
+                }
+            }
+
+            console.log('✅ Dungeon built from designer!');
+            if (typeof showFloatingText === 'function') showFloatingText('🏰 Dungeon Ready!', '#ffd700');
+        }
+
+        function saveDesignToJSON() {
+            if (!designerGrid.length) { alert('Nothing to save!'); return; }
+            const design = {
+                version: 1,
+                cols: DESIGNER_COLS,
+                rows: DESIGNER_ROWS,
+                theme: parseInt(document.getElementById('room-theme-select').value) || 0,
+                grid: designerGrid.map(r => r.slice())
+            };
+            const json = JSON.stringify(design, null, 2);
+            localStorage.setItem('dungeonDesign', json);
+            // Offer browser download
+            const blob = new Blob([json], { type: 'application/json' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url; a.download = 'dungeon-design.json'; a.click();
+            URL.revokeObjectURL(url);
+            if (typeof showFloatingText === 'function') showFloatingText('💾 Design saved!', '#00ff00');
+        }
+
+        function loadDesignFromFile() {
+            document.getElementById('design-file-input').click();
+        }
+
+        function loadDesignFromFileInput(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const design = JSON.parse(ev.target.result);
+                    if (design.grid) {
+                        designerGrid = design.grid;
+                        const sel = document.getElementById('room-theme-select');
+                        if (sel && design.theme !== undefined) sel.value = design.theme;
+                        _renderDesignerCanvas();
+                        _updateDesignerTileCount();
+                        if (typeof showFloatingText === 'function') showFloatingText('📂 Design loaded!', '#00ff00');
+                    } else {
+                        alert('Invalid design file — no "grid" key found.');
+                    }
+                } catch (err) {
+                    alert('Could not parse design file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            // Reset so the same file can be re-selected
+            e.target.value = '';
+        }
+
+        // ============================================================
+        // END DUNGEON DESIGNER
+        // ============================================================
+
         function saveGame() {
             localStorage.setItem('loreAndLegendsSave', JSON.stringify({
                 player: GameState.player,
@@ -2530,6 +3135,7 @@
                         enemies = [];
                         chests = [];
                         crystals = [];
+                        enemyMixers = [];
                         
                         // Remove and dispose old dungeon scene objects
                         const toRemove = [];
