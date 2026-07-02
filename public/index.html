@@ -746,6 +746,11 @@
             floor: new THREE.BoxGeometry(4, 0.2, 4),
             wall: new THREE.BoxGeometry(4, 6, 1)
         };
+        const _dungeonModelAliases = {
+            wall: {
+                wall_wood: 'wall'
+            }
+        };
         // Material pool keyed by hex color integer
         const _dungeonMatPool = new Map();
         function _getDungeonMat(color) {
@@ -1613,7 +1618,12 @@
         // Subsequent requests – including those already in-flight – receive clones of
         // the cached template instead of re-parsing the asset.
         function loadDungeonTile(type, name, callback) {
-            const path = `/models/environment/dungeon/${type}s/${name}.gltf`;
+            const resolvedName = _dungeonModelAliases[type]?.[name] || name;
+            const path = `/models/environment/dungeon/${type}s/${resolvedName}.gltf`;
+
+            if (resolvedName !== name) {
+                console.warn(`⚠️ Missing ${type} model "${name}", using "${resolvedName}" instead`);
+            }
             
             // Return a clone of the cached template immediately
             if (_dungeonModelCache.has(path)) {
@@ -1668,7 +1678,8 @@
                 },
                 undefined,
                 (error) => {
-                    console.error(`❌ Failed to load ${name}:`, error.message);
+                    const errorMessage = error?.message || error?.target?.statusText || `Request failed for ${path}`;
+                    console.error(`❌ Failed to load ${resolvedName}:`, errorMessage);
                     console.log(`   Using fallback geometry for ${type}`);
                     // Build a shared-geometry fallback and cache it so later
                     // requests also get cheap clones.
@@ -1713,13 +1724,13 @@
             ];
 
             return directions.reduce((count, [dx, dz]) => {
-                return count + (walkableTileKeys.has(tileKey(tile.gx + dx, tile.gz + dz)) ? 1 : 0);
+                return count + (walkableTileKeys.has(`${tile.gx + dx},${tile.gz + dz}`) ? 1 : 0);
             }, 0);
         }
 
         function buildSpawnCandidates(weightKey, allowedKinds, requireClearance) {
             const walkableTileKeys = currentDungeonLayout.walkableTileKeys
-                || new Set(currentDungeonLayout.walkableTiles.map((tile) => tileKey(tile.gx, tile.gz)));
+                || new Set(currentDungeonLayout.walkableTiles.map((tile) => `${tile.gx},${tile.gz}`));
 
             return currentDungeonLayout.walkableTiles
                 .filter((tile) => allowedKinds.includes(tile.kind))

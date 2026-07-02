@@ -1,1 +1,3 @@
 
+Some dungeon theme names referenced by the game may not exist as authored GLTF files in this asset pack.
+The runtime now aliases known missing wall variants (for example `wall_wood` -> `wall`) and falls back to shared procedural geometry for any other missing dungeon floor or wall model so game startup can continue.
