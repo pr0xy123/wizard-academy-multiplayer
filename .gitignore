@@ -32,3 +32,6 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Raw asset pack downloads (extracted contents live under public/models/)
+KayKit_*.zip
