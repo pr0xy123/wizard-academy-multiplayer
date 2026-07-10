@@ -71,6 +71,7 @@
             text-shadow: 1px 1px 2px #000;
             pointer-events: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            max-width: 250px;
         }
         
         .stat-bar {
@@ -179,6 +180,7 @@
         #multiplayer-modal { border-color: #00ffff; }
         #shop-modal { border-color: #ffcc00; max-width: 480px; }
         #equipment-modal { border-color: #cc8844; max-width: 520px; }
+        #forge-modal { border-color: #ff8844; max-width: 480px; }
         
         .potion-brewing {
             display: grid;
@@ -308,7 +310,11 @@
         #start-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0a0502 0%, #1a1008 50%, #0a0502 100%);
+            background:
+                linear-gradient(180deg, rgba(10,5,2,0.55) 0%, rgba(20,10,5,0.45) 40%, rgba(10,5,2,0.85) 100%),
+                url('images/start-bg.jpg');
+            background-size: cover;
+            background-position: center;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -501,19 +507,32 @@
                             <span>📜</span>
                             <span style="font-size: 12px;">Scrolls: <span id="scrolls-count">0</span> <span style="color:#888;">(click to recall)</span></span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 5px;">
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 5px; margin-bottom: 5px;">
                             <span>💰</span>
                             <span style="font-size: 12px;">Gold: <span id="gold-count">0</span></span>
                         </div>
+                        <div onclick="openIngredients()" title="See what you've gathered for brewing and forging" style="display: flex; align-items: center; gap: 8px; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer;">
+                            <span>🌿</span>
+                            <span style="font-size: 12px;">Ingredients: <span id="ingredients-total-count">0</span> <span style="color:#888;">(click to view)</span></span>
+                        </div>
                     </div>
-                    <div style="margin-top: 10px; font-size: 10px; color: #888;">
-                        H: Heal • T: Tutor • K: Skills • R: Recall • B: Shop • G: Gear
+                    <div style="margin-top: 10px; font-size: 10px; color: #888; line-height: 1.6;">
+                        H: Heal • T: Tutor • K: Skills • R: Recall<br>B: Shop • G: Gear • P: Brew • F: Forge • Y: Train
                     </div>
                     <button class="btn-fantasy" onclick="openEquipment()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b5a2b, #4a2e14);">
                         🎽 Equipment
                     </button>
                     <button class="btn-fantasy" onclick="openShop()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b6914, #4a3800);">
                         🛒 Shop
+                    </button>
+                    <button class="btn-fantasy" onclick="openPotionBrewing()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #006688, #003344);">
+                        🧪 Brew
+                    </button>
+                    <button class="btn-fantasy" onclick="openForge()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #883300, #441800);">
+                        🔨 Forge
+                    </button>
+                    <button class="btn-fantasy" onclick="openTraining()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #336633, #113311);">
+                        🎯 Train
                     </button>
                     <button class="btn-fantasy" onclick="exitGame()" style="width: 100%; margin-top: 10px; font-size: 12px; background: linear-gradient(135deg, #8b0000, #4a0000);">
                         🚪 Exit
@@ -535,12 +554,35 @@
         <div id="potion-modal" class="modal">
             <h2 style="color: #00ccff; margin-bottom: 10px;">🧪 Potion Brewing</h2>
             <div class="cauldron"><div class="cauldron-liquid"></div></div>
+            <div id="potion-status" style="font-size:12px; color:#999; margin-bottom:6px;"></div>
             <div id="potion-question" style="font-size: 20px; color: #ffd700; margin: 20px 0;"></div>
             <div class="potion-brewing" id="ingredients-container"></div>
-            <div>
-                <button class="btn-fantasy" onclick="brewPotion()" style="background: linear-gradient(135deg, #00ccff, #0066cc);">Brew</button>
-                <button class="btn-fantasy" onclick="closeModal('potion-modal')">Cancel</button>
+            <button class="btn-fantasy" onclick="closeModal('potion-modal')">Leave</button>
+        </div>
+
+        <div id="forge-modal" class="modal">
+            <h2 style="color: #ff8844; margin-bottom: 10px;">🔨 The Forge</h2>
+            <div style="display:flex; gap:8px; justify-content:center; margin-bottom:10px;">
+                <button id="forge-tab-weapon" class="btn-fantasy" onclick="_setForgeMode('weapon')" style="font-size:12px; padding:6px 14px;">⚔️ Weapon</button>
+                <button id="forge-tab-armor" class="btn-fantasy" onclick="_setForgeMode('armor')" style="font-size:12px; padding:6px 14px;">🛡️ Armor</button>
             </div>
+            <p id="forge-target-desc" style="font-size:13px; color:#ccc; margin-bottom:6px;">
+                Temper your <span id="forge-weapon-name" style="color:#ffcc88;">weapon</span> —
+                currently <span id="forge-temper-level" style="color:#ffcc88;">+0%</span> damage
+            </p>
+            <div id="forge-question" style="font-size: 18px; color: #ffd700; margin: 16px 0;"></div>
+            <div id="forge-answers" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;"></div>
+            <div id="forge-status" style="font-size:12px; color:#999; margin-bottom:10px;"></div>
+            <button class="btn-fantasy" onclick="closeModal('forge-modal')">Leave</button>
+        </div>
+
+        <div id="training-modal" class="modal">
+            <h2 style="color: #66cc66; margin-bottom: 10px;">🎯 Training Grounds</h2>
+            <p style="font-size:13px; color:#ccc; margin-bottom:6px;">Sharpen your mind between battles — no cost, just XP for a correct answer.</p>
+            <div id="training-question" style="font-size: 18px; color: #ffd700; margin: 16px 0;"></div>
+            <div id="training-answers" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;"></div>
+            <div id="training-status" style="font-size:12px; color:#999; margin-bottom:10px; min-height:16px;"></div>
+            <button class="btn-fantasy" onclick="closeModal('training-modal')">Leave</button>
         </div>
         
         <div id="combat-modal" class="modal">
@@ -570,7 +612,10 @@
             <!-- Phase 1: attack choice — the actual picker is the Spellbook bar just above (also
                  usable via keys 1-6), so both places you'd look for "what can I do" agree. -->
             <div id="combat-phase-choice">
-                <div style="font-size:12px; color:#ccc; text-align:center; padding:6px 0;">👆 Choose your attack from your Spellbook above, or press 1-6</div>
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 0;">
+                    <div style="font-size:12px; color:#ccc;">👆 Choose your attack from your Spellbook above, or press 1-6</div>
+                    <button onclick="fleeCombat()" style="background:rgba(120,120,120,0.2); border:1px solid #888; border-radius:6px; color:#ccc; font-size:11px; padding:4px 10px; cursor:pointer; font-family:inherit; white-space:nowrap;">🏃 Flee [Esc]</button>
+                </div>
             </div>
 
             <!-- Phase 2: question -->
@@ -598,6 +643,24 @@
             <h2 style="color: #ffaa00;">📦 Treasure!</h2>
             <div id="chest-contents"></div>
             <button class="btn-fantasy" onclick="closeChestModal()">Take</button>
+        </div>
+
+        <div id="crystal-question-modal" class="modal">
+            <h2 style="color: #66ffee;">💎 Crystal</h2>
+            <p style="font-size:12px; color:#999; margin-bottom:6px;">Answer correctly to claim its energy.</p>
+            <div id="crystal-question" style="font-size: 18px; color: #ffd700; margin: 14px 0;"></div>
+            <div id="crystal-answers" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;"></div>
+            <div id="crystal-status" style="font-size:12px; color:#999; margin-bottom:10px; min-height:16px;"></div>
+            <button class="btn-fantasy" onclick="closeModal('crystal-question-modal')">Leave</button>
+        </div>
+
+        <div id="chest-question-modal" class="modal">
+            <h2 style="color: #ffaa00;">📦 Locked Chest</h2>
+            <p style="font-size:12px; color:#999; margin-bottom:6px;">Answer correctly to open it.</p>
+            <div id="chest-q-question" style="font-size: 18px; color: #ffd700; margin: 14px 0;"></div>
+            <div id="chest-q-answers" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;"></div>
+            <div id="chest-q-status" style="font-size:12px; color:#999; margin-bottom:10px; min-height:16px;"></div>
+            <button class="btn-fantasy" onclick="closeModal('chest-question-modal')">Leave</button>
         </div>
 
         <div id="shop-modal" class="modal">
@@ -633,6 +696,13 @@
                 <div id="equipment-skins" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
             </div>
             <button class="btn-fantasy" onclick="closeModal('equipment-modal')">Close  [G]</button>
+        </div>
+
+        <div id="ingredients-modal" class="modal">
+            <h2 style="color: #66cc88;">🌿 Ingredients</h2>
+            <p style="font-size:13px; color:#ccc; margin-bottom:12px;">Gathered from crystals and chests — spent brewing potions, tempering weapons, and forging armor.</p>
+            <div id="ingredients-list" style="display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin-bottom:14px;"></div>
+            <button class="btn-fantasy" onclick="closeModal('ingredients-modal')">Close</button>
         </div>
 
         <!-- Spell Inventory Modal -->
@@ -898,8 +968,221 @@
                 };
 
                 return pick(templates[op] || templates['+']);
+            },
+
+            // Non-math fact banks — same {question, correctValue, answers} shape as the arithmetic
+            // generators above, so no rendering code needs to special-case them. minGrade gates which
+            // facts are eligible so younger grades see simpler categorization, older grades see more
+            // specific science-lite facts.
+            INGREDIENT_FACTS: [
+                { minGrade: 1, q: 'Which of these comes from a mushroom?', correct: 'Fungus Cap', wrong: ['Dragon Scale', 'Moonpetal', 'Iron Shaving'] },
+                { minGrade: 1, q: 'Which of these ingredients is alive?', correct: 'Forest Spider', wrong: ['Iron Shaving', 'Crystal Dust', 'Ash'] },
+                { minGrade: 1, q: 'Which ingredient would float in water?', correct: 'Dry Oak Leaf', wrong: ['Iron Shaving', 'Lead Pellet', 'Stone Chip'] },
+                { minGrade: 2, q: 'Which of these ingredients is a liquid?', correct: 'Moonwell Water', wrong: ['Iron Shaving', 'Bone Dust', 'Crystal Shard'] },
+                { minGrade: 2, q: 'Which ingredient comes from a plant?', correct: 'Moonpetal', wrong: ['Dragon Scale', 'Bone Dust', 'Iron Shaving'] },
+                { minGrade: 2, q: 'Which of these ingredients would melt if heated?', correct: 'Beeswax', wrong: ['Stone Chip', 'Iron Shaving', 'Bone Dust'] },
+                { minGrade: 3, q: 'Which of these ingredients is a solid?', correct: 'Iron Shaving', wrong: ['Morning Dew', 'Steam Essence', 'Moonwell Water'] },
+                { minGrade: 3, q: 'Which of these ingredients is a gas at room temperature?', correct: 'Steam Essence', wrong: ['Iron Shaving', 'Bone Dust', 'Stone Chip'] },
+                { minGrade: 3, q: 'Which ingredient would sink in water?', correct: 'Iron Shaving', wrong: ['Dry Oak Leaf', 'Feather', 'Cork Bark'] },
+                { minGrade: 4, q: 'Which of these ingredients is magnetic?', correct: 'Iron Shaving', wrong: ['Copper Dust', 'Silver Fleck', 'Gold Dust'] },
+                { minGrade: 4, q: 'Which ingredient is a fungus, not a plant?', correct: 'Fungus Cap', wrong: ['Moonpetal', 'Oak Leaf', 'Fern Frond'] },
+                { minGrade: 4, q: 'Which of these changes from liquid to gas when boiled?', correct: 'Moonwell Water', wrong: ['Iron Shaving', 'Stone Chip', 'Bone Dust'] },
+                { minGrade: 5, q: 'Which ingredient is a mineral, not something once alive?', correct: 'Crystal Shard', wrong: ['Oak Leaf', 'Fungus Cap', 'Feather'] },
+                { minGrade: 5, q: 'Which of these ingredients would conduct electricity best?', correct: 'Copper Dust', wrong: ['Dry Oak Leaf', 'Beeswax', 'Cork Bark'] },
+                { minGrade: 5, q: 'Which ingredient is least dense — most likely to float on the elixir?', correct: 'Feather', wrong: ['Iron Shaving', 'Stone Chip', 'Lead Pellet'] },
+                { minGrade: 6, q: "Which of these undergoes a chemical change (not just physical) when it burns?", correct: 'Oak Leaf', wrong: ['Iron Shaving', 'Stone Chip', 'Crystal Shard'] },
+            ],
+
+            MATERIAL_FACTS: [
+                { minGrade: 1, q: 'Which of these is used to build with because it is hard?', correct: 'Stone', wrong: ['Feather', 'Cloth', 'Water'] },
+                { minGrade: 1, q: 'Which material is soft and squishy?', correct: 'Wool', wrong: ['Iron', 'Stone', 'Diamond'] },
+                { minGrade: 1, q: 'Which of these would a blacksmith heat to shape it?', correct: 'Iron', wrong: ['Water', 'Feather', 'Cloth'] },
+                { minGrade: 2, q: 'Which material is the strongest for a sword blade?', correct: 'Steel', wrong: ['Wood', 'Cloth', 'Wax'] },
+                { minGrade: 2, q: 'Which of these materials can rust?', correct: 'Iron', wrong: ['Gold', 'Glass', 'Stone'] },
+                { minGrade: 2, q: 'Which material would shatter if you dropped it?', correct: 'Glass', wrong: ['Leather', 'Wool', 'Rope'] },
+                { minGrade: 3, q: 'Which metal is famously yellow and does not rust?', correct: 'Gold', wrong: ['Iron', 'Steel', 'Tin'] },
+                { minGrade: 3, q: 'Which of these materials is flexible, not rigid?', correct: 'Leather', wrong: ['Stone', 'Glass', 'Iron'] },
+                { minGrade: 3, q: 'Which material conducts heat the fastest?', correct: 'Copper', wrong: ['Wood', 'Wool', 'Leather'] },
+                { minGrade: 4, q: 'Which metal is attracted to magnets?', correct: 'Iron', wrong: ['Gold', 'Silver', 'Copper'] },
+                { minGrade: 4, q: 'Steel is mostly iron mixed with which element?', correct: 'Carbon', wrong: ['Tin', 'Silver', 'Oxygen'] },
+                { minGrade: 4, q: 'Which of these is an alloy — a mix of two metals?', correct: 'Bronze', wrong: ['Iron', 'Gold', 'Silver'] },
+                { minGrade: 5, q: 'Which property makes tempered steel less likely to shatter?', correct: 'Increased toughness', wrong: ['Increased weight', 'Increased color', 'Increased shine'] },
+                { minGrade: 5, q: 'Which of these best conducts electricity, prized for enchanted wiring?', correct: 'Copper', wrong: ['Wood', 'Stone', 'Wool'] },
+                { minGrade: 5, q: 'Bronze is an alloy of copper and which other metal?', correct: 'Tin', wrong: ['Iron', 'Gold', 'Lead'] },
+                { minGrade: 6, q: 'Why does quenching hot steel in water make it harder?', correct: 'Rapid cooling changes its structure', wrong: ['It adds more carbon', 'It removes all impurities', 'It makes it lighter'] },
+            ],
+
+            generateFactQuestion: function(bank, grade) {
+                const eligible = bank.filter(f => f.minGrade <= grade);
+                const pool = eligible.length ? eligible : bank;
+                const fact = pool[Math.floor(Math.random() * pool.length)];
+                const answers = [fact.correct, ...fact.wrong].sort(() => Math.random() - 0.5);
+                return { question: fact.q, correctValue: fact.correct, answers };
+            },
+
+            // Crystals are common/low-stakes — a quick math question, same shape as a basic Strike.
+            generateCrystalQuestion: function(grade) {
+                return this.generateCombatQuestion(grade, 0, 'the crystal', 'strike');
+            },
+
+            // Chests are rarer finds and the ingredient drop source, so lean lore-heavy — same
+            // 50/50 math+fact split as Forge, drawing from both fact banks since a chest might
+            // yield either an ingredient or a material.
+            generateChestQuestion: function(grade) {
+                const bank = Math.random() < 0.5 ? this.INGREDIENT_FACTS : this.MATERIAL_FACTS;
+                return Math.random() < 0.5
+                    ? this._forgeMathQuestion(grade)
+                    : this.generateFactQuestion(bank, grade);
+            },
+
+            // Training has no cauldron/anvil flavor of its own — just a themed combat-style
+            // question at Power difficulty, since its only job is a solid XP checkpoint.
+            generateTrainingQuestion: function(grade, className) {
+                return this.generateCombatQuestion(grade, 1, 'your training dummy', 'power');
+            },
+
+            // Brewing draws half the time from the existing math templates, half from ingredient lore —
+            // keeps the cauldron from being pure arithmetic every time.
+            generateBrewQuestion: function(grade) {
+                return Math.random() < 0.5
+                    ? this.generatePotionQuestion(grade)
+                    : this.generateFactQuestion(this.INGREDIENT_FACTS, grade);
+            },
+
+            generateForgeQuestion: function(grade) {
+                return Math.random() < 0.5
+                    ? this._forgeMathQuestion(grade)
+                    : this.generateFactQuestion(this.MATERIAL_FACTS, grade);
+            },
+
+            _forgeMathQuestion: function(grade) {
+                const g = this.grades[Math.min(grade - 1, this.grades.length - 1)];
+                const max = g.maxNumber;
+
+                const templates = [
+                    {
+                        setup: `Heat the blade to {a} degrees, then it cools by {b}. What's the final temperature?`,
+                        generate: () => {
+                            const a = Math.floor(Math.random() * (max / 2)) + Math.ceil(max / 2);
+                            const b = Math.floor(Math.random() * (max / 2)) + 1;
+                            return { a, b, answer: a - b };
+                        }
+                    },
+                    {
+                        setup: `The anvil holds {a} ingots. You add {b} more to the batch. How many ingots in all?`,
+                        generate: () => {
+                            const a = Math.floor(Math.random() * (max / 2)) + 1;
+                            const b = Math.floor(Math.random() * (max / 2)) + 1;
+                            return { a, b, answer: a + b };
+                        }
+                    }
+                ];
+
+                const template = templates[Math.floor(Math.random() * templates.length)];
+                const data = template.generate();
+                let question = template.setup;
+                for (let key in data) {
+                    if (key !== 'answer') question = question.replace(`{${key}}`, data[key]);
+                }
+
+                const correctValue = data.answer;
+                const wrongAnswers = [];
+                while (wrongAnswers.length < 3) {
+                    const wrong = correctValue + Math.floor(Math.random() * 10) - 5;
+                    if (wrong > 0 && wrong !== correctValue && !wrongAnswers.includes(wrong)) wrongAnswers.push(wrong);
+                }
+                const answers = [correctValue, ...wrongAnswers].sort(() => Math.random() - 0.5);
+
+                return { question, correctValue, answers };
             }
         };
+
+        // ─── INGREDIENTS & RECIPES ──────────────────────────────────────────────────
+        // Curated from the correct answers in Curriculum.INGREDIENT_FACTS/MATERIAL_FACTS, so
+        // finding e.g. "Iron Shaving" in the world pairs with the lore fact that already exists
+        // about it. A few conceptual (non-item) correct answers from the fact banks — "Increased
+        // toughness", "Rapid cooling changes its structure" — are excluded since they aren't
+        // physical things to collect.
+        const INGREDIENT_NAMES = [
+            'Fungus Cap', 'Forest Spider', 'Dry Oak Leaf', 'Moonwell Water', 'Moonpetal',
+            'Beeswax', 'Iron Shaving', 'Steam Essence', 'Copper Dust', 'Crystal Shard',
+            'Feather', 'Oak Leaf', 'Stone', 'Wool', 'Iron', 'Steel', 'Gold', 'Glass',
+            'Leather', 'Copper', 'Carbon', 'Bronze', 'Tin'
+        ];
+
+        function _rollIngredients(count) {
+            const won = {};
+            for (let i = 0; i < count; i++) {
+                const name = INGREDIENT_NAMES[Math.floor(Math.random() * INGREDIENT_NAMES.length)];
+                won[name] = (won[name] || 0) + 1;
+            }
+            return won;
+        }
+
+        // What Brew/Forge/Armor-tempering each consume per successful attempt. Ingredients are
+        // only spent on success (see brewPotion/attemptForge/attemptArmorForge) — a wrong answer
+        // already costs mana/gold, it shouldn't also burn a harder-to-find ingredient.
+        const RECIPES = {
+            potion: { ingredients: { 'Beeswax': 1 } },
+            temper: { ingredients: { 'Iron Shaving': 1 } },
+            armor:  { ingredients: { 'Leather': 1 } }
+        };
+
+        function _hasIngredients(recipeId) {
+            const need = RECIPES[recipeId]?.ingredients || {};
+            const have = GameState.player.ingredients || {};
+            return Object.entries(need).every(([name, qty]) => (have[name] || 0) >= qty);
+        }
+
+        function _consumeIngredients(recipeId) {
+            const need = RECIPES[recipeId]?.ingredients || {};
+            const have = GameState.player.ingredients || (GameState.player.ingredients = {});
+            Object.entries(need).forEach(([name, qty]) => { have[name] = Math.max(0, (have[name] || 0) - qty); });
+        }
+
+        function _addIngredients(won) {
+            const have = GameState.player.ingredients || (GameState.player.ingredients = {});
+            Object.entries(won).forEach(([name, qty]) => { have[name] = (have[name] || 0) + qty; });
+        }
+
+        // ─── ARMOR ───────────────────────────────────────────────────────────────
+        // A second Forge track, structurally identical to weapon tempering: each successful
+        // attempt (gold + one Leather + a question) bumps gear.armorTier by one, up to
+        // ARMOR_MAX_TIER, reducing defMult and ramping a glow tint on the character's own body
+        // meshes — the same "glow ramps with level" visual language as WEAPON_TEMPER_TIERS,
+        // since there are no separate armor-piece meshes to swap in this asset set.
+        const ARMOR_FORGE_COST = 15;
+        const ARMOR_MAX_TIER = 5;
+        const ARMOR_TIERS = [
+            { min: 0, label: 'Unarmored',   glowColor: 0x000000, glowIntensity: 0,    defMult: 1.00 },
+            { min: 1, label: 'Hardened',    glowColor: 0x4488ff, glowIntensity: 0.30, defMult: 0.96 },
+            { min: 3, label: 'Reinforced',  glowColor: 0x66aaff, glowIntensity: 0.50, defMult: 0.90 },
+            { min: 5, label: 'Masterwork',  glowColor: 0xaaffff, glowIntensity: 0.80, defMult: 0.82 }
+        ];
+
+        function _armorTier(lvl) {
+            let tier = ARMOR_TIERS[0];
+            for (const t of ARMOR_TIERS) if (lvl >= t.min) tier = t;
+            return tier;
+        }
+
+        // Tints every body mesh (Body/Head/Arm*/Leg*, matching MESH_PREFIX) the same way
+        // _applyWeaponTemperGlow tints the weapon — clone-once-then-mutate the emissive channel.
+        function _applyArmorGlow() {
+            if (!GameState.characterModel) return;
+            const lvl = GameState.player.gear?.armorTier || 0;
+            const tier = _armorTier(lvl);
+            const prefix = MESH_PREFIX[GameState.player.class];
+            GameState.characterModel.traverse(n => {
+                if (!n.isMesh || !n.material || !prefix || !n.name.startsWith(prefix + '_')) return;
+                if (!n.userData._armorTintCloned) {
+                    n.material = n.material.clone();
+                    n.userData._armorTintCloned = true;
+                }
+                n.material.emissive.set(tier.glowColor);
+                n.material.emissiveIntensity = tier.glowIntensity;
+            });
+        }
 
         // ─── SOUND ───────────────────────────────────────────────────────────────
         // All synthesized with Tone.js — no audio files needed. Browsers block audio
@@ -959,14 +1242,14 @@
                 xp: 0, xpToNext: 100,
                 health: 100, maxHealth: 100,
                 mana: 50, maxMana: 50,
-                gold: 0, potions: 2, scrolls: 1,
+                gold: 0, potions: 2, scrolls: 1, ingredients: {},
                 skillPoints: 0, skills: { health: 0, mana: 0, power: 0 },
                 comboStreak: 0,
                 abilityScore: 50,   // 0-95 hidden adaptive difficulty tracker
                 x: 0, z: 0, rotation: 0,
                 spellCollection: ['arcane_missile', 'shadow_bolt'],  // owned spell IDs
                 equippedSpells:   ['arcane_missile', 'shadow_bolt', null, null],  // 4 HUD slots
-                gear: { weaponId: 'staff', shieldId: null, skinId: null, outfitColor: null, accessoryUnlocked: false, accessoryColor: null }  // equipped weapon/shield/skin/cosmetics
+                gear: { weaponId: 'staff', shieldId: null, skinId: null, outfitColor: null, accessoryUnlocked: false, accessoryColor: null, weaponTempers: {}, armorTier: 0 }  // equipped weapon/shield/skin/cosmetics + forge temper levels per weaponId + armor tier
             },
             selectedClass: null,
             selectedSpell: 0,
@@ -1000,6 +1283,7 @@
         const DUNGEON_WORLDS = [
             {
                 id: 'crypt', name: 'The Crypt', icon: '🪦', color: '#9966cc', lockColor: '#6644aa',
+                bgImage: 'images/world-crypt.jpg',
                 unlockLevel: 1,
                 desc: 'Ancient bones stir in the darkness beneath the academy.',
                 flavorEnemies: 'skeleton undead',
@@ -1011,12 +1295,13 @@
                     { floor: 'floor_dirt_small_weeds',     wall: 'wall_window_closed', name: 'Sunken Crypt', furniture: null }
                 ],
                 corridorFloor: 'floor_dirt_large',
-                bgColor: 0x080510, fogColor: 0x080510, fogDensity: 0.042,
-                ambientColor: 0x9977cc, ambientIntensity: 0.28,
-                dirColor: 0x7766bb, dirIntensity: 0.32
+                bgColor: 0x080510, fogColor: 0x080510, fogDensity: 0.036,
+                ambientColor: 0x9977cc, ambientIntensity: 0.4,
+                dirColor: 0x7766bb, dirIntensity: 0.46
             },
             {
                 id: 'forest', name: 'Whispering Woods', icon: '🌲', color: '#44bb66', lockColor: '#227744',
+                bgImage: 'images/world-forest.jpg',
                 unlockLevel: 4,
                 desc: 'Twisted trees whisper forgotten secrets. Something hunts between the roots.',
                 flavorEnemies: 'forest spirit',
@@ -1028,12 +1313,13 @@
                     { floor: 'floor_wood_small_dark',  wall: 'wall_shelves',     name: 'Root Cellar', furniture: 'storage' }
                 ],
                 corridorFloor: 'floor_dirt_large',
-                bgColor: 0x060e07, fogColor: 0x060e07, fogDensity: 0.038,
-                ambientColor: 0x77aa77, ambientIntensity: 0.3,
-                dirColor: 0x559955, dirIntensity: 0.35
+                bgColor: 0x060e07, fogColor: 0x060e07, fogDensity: 0.032,
+                ambientColor: 0x77aa77, ambientIntensity: 0.42,
+                dirColor: 0x559955, dirIntensity: 0.48
             },
             {
                 id: 'volcano', name: 'Volcano Lair', icon: '🔥', color: '#ff6622', lockColor: '#cc3300',
+                bgImage: 'images/world-volcano.jpg',
                 unlockLevel: 8,
                 desc: 'Lava flows beneath cracked stone. The air itself burns.',
                 flavorEnemies: 'fire demon',
@@ -1045,12 +1331,13 @@
                     { floor: 'floor_tile_small_broken_B', wall: 'wall_sloped',   name: 'Scorched Hollow', furniture: null }
                 ],
                 corridorFloor: 'floor_tile_grate',
-                bgColor: 0x0d0400, fogColor: 0x0d0400, fogDensity: 0.048,
-                ambientColor: 0xcc6622, ambientIntensity: 0.32,
-                dirColor: 0xdd4400, dirIntensity: 0.4
+                bgColor: 0x0d0400, fogColor: 0x0d0400, fogDensity: 0.04,
+                ambientColor: 0xcc6622, ambientIntensity: 0.44,
+                dirColor: 0xdd4400, dirIntensity: 0.52
             },
             {
                 id: 'ice', name: 'Frost Caverns', icon: '❄️', color: '#66ccff', lockColor: '#3388cc',
+                bgImage: 'images/world-ice.jpg',
                 unlockLevel: 14,
                 desc: 'Ice crystals glitter in the frozen deep. Every step echoes for eternity.',
                 flavorEnemies: 'frost wraith',
@@ -1062,12 +1349,13 @@
                     { floor: 'floor_dirt_large_rocky',     wall: 'wall_half',     name: 'Frostbound Cellar', furniture: 'storage' }
                 ],
                 corridorFloor: 'floor_tile_small',
-                bgColor: 0x050b11, fogColor: 0x050b11, fogDensity: 0.036,
-                ambientColor: 0x6699bb, ambientIntensity: 0.35,
-                dirColor: 0x5599dd, dirIntensity: 0.38
+                bgColor: 0x050b11, fogColor: 0x050b11, fogDensity: 0.03,
+                ambientColor: 0x6699bb, ambientIntensity: 0.46,
+                dirColor: 0x5599dd, dirIntensity: 0.5
             },
             {
                 id: 'temple', name: 'Sunken Temple', icon: '🌊', color: '#0099cc', lockColor: '#006699',
+                bgImage: 'images/world-temple.jpg',
                 unlockLevel: 21,
                 desc: 'Coral-encrusted ruins hide ancient power. The walls weep with forgotten tides.',
                 flavorEnemies: 'sea wraith',
@@ -1079,12 +1367,13 @@
                     { floor: 'floor_wood_large_dark',        wall: 'wall_shelves', name: 'Drowned Archive', furniture: 'archive' }
                 ],
                 corridorFloor: 'floor_tile_grate',
-                bgColor: 0x000a14, fogColor: 0x000a14, fogDensity: 0.032,
-                ambientColor: 0x2277aa, ambientIntensity: 0.3,
-                dirColor: 0x116688, dirIntensity: 0.35
+                bgColor: 0x000a14, fogColor: 0x000a14, fogDensity: 0.028,
+                ambientColor: 0x2277aa, ambientIntensity: 0.42,
+                dirColor: 0x116688, dirIntensity: 0.48
             },
             {
                 id: 'sky', name: 'Sky Fortress', icon: '⚡', color: '#ffdd00', lockColor: '#cc9900',
+                bgImage: 'images/world-sky.jpg',
                 unlockLevel: 30,
                 desc: 'Storm clouds swirl around floating battlements. Lightning is the only law here.',
                 flavorEnemies: 'storm knight',
@@ -1096,12 +1385,13 @@
                     { floor: 'floor_wood_small',           wall: 'wall_pillar',    name: 'Windswept Hall', furniture: 'dining' }
                 ],
                 corridorFloor: 'floor_tile_small',
-                bgColor: 0x050810, fogColor: 0x050810, fogDensity: 0.03,
-                ambientColor: 0xbbaa44, ambientIntensity: 0.38,
-                dirColor: 0xddaa11, dirIntensity: 0.42
+                bgColor: 0x050810, fogColor: 0x050810, fogDensity: 0.026,
+                ambientColor: 0xbbaa44, ambientIntensity: 0.48,
+                dirColor: 0xddaa11, dirIntensity: 0.54
             },
             {
                 id: 'shadow', name: 'Shadow Realm', icon: '☠️', color: '#cc2255', lockColor: '#880033',
+                bgImage: 'images/world-shadow.jpg',
                 unlockLevel: 40,
                 desc: 'Reality fractures in the realm between worlds. Nothing here stays dead for long.',
                 flavorEnemies: 'void wraith',
@@ -1113,9 +1403,9 @@
                     { floor: 'floor_tile_big_spikes',    wall: 'wall_sloped',    name: 'Abyssal Vault', furniture: 'storage' }
                 ],
                 corridorFloor: 'floor_dirt_large',
-                bgColor: 0x04000a, fogColor: 0x04000a, fogDensity: 0.06,
-                ambientColor: 0x771199, ambientIntensity: 0.22,
-                dirColor: 0x550022, dirIntensity: 0.26
+                bgColor: 0x04000a, fogColor: 0x04000a, fogDensity: 0.05,
+                ambientColor: 0x771199, ambientIntensity: 0.32,
+                dirColor: 0x550022, dirIntensity: 0.36
             }
         ];
         let keys = {};
@@ -1257,7 +1547,53 @@
                 dmgMult *= SHIELD_STAT.dmgMult;
                 defMult *= SHIELD_STAT.defMult;
             }
+            const temperLvl = gear.weaponTempers?.[gear.weaponId] || 0;
+            dmgMult *= (1 + temperLvl * 0.02); // +2% per Forge temper level, capped at 5 => +10% max
+            defMult *= _armorTier(gear.armorTier || 0).defMult;
             return { dmgMult, defMult };
+        }
+
+        const FORGE_COST = 20;
+        const FORGE_MAX_TEMPER = 5;
+
+        // Visual/name tiers for a tempered weapon — glow ramps up alongside the +2%/level dmgMult
+        // already applied in _getGearMods, so the name, in-menu glow border, and in-world weapon
+        // glow all read the same "how tempered is this" signal at a glance.
+        const WEAPON_TEMPER_TIERS = [
+            { min: 0, prefix: '',            glowColor: 0x000000, glowIntensity: 0 },
+            { min: 1, prefix: 'Tempered ',    glowColor: 0xff8844, glowIntensity: 0.35 },
+            { min: 3, prefix: 'Tempered ',    glowColor: 0xffaa44, glowIntensity: 0.55 },
+            { min: 5, prefix: 'Masterwork ',  glowColor: 0xffffff, glowIntensity: 0.85 }
+        ];
+
+        function _weaponTemperTier(lvl) {
+            let tier = WEAPON_TEMPER_TIERS[0];
+            for (const t of WEAPON_TEMPER_TIERS) if (lvl >= t.min) tier = t;
+            return tier;
+        }
+
+        function _weaponDisplayName(baseName, weaponId) {
+            const lvl = GameState.player.gear?.weaponTempers?.[weaponId] || 0;
+            return _weaponTemperTier(lvl).prefix + baseName;
+        }
+
+        // Tints the currently-attached weapon mesh's emissive channel to match its temper tier —
+        // same clone-once-then-mutate pattern as _applyPartColor, just targeting GameState.weapon
+        // (a separate attached GLTF, not part of characterModel's mesh tree).
+        function _applyWeaponTemperGlow() {
+            if (!GameState.weapon) return;
+            const gear = GameState.player.gear || {};
+            const lvl = gear.weaponTempers?.[gear.weaponId] || 0;
+            const tier = _weaponTemperTier(lvl);
+            GameState.weapon.traverse(n => {
+                if (!n.isMesh || !n.material) return;
+                if (!n.userData._tintCloned) {
+                    n.material = n.material.clone();
+                    n.userData._tintCloned = true;
+                }
+                n.material.emissive.set(tier.glowColor);
+                n.material.emissiveIntensity = tier.glowIntensity;
+            });
         }
 
         // Mesh names use the character's model name, not the class id — Warrior's model is
@@ -1314,7 +1650,7 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 0.85;
+            renderer.toneMappingExposure = 1.05;
 
             // WebGL context loss / restore handling
             canvas.addEventListener('webglcontextlost', (e) => {
@@ -1431,6 +1767,7 @@
                     if (accessory && gear.accessoryUnlocked && gear.accessoryColor !== undefined) {
                         _applyPartColor(accessory.meshName, gear.accessoryColor);
                     }
+                    _applyArmorGlow();
 
                     // Load animations - models ARE rigged with Rig_Medium skeleton!
                     loadAnimationsForCharacter(model);
@@ -1712,77 +2049,69 @@
                 (gltf) => {
                     const weapon = gltf.scene;
                     
-                    // Find the right hand bone in the skeleton
-                    let rightHand = null;
+                    // Find the socket bone in the skeleton. Every KayKit Rig_Medium character
+                    // ships a dedicated 'handslot.r' bone (child of 'hand.r') purpose-built as the
+                    // weapon attachment point — confirmed by inspecting the raw glTF node data for
+                    // every character file, where handslot.r carries the exact same local
+                    // transform (a fixed 90° rotation off hand.r) across every class. It's just
+                    // never referenced by name because three.js's GLTFLoader strips the dot,
+                    // turning 'handslot.r' into 'handslotr'. Falls back to the old hand.r heuristic
+                    // for any rig that doesn't have it.
+                    let socket = null, rightHand = null;
                     model.traverse((node) => {
-                        if (node.isBone && node.name) {
-                            const name = node.name.toLowerCase();
-                            // Check for common hand bone naming conventions
-                            if (name === 'hand.r' || name === 'handr' || name === 'hand_r' || 
-                                name === 'r_hand' || name === 'rhand' || name === 'hand' ||
-                                (name.includes('hand') && name.includes('r') && !name.includes('l'))) {
-                                rightHand = node;
-                                console.log('✓ Found hand bone:', node.name);
-                            }
+                        if (!node.isBone || !node.name) return;
+                        const name = node.name.toLowerCase();
+                        if (name === 'handslotr' || (name.includes('handslot') && name.includes('r') && !name.includes('l'))) {
+                            socket = node;
+                        }
+                        if (name === 'hand.r' || name === 'handr' || name === 'hand_r' ||
+                            name === 'r_hand' || name === 'rhand' || name === 'hand' ||
+                            (name.includes('hand') && name.includes('r') && !name.includes('l'))) {
+                            rightHand = node;
                         }
                     });
-                    
-                    if (rightHand) {
+                    const attachBone = socket || rightHand;
+                    if (attachBone) console.log(`✓ Found ${socket ? 'socket' : 'hand'} bone:`, attachBone.name);
+
+                    if (attachBone) {
                         // CRITICAL FIX: Reset weapon transform completely first
                         weapon.position.set(0, 0, 0);
                         weapon.rotation.set(0, 0, 0);
                         weapon.scale.set(1, 1, 1);
-                        
-                        // Add to hand BEFORE adjusting (so local coords work)
-                        rightHand.add(weapon);
-                        
-                        // NOW adjust position/rotation relative to hand bone
-                        // These values are specifically tuned for KayKit weapons
-                        const weaponOffsets = {
-                            warrior: { 
-                                // Axe needs to be held by handle, blade forward
-                                pos: [0, 0, 0.15],     // Slightly forward in hand
-                                rot: [Math.PI/2, 0, Math.PI/2],  // Rotate to grip properly
-                                scale: 1.0 
-                            },
-                            mage: { 
-                                // Staff held vertically
-                                pos: [0, -0.8, 0],     // Center staff in hand
-                                rot: [0, 0, 0],        // Upright
-                                scale: 0.8 
-                            },
-                            rogue: { 
-                                // Daggers held pointing forward
-                                pos: [0, 0, 0.1],
-                                rot: [Math.PI/2, 0, 0],
-                                scale: 0.7 
-                            },
-                            knight: {
-                                // Sword
-                                pos: [0, 0.05, 0.1],
-                                rot: [Math.PI/2, 0, Math.PI/2],
-                                scale: 1.0
-                            },
-                            ranger: {
-                                // Bow held horizontally
-                                pos: [0, 0, 0],
-                                rot: [0, 0, Math.PI/2],
-                                scale: 0.9
-                            }
+
+                        // Add to socket BEFORE adjusting (so local coords work)
+                        attachBone.add(weapon);
+
+                        // handslot.r's rest orientation IS the canonical grip: every KayKit blade,
+                        // axe and staff mesh is modeled blade/shaft-along-local-+Y, which is exactly
+                        // the socket's own forward axis, so those need zero rotation at all — verified
+                        // across rogue's dagger, knight's sword, warrior's axe and mage's staff, all
+                        // parented to handslot.r with identity rotation. Bows and crossbows are
+                        // modeled the other way (long axis along local Z, not Y), so they need a
+                        // fixed corrective rotation instead: it maps local Z (barrel/limb axis) to
+                        // the socket's forward direction and local Y (up) to world-up, solved once
+                        // from the socket's measured world rotation and confirmed identical (to
+                        // within float noise) on both rogue's crossbow and ranger's bow.
+                        const AIM_WEAPONS = new Set(['bow', 'crossbow']);
+                        const rot = AIM_WEAPONS.has(chosenId) ? [-1.8368, 0, Math.PI / 2] : [0, 0, 0];
+
+                        // Per-weapon scale — meshes vary in size/scale by design, independent of
+                        // the grip-vs-aim rotation above.
+                        const WEAPON_SCALE = {
+                            warrior_axe: 1.0, warrior_sword: 1.0,
+                            mage_staff: 0.8, mage_wand: 0.8,
+                            rogue_dagger: 0.7, rogue_sword: 0.7, rogue_crossbow: 0.75,
+                            knight_sword: 1.0, knight_axe: 1.0,
+                            ranger_sword: 0.9, ranger_bow: 0.9
                         };
-                        
-                        const offset = weaponOffsets[className] || { pos: [0, 0, 0], rot: [0, 0, 0], scale: 1 };
-                        
+                        const scale = WEAPON_SCALE[`${className}_${chosenId}`] ?? 1;
+
                         // Apply weapon-specific offsets
-                        weapon.position.set(...offset.pos);
-                        weapon.rotation.set(...offset.rot);
-                        weapon.scale.set(offset.scale, offset.scale, offset.scale);
-                        
-                        // ADDITIONAL FIX: If weapon is still backward, try flipping 180
-                        // Uncomment if needed:
-                        // weapon.rotation.y += Math.PI;
-                        
-                        console.log(`✓ Weapon attached to ${rightHand.name} for ${className}`);
+                        weapon.position.set(0, 0, 0);
+                        weapon.rotation.set(...rot);
+                        weapon.scale.set(scale, scale, scale);
+
+                        console.log(`✓ Weapon attached to ${attachBone.name} for ${className}`);
                         console.log(`   Position: ${weapon.position.x.toFixed(2)}, ${weapon.position.y.toFixed(2)}, ${weapon.position.z.toFixed(2)}`);
                         console.log(`   Rotation: ${(weapon.rotation.x * 180/Math.PI).toFixed(0)}°, ${(weapon.rotation.y * 180/Math.PI).toFixed(0)}°, ${(weapon.rotation.z * 180/Math.PI).toFixed(0)}°`);
                         
@@ -1796,6 +2125,7 @@
                     }
                     
                     GameState.weapon = weapon;
+                    _applyWeaponTemperGlow();
                 },
                 undefined,
                 (error) => {
@@ -2704,35 +3034,40 @@
             const loader = new THREE.GLTFLoader(mgr);
             loader.load(weaponPath, (gltf) => {
                 const weapon = gltf.scene;
-                let handBone = null;
+                // Same socket bone as the player rig (see loadWeaponForCharacter): every KayKit
+                // Rig_Medium/Rig_Large skeleton — monsters included — has a dedicated 'handslot.r'
+                // bone (child of 'hand.r') as its weapon attachment point, but three.js's GLTFLoader
+                // strips the dot from bone names, so it shows up as 'handslotr'. This previously
+                // matched neither 'handslot.r' nor 'hand.r'/'handslot_r' and fell through to the
+                // generic 'hand'-substring fallback, which grabs 'handr' (the wrist joint) first
+                // since it's the parent and gets visited before its 'handslotr' child — attaching
+                // every monster's weapon to the wrist with no compensating rotation, the same
+                // wrong-orientation bug the player weapons had.
+                let socket = null, handBone = null;
                 model.traverse(node => {
-                    if (handBone) return;
                     const n = node.name.toLowerCase();
-                    if (n === 'handslot.r' || n === 'hand.r' || n === 'handslot_r' || n === 'hand_r') {
+                    if (!socket && (n === 'handslotr' || (n.includes('handslot') && n.includes('r') && !n.includes('l')))) {
+                        socket = node;
+                    }
+                    if (!handBone && (n === 'handr' || (n.includes('hand') && n.includes('r') && !n.includes('l')))) {
                         handBone = node;
                     }
                 });
-                if (!handBone) {
-                    // Fallback: any node whose name contains 'hand' and not 'l'
-                    model.traverse(node => {
-                        if (handBone) return;
-                        const n = node.name.toLowerCase();
-                        if (n.includes('hand') && !n.includes('handslot.l') && !n.includes('hand.l') && !n.endsWith('l')) {
-                            handBone = node;
-                        }
-                    });
-                }
-                if (!handBone) {
+                const attachBone = socket || handBone;
+                if (!attachBone) {
                     console.warn('⚔️ Weapon: no hand bone found in', model.name || 'monster');
                     return;
                 }
                 // Weapon is in bone-local space; scale 1.0 keeps it proportional to the character.
                 // (1/modelScale would upscale the weapon back to world units — too large for small monsters.)
+                // handslot.r's rest orientation is the canonical grip for these Y-forward
+                // blade/axe/staff/scythe meshes (verified identically on the player rig), so
+                // identity rotation is correct here too — no per-monster tuning needed.
                 weapon.scale.setScalar(1.0);
                 weapon.position.set(0, 0, 0);
                 weapon.rotation.set(0, 0, 0);
-                handBone.add(weapon);
-                console.log(`⚔️ Weapon attached to ${handBone.name}`);
+                attachBone.add(weapon);
+                console.log(`⚔️ Weapon attached to ${attachBone.name}`);
             }, undefined, (err) => {
                 console.warn('⚔️ Weapon load failed:', weaponPath, err?.message || '');
             });
@@ -3296,7 +3631,9 @@
 
             if (GameState.contextLost) return;
 
-            const delta = clock.getDelta();
+            // Clamp so a dropped frame or alt-tab pause can't produce one huge movement/rotation
+            // jump (or tunnel through wall collision) once those are delta-scaled.
+            const delta = Math.min(clock.getDelta(), 0.1);
             const elapsed = clock.elapsedTime;
 
             // Flicker wall torches — layered sine waves plus a touch of random jitter reads
@@ -3346,6 +3683,46 @@
 
             if (animationMixer) animationMixer.update(delta);
 
+            // Advance the pre-fight approach/retreat walk (see _beginCombatApproach) — moves the
+            // player toward or away from the enemy to the class's combat range before the attack
+            // UI appears, instead of the old instant teleport-the-monster-into-place.
+            if (GameState._combatApproachTween) {
+                const t = GameState._combatApproachTween;
+                t.elapsed += delta;
+                const p = Math.min(1, t.elapsed / t.duration);
+                const x = t.fromX + (t.targetX - t.fromX) * p;
+                const z = t.fromZ + (t.targetZ - t.fromZ) * p;
+                GameState.player.x = x;
+                GameState.player.z = z;
+                if (playerContainer) playerContainer.position.set(x, 0, z);
+                if (p >= 1) {
+                    GameState._combatApproachTween = null;
+                    if (GameState.walkAction && GameState.idleAction) {
+                        GameState.idleAction.setLoop(THREE.LoopRepeat, Infinity);
+                        _switchAction(GameState.walkAction, GameState.idleAction, 0.15);
+                        _lastAnimState = 'idle';
+                    }
+                    t.onComplete();
+                }
+            }
+
+            // Mirror of the tween above, but for a monster closing on a kiting ranged player or
+            // backing off from one that got too close (see _beginEnemyCombatApproach).
+            if (GameState._combatEnemyApproachTween) {
+                const t = GameState._combatEnemyApproachTween;
+                t.elapsed += delta;
+                const p = Math.min(1, t.elapsed / t.duration);
+                const x = t.fromX + (t.targetX - t.fromX) * p;
+                const z = t.fromZ + (t.targetZ - t.fromZ) * p;
+                t.enemy.position.x = x;
+                t.enemy.position.z = z;
+                if (p >= 1) {
+                    GameState._combatEnemyApproachTween = null;
+                    _setEnemyWalking(t.enemy, false);
+                    t.onComplete();
+                }
+            }
+
             // Move spell projectiles
             activeProjectiles = activeProjectiles.filter(p => {
                 if (p.done) { scene.remove(p.orb); return false; }
@@ -3375,7 +3752,7 @@
 
             updateEnemyAI(delta);
 
-            if (GameState.isPlaying && !GameState.inCombat) updateMovement();
+            if (GameState.isPlaying && !GameState.inCombat) updateMovement(delta);
 
             updateCamera();
             checkInteractions();
@@ -3383,37 +3760,37 @@
             renderer.render(scene, camera);
         }
 
-        function updateMovement() {
-            const speed = 0.15;
+        function updateMovement(delta) {
+            // Scaled by delta (tuned to match the original fixed per-frame feel at 60fps) so
+            // movement/rotation speed stays constant in real time regardless of framerate —
+            // previously these were flat per-frame steps, so a slower framerate directly meant
+            // slower movement.
+            const speed = 9 * delta;
             let dx = 0, dz = 0;
             let moved = false;
-            
+
             // Camera rotation
-            if (keys['q']) cameraAngle += 0.04;
-            if (keys['e']) cameraAngle -= 0.04;
-            
-            // Movement relative to camera
-            if (keys['w'] || keys['arrowup']) {
-                dx += Math.sin(cameraAngle) * speed;
-                dz += Math.cos(cameraAngle) * speed;
-                moved = true;
+            if (keys['q']) cameraAngle += 2.4 * delta;
+            if (keys['e']) cameraAngle -= 2.4 * delta;
+
+            // Movement relative to camera, expressed as forward/strafe scalars first so a
+            // diagonal (e.g. W+A) can be normalized — otherwise dx/dz from both keys just add
+            // up unnormalized and diagonal movement ends up sqrt(2) (~41%) faster than straight,
+            // which is what made steering through corridors feel twitchy/hard to control.
+            let forward = 0, strafe = 0;
+            if (keys['w'] || keys['arrowup'])    { forward += 1;   moved = true; }
+            if (keys['s'] || keys['arrowdown'])  { forward -= 0.6; moved = true; } // backward is intentionally slower
+            if (keys['a'] || keys['arrowleft'])  { strafe  += 1;   moved = true; }
+            if (keys['d'] || keys['arrowright']) { strafe  -= 1;   moved = true; }
+
+            if (forward !== 0 || strafe !== 0) {
+                const mag = Math.hypot(forward, strafe);
+                const norm = Math.max(mag, 1); // only shrink when a diagonal would otherwise exceed single-axis speed
+                const f = forward / norm, s = strafe / norm;
+                dx = (Math.sin(cameraAngle) * f + Math.sin(cameraAngle + Math.PI / 2) * s) * speed;
+                dz = (Math.cos(cameraAngle) * f + Math.cos(cameraAngle + Math.PI / 2) * s) * speed;
             }
-            if (keys['s'] || keys['arrowdown']) {
-                dx -= Math.sin(cameraAngle) * speed * 0.6;
-                dz -= Math.cos(cameraAngle) * speed * 0.6;
-                moved = true;
-            }
-            if (keys['a'] || keys['arrowleft']) {
-                dx += Math.sin(cameraAngle + Math.PI/2) * speed;
-                dz += Math.cos(cameraAngle + Math.PI/2) * speed;
-                moved = true;
-            }
-            if (keys['d'] || keys['arrowright']) {
-                dx += Math.sin(cameraAngle - Math.PI/2) * speed;
-                dz += Math.cos(cameraAngle - Math.PI/2) * speed;
-                moved = true;
-            }
-            
+
             if (dx !== 0 || dz !== 0) {
                 const newX = GameState.player.x + dx;
                 const newZ = GameState.player.z + dz;
@@ -3432,7 +3809,7 @@
                         // Wrap to [-PI, PI] so we always take the short arc
                         while (diff >  Math.PI) diff -= Math.PI * 2;
                         while (diff < -Math.PI) diff += Math.PI * 2;
-                        characterModel.rotation.y += diff * 0.2;
+                        characterModel.rotation.y += diff * Math.min(1, 12 * delta); // ~same feel as the old flat 0.2/frame, at 60fps
                     }
                     
                     moved = true;
@@ -3564,6 +3941,9 @@
             if (e.code === 'Space' && nearestInteractable) {
                 handleInteraction();
             }
+            if (e.code === 'Escape' && _isCombatChoicePhase()) {
+                fleeCombat();
+            }
             // 1-2 = Strike/Power Blow, 3-6 = equipped abilities — same slots shown in the Spellbook
             // bar, both while exploring (selects a Tome target) and mid-combat (casts directly).
             if (e.key >= '1' && e.key <= '6') _handleQuickSlot(parseInt(e.key) - 1);
@@ -3577,6 +3957,9 @@
             if (e.key.toLowerCase() === 'r') useScroll();
             if (e.key.toLowerCase() === 'b') openShop();
             if (e.key.toLowerCase() === 'g') openEquipment();
+            if (e.key.toLowerCase() === 'p') openPotionBrewing();
+            if (e.key.toLowerCase() === 'f') openForge();
+            if (e.key.toLowerCase() === 'y') openTraining();
         });
         
         document.addEventListener('keyup', (e) => {
@@ -3586,13 +3969,13 @@
 
         function handleInteraction() {
             if (!nearestInteractable) return;
-            
+
             if (nearestInteractable.type === 'crystal') {
-                collectCrystal(nearestInteractable.object);
+                openCrystalQuestion(nearestInteractable.object);
             } else if (nearestInteractable.type === 'enemy') {
                 startCombat(nearestInteractable.object);
             } else if (nearestInteractable.type === 'chest') {
-                openChest(nearestInteractable.object);
+                openChestQuestion(nearestInteractable.object);
             }
         }
 
@@ -3733,18 +4116,89 @@
 
             const dx = enemy.position.x - GameState.player.x;
             const dz = enemy.position.z - GameState.player.z;
-            const fightLen = Math.hypot(dx, dz) || 1;
+            const currentGap = Math.hypot(dx, dz) || 1;
+            const dirX = dx / currentGap, dirZ = dz / currentGap; // unit vector from player to enemy
 
-            // Ranged player classes or ranged enemy monsters both fight at range
+            // Melee needs closeness to function at all — a sword swing from 5 units away just
+            // whiffs at empty air — while ranged attacks read fine even at close range. So the
+            // fight only happens at range if BOTH sides are ranged; a melee participant on
+            // either side collapses it to melee distance instead of the old rule (any ranged
+            // party present ⇒ far), which stranded melee players and monsters swinging at nothing.
             const isRangedPlayer = ['mage', 'ranger'].includes(GameState.player.class);
-            const combatGap = (isRangedPlayer || enemy.userData.ranged) ? 5.5 : 2.2;
-            const currentGap = fightLen;
-            if (currentGap < combatGap) {
-                const pushBack = combatGap - currentGap;
-                enemy.position.x += (dx / fightLen) * pushBack;
-                enemy.position.z += (dz / fightLen) * pushBack;
+            const isRangedEnemy = !!enemy.userData.ranged;
+            const bothRanged = isRangedPlayer && isRangedEnemy;
+            const finalGap = bothRanged ? 5.5 : 2.2;
+
+            if (Math.abs(currentGap - finalGap) <= 0.3) {
+                _finishStartingCombat(enemy);
+                return;
             }
 
+            let pending = 0;
+            const join = () => { pending--; if (pending <= 0) _finishStartingCombat(enemy); };
+
+            if (bothRanged) {
+                // Both prefer distance — split the adjustment so each visibly steps back (or in)
+                // halfway, instead of one side doing all the moving.
+                const half = (currentGap - finalGap) / 2;
+                const pTargetX = GameState.player.x + dirX * half, pTargetZ = GameState.player.z + dirZ * half;
+                const eTargetX = enemy.position.x - dirX * half, eTargetZ = enemy.position.z - dirZ * half;
+                if (!checkCollision(pTargetX, pTargetZ)) { pending++; _beginCombatApproach(pTargetX, pTargetZ, enemy.position.x, enemy.position.z, join); }
+                pending++; _beginEnemyCombatApproach(enemy, eTargetX, eTargetZ, GameState.player.x, GameState.player.z, join);
+            } else if (isRangedPlayer) {
+                // Player wants distance but the enemy is melee and needs closeness — the monster
+                // closes the gap instead, so a ranged player can still be caught by a melee threat.
+                const eTargetX = GameState.player.x + dirX * finalGap, eTargetZ = GameState.player.z + dirZ * finalGap;
+                pending++; _beginEnemyCombatApproach(enemy, eTargetX, eTargetZ, GameState.player.x, GameState.player.z, join);
+            } else {
+                // Player is melee (or otherwise matches finalGap) — player closes/adjusts to the enemy.
+                const pTargetX = enemy.position.x - dirX * finalGap, pTargetZ = enemy.position.z - dirZ * finalGap;
+                if (checkCollision(pTargetX, pTargetZ)) { _finishStartingCombat(enemy); return; }
+                pending++; _beginCombatApproach(pTargetX, pTargetZ, enemy.position.x, enemy.position.z, join);
+            }
+
+            if (pending === 0) _finishStartingCombat(enemy); // every candidate mover was wall-blocked
+        }
+
+        // Tweens the player to targetX/Z over a short walk, facing the enemy the whole way (a
+        // ranged class backs away while still facing its target, like a real kite), then hands
+        // off to onComplete once in position.
+        function _beginCombatApproach(targetX, targetZ, faceX, faceZ, onComplete) {
+            const fromX = GameState.player.x, fromZ = GameState.player.z;
+            const dist = Math.hypot(targetX - fromX, targetZ - fromZ);
+            if (characterModel) {
+                characterModel.rotation.y = Math.atan2(faceX - fromX, faceZ - fromZ) + Math.PI;
+            }
+            if (GameState.walkAction && GameState.idleAction) {
+                GameState.walkAction.setLoop(THREE.LoopRepeat, Infinity);
+                _switchAction(GameState.idleAction, GameState.walkAction, 0.1);
+                _lastAnimState = 'walk'; // keep updateCharacterAnimation's per-frame idle/walk check from fighting this
+            }
+            GameState._combatApproachTween = {
+                fromX, fromZ, targetX, targetZ,
+                duration: Math.min(0.9, Math.max(0.25, dist / 6)),
+                elapsed: 0,
+                onComplete
+            };
+        }
+
+        // Enemy-side mirror of _beginCombatApproach — a melee monster closing on a kiting ranged
+        // player, or a ranged monster (Skeleton Mage, Necromancer) backing off from a player who
+        // got too close, using the enemy's own idle/walk mixer actions (_setEnemyWalking).
+        function _beginEnemyCombatApproach(enemy, targetX, targetZ, faceX, faceZ, onComplete) {
+            const fromX = enemy.position.x, fromZ = enemy.position.z;
+            const dist = Math.hypot(targetX - fromX, targetZ - fromZ);
+            enemy.rotation.y = Math.atan2(-(faceX - fromX), -(faceZ - fromZ));
+            _setEnemyWalking(enemy, true);
+            GameState._combatEnemyApproachTween = {
+                enemy, fromX, fromZ, targetX, targetZ,
+                duration: Math.min(0.9, Math.max(0.25, dist / 6)),
+                elapsed: 0,
+                onComplete
+            };
+        }
+
+        function _finishStartingCombat(enemy) {
             // Face each other — rotate only characterModel, not playerContainer
             // so movement resumes with correct orientation after combat
             const faceDx = enemy.position.x - GameState.player.x;
@@ -3858,11 +4312,26 @@
             });
         }
 
-        function _resolveCombat(enemy, attackType, ans, q) {
+        // Ends the current encounter — closes the combat panel and returns to free exploration.
+        // Called on a kill, a player death, or a voluntary flee. Everything else (a survived
+        // exchange either way) stays "in combat" and drops straight back to the attack-choice
+        // phase instead — no more walking away and pressing SPACE again just to keep fighting
+        // the same enemy.
+        function _endCombat(enemy) {
             closeModal('combat-modal');
             GameState.inCombat = false;
+            GameState.currentEnemy = null;
+            GameState.combatCamFixed = null;
             document.querySelector('.vignette')?.classList.remove('combat');
+            if (enemy?.userData?.active) _returnEnemyToIdle(enemy);
+        }
 
+        function fleeCombat() {
+            GameState.player.comboStreak = 0;
+            _endCombat(GameState.currentEnemy);
+        }
+
+        function _resolveCombat(enemy, attackType, ans, q) {
             if (ans === q.correctValue) {
                 _updateAbilityScore(true);
                 // Correct — player attacks
@@ -3896,6 +4365,7 @@
                 const applyDamage = () => {
                     enemy.userData.hp = Math.max(0, enemy.userData.hp - baseDmg);
                     _updateEnemyHpBar(enemy);
+                    _updateCombatHpDisplay(enemy); // combat modal's own HP bar — no longer implicitly refreshed by a re-open now that a fight stays open across rounds
                     _flashEnemy(enemy, attackType.projectileColor ?? (attackType.id === 'spell' ? 0x9922ff : 0xff2222));
                     const isMeleeStyle = attackType.style === 'power' || attackType.style === 'strike' || attackType.id === 'strike' || attackType.id === 'power';
                     (isMeleeStyle ? Sound.hit : Sound.spellCast).call(Sound);
@@ -3912,11 +4382,13 @@
                             enemy.userData._hasRevived = true;
                             enemy.userData.hp = Math.floor(enemy.userData.maxHp * 0.3);
                             _updateEnemyHpBar(enemy);
+                            _updateCombatHpDisplay(enemy);
                             showFloatingText('☠️ The Necromancer refuses to die!', '#ff44ff');
                             Sound.necroRevive();
                             _playEnemyAnim(enemy, '_resurrectAction', () => _returnEnemyToIdle(enemy));
                             addXP(Math.floor(xpReward * 0.3));
                             updateHUD();
+                            _showAttackChoice(enemy); // still standing (barely) — fight continues
                             return;
                         }
                         enemy.userData.active = false;
@@ -3936,6 +4408,7 @@
                         if (enemy.userData.name === 'Necromancer') {
                             _grantAccessoryUnlock('You defeated the Necromancer!');
                         }
+                        _endCombat(enemy);
                     } else {
                         // Monster takes the hit, then counterattacks for reduced damage
                         const baseCounterDmg = Math.floor((4 + (enemy.userData.maxHp / 20)) * (1 / attackType.damageMultiplier));
@@ -3955,7 +4428,8 @@
                             showFloatingText(`${enemy.userData.name} ${flavour}${counterCrit ? ' 💥 CRIT' : ''}! -${counterDmg} HP`, counterCrit ? '#ff2222' : '#ff8844');
                             Sound.playerHurt();
                             updateHUD();
-                            if (GameState.player.health <= 0) handlePlayerDeath();
+                            if (GameState.player.health <= 0) { handlePlayerDeath(); _endCombat(enemy); }
+                            else _showAttackChoice(enemy); // both still standing — keep fighting, no re-engage needed
                         };
                         _playEnemyAnim(enemy, '_hitAction', () => {
                             setTimeout(() => {
@@ -3972,22 +4446,25 @@
                     updateHUD();
                 };
 
-                // Spell book spells, ranged classes, and generic spells all fire projectiles
+                // Spell book spells, mages (always spell-based), ranged weapons (bow/crossbow —
+                // by equipped weapon, not class, so rogue's crossbow fires just like ranger's bow),
+                // and generic spells all fire projectiles.
                 const pClass = GameState.player.class;
-                const isRangedClass = pClass === 'mage' || pClass === 'ranger';
+                const isRangedClass = pClass === 'mage';
+                const isRangedWeapon = ['bow', 'crossbow'].includes(GameState.player.gear?.weaponId);
                 const isSpellType = attackType.id === 'spell' || !!attackType.spellId;
-                if ((isRangedClass || isSpellType) && playerContainer) {
+                if ((isRangedClass || isRangedWeapon || isSpellType) && playerContainer) {
                     // Spell book spell → use spell's own color; else per-class fallback
                     let color;
                     if (attackType.projectileColor) {
                         color = attackType.projectileColor;
                     } else {
-                        const fallback = { mage: { strike: 0x33aaff, power: 0xff6600 }, ranger: { strike: 0xcc8844, power: 0xffdd00 } };
+                        const fallback = { mage: { strike: 0x33aaff, power: 0xff6600 }, ranger: { strike: 0xcc8844, power: 0xffdd00 }, rogue: { strike: 0x999999, power: 0xaa8866 } };
                         color = fallback[pClass]?.[attackType.id] ?? 0x9933ff;
                     }
                     // Flash color matches projectile
                     const flashColor = attackType.projectileColor ?? (attackType.id === 'spell' ? 0x9922ff : 0xff2222);
-                    if (pClass === 'ranger' && !attackType.spellId) {
+                    if (isRangedWeapon && !attackType.spellId) {
                         launchArrowProjectile(playerContainer, enemy, color, applyDamage);
                     } else {
                         launchSpellProjectile(playerContainer, enemy, color, applyDamage);
@@ -4020,7 +4497,8 @@
                     showFloatingText(`✗ Wrong! ${enemy.userData.name} ${flavour}${enemyCrit ? ' 💥 CRIT' : ''}! -${enemyDmg} HP`, enemyCrit ? '#ff2222' : '#ff4444');
                     Sound.playerHurt();
                     updateHUD();
-                    if (GameState.player.health <= 0) handlePlayerDeath();
+                    if (GameState.player.health <= 0) { handlePlayerDeath(); _endCombat(enemy); }
+                    else _showAttackChoice(enemy); // still standing — keep fighting, no re-engage needed
                 };
 
                 if (enemy.userData.ranged) {
@@ -4031,17 +4509,83 @@
             }
         }
 
+        // Question gate for crystals — modeled on the Forge's question→answer-grid loop. Wrong
+        // answers don't consume the crystal (it stays interactable so the player can try again),
+        // matching how Brew/Forge already allow infinite re-attempts.
+        function openCrystalQuestion(crystal, statusMsg) {
+            const modal = document.getElementById('crystal-question-modal');
+            if (!modal) return;
+            const q = Curriculum.generateCrystalQuestion(GameState.player.grade);
+            GameState.currentQuestion = q;
+            document.getElementById('crystal-status').textContent = statusMsg || '';
+            document.getElementById('crystal-question').textContent = q.question;
+            const answersEl = document.getElementById('crystal-answers');
+            answersEl.innerHTML = '';
+            q.answers.forEach(ans => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-fantasy';
+                btn.textContent = ans;
+                btn.onclick = () => {
+                    if (ans === q.correctValue) {
+                        Sound.correct();
+                        closeModal('crystal-question-modal');
+                        collectCrystal(crystal);
+                    } else {
+                        Sound.wrong();
+                        openCrystalQuestion(crystal, 'Not quite — try again!');
+                    }
+                };
+                answersEl.appendChild(btn);
+            });
+            modal.style.display = 'block';
+        }
+
+        function openChestQuestion(chest, statusMsg) {
+            const modal = document.getElementById('chest-question-modal');
+            if (!modal) return;
+            const q = Curriculum.generateChestQuestion(GameState.player.grade);
+            GameState.currentQuestion = q;
+            document.getElementById('chest-q-status').textContent = statusMsg || '';
+            document.getElementById('chest-q-question').textContent = q.question;
+            const answersEl = document.getElementById('chest-q-answers');
+            answersEl.innerHTML = '';
+            q.answers.forEach(ans => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-fantasy';
+                btn.textContent = ans;
+                btn.onclick = () => {
+                    if (ans === q.correctValue) {
+                        Sound.correct();
+                        closeModal('chest-question-modal');
+                        openChest(chest);
+                    } else {
+                        Sound.wrong();
+                        openChestQuestion(chest, 'Not quite — try again!');
+                    }
+                };
+                answersEl.appendChild(btn);
+            });
+            modal.style.display = 'block';
+        }
+
         function collectCrystal(crystal) {
             crystal.userData.collected = true;
             crystal.visible = false;
             addXP(100);
             showFloatingText('+100 XP', '#00ffff');
+            const won = _rollIngredients(1);
+            _addIngredients(won);
+            const [name, qty] = Object.entries(won)[0];
+            showFloatingText(`🌿 Found ${qty}x ${name}`, '#88ff88');
+            updateHUD();
         }
 
         function openChest(chest) {
             chest.userData.opened = true;
             chest.visible = false;
             GameState.player.gold += 20;
+            addXP(30);
+            _addIngredients(_rollIngredients(2));
             Sound.chestOpen();
             let bonusHtml = '';
 
@@ -4064,7 +4608,7 @@
                 }
             }
 
-            document.getElementById('chest-contents').innerHTML = `<div style="font-size: 40px;">💰</div><div>+20 Gold</div>${bonusHtml}`;
+            document.getElementById('chest-contents').innerHTML = `<div style="font-size: 40px;">💰</div><div>+20 Gold, +30 XP</div><div style="font-size:12px; color:#88ff88; margin-top:4px;">🌿 Ingredients gathered</div>${bonusHtml}`;
             document.getElementById('chest-modal').style.display = 'block';
             updateHUD();
         }
@@ -4124,38 +4668,49 @@
         }
 
         function openPotionBrewing() {
-            const q = Curriculum.generatePotionQuestion(GameState.player.grade);
+            const statusEl = document.getElementById('potion-status');
+            const need = RECIPES.potion.ingredients;
+            const [needName, needQty] = Object.entries(need)[0];
+            const have = GameState.player.ingredients?.[needName] || 0;
+
+            if (have < needQty) {
+                document.getElementById('potion-question').textContent = '';
+                document.getElementById('ingredients-container').innerHTML = '';
+                statusEl.textContent = `You need ${needQty}x ${needName} to brew — you have ${have}. Find more in crystals and chests.`;
+                document.getElementById('potion-modal').style.display = 'block';
+                return;
+            }
+            statusEl.textContent = `Uses: ${needQty}x ${needName}`;
+
+            const q = Curriculum.generateBrewQuestion(GameState.player.grade);
             GameState.currentQuestion = q;
             document.getElementById('potion-question').textContent = q.question;
-            
+
             const container = document.getElementById('ingredients-container');
             container.innerHTML = '';
             q.answers.forEach((ans, idx) => {
                 const div = document.createElement('div');
                 div.className = 'ingredient';
                 div.innerHTML = `<div style="font-size: 24px;">${idx === 0 ? '✨' : '🌿'}</div><div>${ans}</div>`;
-                div.onclick = () => {
-                    document.querySelectorAll('.ingredient').forEach(el => el.classList.remove('selected'));
-                    div.classList.add('selected');
-                    GameState.selectedIngredient = idx;
-                };
+                div.onclick = () => brewPotion(ans, q);
                 container.appendChild(div);
             });
-            
+
             document.getElementById('potion-modal').style.display = 'block';
         }
 
-        function brewPotion() {
-            const selected = GameState.currentQuestion.answers[GameState.selectedIngredient];
-            if (selected === GameState.currentQuestion.correctValue) {
+        function brewPotion(ans, q) {
+            if (ans === q.correctValue) {
+                _consumeIngredients('potion');
                 GameState.player.potions++;
-                showFloatingText('Potion Created!', '#00ccff');
+                addXP(15);
+                showFloatingText('Potion Created! +15 XP', '#00ccff');
             } else {
                 GameState.player.mana = Math.max(0, GameState.player.mana - 5);
                 showFloatingText('Wrong ingredient!', '#ff4444');
             }
-            closeModal('potion-modal');
             updateHUD();
+            openPotionBrewing(); // re-render with updated ingredient count/next question
         }
 
         function handlePlayerDeath() {
@@ -4499,6 +5054,7 @@
             set('potions-count',  el => el.textContent = p.potions);
             set('scrolls-count',  el => el.textContent = p.scrolls);
             set('gold-count',     el => el.textContent = p.gold);
+            set('ingredients-total-count', el => el.textContent = Object.values(p.ingredients || {}).reduce((a, b) => a + b, 0));
             const worldCfg = DUNGEON_WORLDS.find(w => w.id === GameState.currentWorld) || DUNGEON_WORLDS[0];
             set('grade-display', el => el.innerHTML = `<span>${worldCfg.icon}</span><span>${worldCfg.name}</span>`);
             set('mute-toggle-btn', el => el.textContent = Sound.muted ? '🔇' : '🔊');
@@ -4618,6 +5174,152 @@
             openShop(); // re-render with updated gold/affordability
         }
 
+        // ─── FORGE ───────────────────────────────────────────────────────────────
+        // Forge has two craftable tracks sharing one modal — weapon tempering (existing) and
+        // armor tempering (new). _forgeMode picks which recipe/currency/tier-table openForge and
+        // attemptForge operate on, so neither needs its own duplicate modal.
+        function _setForgeMode(mode) {
+            GameState._forgeMode = mode;
+            openForge();
+        }
+
+        function openForge() {
+            const modal = document.getElementById('forge-modal');
+            if (!modal) return;
+            const mode = GameState._forgeMode || 'weapon';
+            const gear = GameState.player.gear || (GameState.player.gear = {});
+            if (!gear.weaponTempers) gear.weaponTempers = {};
+
+            document.getElementById('forge-tab-weapon').style.opacity = mode === 'weapon' ? '1' : '0.55';
+            document.getElementById('forge-tab-armor').style.opacity = mode === 'armor' ? '1' : '0.55';
+
+            const statusEl = document.getElementById('forge-status');
+            const answersEl = document.getElementById('forge-answers');
+            const questionEl = document.getElementById('forge-question');
+            const descEl = document.getElementById('forge-target-desc');
+
+            let recipeId, cost, currentLvl, maxLvl;
+            if (mode === 'armor') {
+                recipeId = 'armor';
+                cost = ARMOR_FORGE_COST;
+                currentLvl = gear.armorTier || 0;
+                maxLvl = ARMOR_MAX_TIER;
+                const tier = _armorTier(currentLvl);
+                descEl.innerHTML = `Temper your <span style="color:#ffcc88;">armor</span> — currently <span style="color:#ffcc88;">${tier.label}</span> (${Math.round((1 - tier.defMult) * 100)}% less damage taken)`;
+            } else {
+                recipeId = 'temper';
+                cost = FORGE_COST;
+                const opts = WEAPON_OPTIONS[GameState.player.class] || [];
+                const weapon = opts.find(o => o.id === gear.weaponId) || opts[0];
+                currentLvl = gear.weaponTempers[gear.weaponId] || 0;
+                maxLvl = FORGE_MAX_TEMPER;
+                descEl.innerHTML = `Temper your <span style="color:#ffcc88;">${weapon ? _weaponDisplayName(weapon.name, weapon.id) : 'weapon'}</span> — currently <span style="color:#ffcc88;">+${currentLvl * 2}%</span> damage`;
+            }
+
+            if (currentLvl >= maxLvl) {
+                questionEl.textContent = '';
+                answersEl.innerHTML = '';
+                statusEl.textContent = `Fully tempered! Can't be improved further.`;
+                modal.style.display = 'block';
+                return;
+            }
+            if (GameState.player.gold < cost) {
+                questionEl.textContent = '';
+                answersEl.innerHTML = '';
+                statusEl.textContent = `You need ${cost} gold to attempt a temper.`;
+                modal.style.display = 'block';
+                return;
+            }
+            const [needName, needQty] = Object.entries(RECIPES[recipeId].ingredients)[0];
+            const haveQty = GameState.player.ingredients?.[needName] || 0;
+            if (haveQty < needQty) {
+                questionEl.textContent = '';
+                answersEl.innerHTML = '';
+                statusEl.textContent = `You need ${needQty}x ${needName} (have ${haveQty}) — find more in crystals and chests.`;
+                modal.style.display = 'block';
+                return;
+            }
+
+            statusEl.textContent = `Cost: ${cost} gold + ${needQty}x ${needName} per attempt`;
+            const q = Curriculum.generateForgeQuestion(GameState.player.grade);
+            GameState.currentQuestion = q;
+            questionEl.textContent = q.question;
+
+            answersEl.innerHTML = '';
+            q.answers.forEach(ans => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-fantasy';
+                btn.textContent = ans;
+                btn.onclick = () => attemptForge(ans, q);
+                answersEl.appendChild(btn);
+            });
+
+            modal.style.display = 'block';
+        }
+
+        function attemptForge(ans, q) {
+            const mode = GameState._forgeMode || 'weapon';
+            const gear = GameState.player.gear;
+            const cost = mode === 'armor' ? ARMOR_FORGE_COST : FORGE_COST;
+            const recipeId = mode === 'armor' ? 'armor' : 'temper';
+            GameState.player.gold -= cost;
+            if (ans === q.correctValue) {
+                _consumeIngredients(recipeId);
+                addXP(15);
+                if (mode === 'armor') {
+                    gear.armorTier = Math.min(ARMOR_MAX_TIER, (gear.armorTier || 0) + 1);
+                    _applyArmorGlow();
+                    Sound.purchase();
+                    showFloatingText('🛡️ Tempered! Armor strengthened. +15 XP', '#66aaff');
+                } else {
+                    gear.weaponTempers[gear.weaponId] = (gear.weaponTempers[gear.weaponId] || 0) + 1;
+                    _applyWeaponTemperGlow();
+                    Sound.purchase();
+                    showFloatingText('🔨 Tempered! Weapon strengthened. +15 XP', '#ff8844');
+                }
+            } else {
+                Sound.wrong();
+                showFloatingText('The temper failed...', '#888');
+            }
+            updateHUD();
+            openForge(); // re-render with updated gold/temper/next question
+        }
+
+        // Training is the simplest activity in the game — no resource cost, no gating, just a
+        // question and an XP reward. Doesn't touch SPELL_LEVEL_UNLOCKS; abilities still unlock at
+        // their existing level thresholds, this is purely another way to earn XP toward them.
+        function openTraining() {
+            const modal = document.getElementById('training-modal');
+            if (!modal) return;
+            const q = Curriculum.generateTrainingQuestion(GameState.player.grade, GameState.player.class);
+            GameState.currentQuestion = q;
+            document.getElementById('training-status').textContent = '';
+            document.getElementById('training-question').textContent = q.question;
+            const answersEl = document.getElementById('training-answers');
+            answersEl.innerHTML = '';
+            q.answers.forEach(ans => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-fantasy';
+                btn.textContent = ans;
+                btn.onclick = () => attemptTraining(ans, q);
+                answersEl.appendChild(btn);
+            });
+            modal.style.display = 'block';
+        }
+
+        function attemptTraining(ans, q) {
+            if (ans === q.correctValue) {
+                addXP(20);
+                Sound.correct();
+                showFloatingText('🎯 Well trained! +20 XP', '#66cc66');
+            } else {
+                Sound.wrong();
+                showFloatingText('Not quite — no XP this time.', '#888');
+            }
+            updateHUD();
+            openTraining(); // re-render with a fresh question
+        }
+
         // ─── EQUIPMENT ───────────────────────────────────────────────────────────
         function openEquipment() {
             const modal = document.getElementById('equipment-modal');
@@ -4629,18 +5331,23 @@
             weaponContainer.innerHTML = '';
             (WEAPON_OPTIONS[className] || []).forEach(w => {
                 const isEquipped = gear.weaponId === w.id;
+                const temperLvl = gear.weaponTempers?.[w.id] || 0;
+                const tier = _weaponTemperTier(temperLvl);
+                const glowHex = '#' + tier.glowColor.toString(16).padStart(6, '0');
                 const row = document.createElement('div');
                 row.style.cssText = `
                     display:flex; align-items:center; justify-content:space-between; gap:10px;
                     background:rgba(255,255,255,0.08); border:1px solid ${isEquipped ? '#ffaa44' : '#553322'};
                     border-radius:8px; padding:10px 12px; text-align:left; cursor:${isEquipped ? 'default' : 'pointer'};
+                    ${tier.glowIntensity > 0 ? `box-shadow: 0 0 ${6 + tier.glowIntensity * 10}px ${glowHex};` : ''}
                 `;
                 row.innerHTML = `
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-size:22px;">${w.icon}</span>
                         <div>
-                            <div style="font-size:13px; font-weight:bold; color:#ffe0c0;">${w.name}</div>
+                            <div style="font-size:13px; font-weight:bold; color:#ffe0c0;">${_weaponDisplayName(w.name, w.id)}</div>
                             <div style="font-size:11px; color:#999;">${w.desc}</div>
+                            ${temperLvl > 0 ? `<div style="font-size:10px; color:${glowHex};">+${temperLvl * 2}% tempered</div>` : ''}
                         </div>
                     </div>
                     <span style="font-size:12px; color:${isEquipped ? '#88ff88' : '#cc8844'};">${isEquipped ? '✓ Equipped' : 'Equip'}</span>
@@ -4730,6 +5437,33 @@
                 skinSection.style.display = 'none';
             }
 
+            modal.style.display = 'block';
+        }
+
+        function openIngredients() {
+            const modal = document.getElementById('ingredients-modal');
+            if (!modal) return;
+            const list = document.getElementById('ingredients-list');
+            list.innerHTML = '';
+            const held = GameState.player.ingredients || {};
+            const names = Object.keys(held).filter(n => held[n] > 0).sort();
+            if (names.length === 0) {
+                list.innerHTML = `<p style="font-size:12px; color:#888;">Nothing gathered yet — crystals and chests have a chance to drop ingredients when you answer their question correctly.</p>`;
+            } else {
+                names.forEach(name => {
+                    const row = document.createElement('div');
+                    row.style.cssText = `
+                        display:flex; align-items:center; justify-content:space-between; gap:10px;
+                        background:rgba(255,255,255,0.08); border:1px solid #335533;
+                        border-radius:8px; padding:8px 12px;
+                    `;
+                    row.innerHTML = `
+                        <span style="font-size:13px; color:#cceecc;">🌿 ${name}</span>
+                        <span style="font-size:13px; color:#88ff88; font-weight:bold;">×${held[name]}</span>
+                    `;
+                    list.appendChild(row);
+                });
+            }
             modal.style.display = 'block';
         }
 
@@ -5076,11 +5810,17 @@
                 const cleared   = progress.cleared || false;
                 const runs      = progress.runCount || 0;
 
+                // World art is added one at a time (see `bgImage` on DUNGEON_WORLDS entries) —
+                // worlds without art yet just keep the original flat color-gradient card.
+                const cardBackground = world.bgImage
+                    ? `linear-gradient(160deg, ${world.color}55, ${world.lockColor}99), url('${world.bgImage}')`
+                    : (locked ? 'rgba(20,10,30,0.7)' : `linear-gradient(160deg, ${world.color}22, ${world.lockColor}44)`);
+
                 const card = document.createElement('div');
                 card.style.cssText = `
-                    background: ${locked
-                        ? 'rgba(20,10,30,0.7)'
-                        : `linear-gradient(160deg, ${world.color}22, ${world.lockColor}44)`};
+                    background: ${cardBackground};
+                    background-size: cover;
+                    background-position: center;
                     border: 2px solid ${locked ? '#333' : world.color};
                     border-radius: 14px; padding: 18px 16px; cursor: ${locked ? 'not-allowed' : 'pointer'};
                     opacity: ${locked ? 0.5 : 1};
