@@ -1451,6 +1451,20 @@
         }
         
         const DUNGEON_TILE_SIZE = 4;
+        // Floor tiles are placed one-per-grid-cell at DUNGEON_TILE_SIZE spacing, but the actual
+        // KayKit floor meshes aren't all 4×4 — measured every floor asset's real footprint (min/max
+        // of its POSITION accessor) and most "small"/dirt/wood variants are 2×2, one is 4×2, and
+        // extralarge_grates is 8×8. Placed at native size, the undersized ones left an L-shaped gap
+        // of bare void in the corner of their cell (or overlapped neighbors, for the oversized one)
+        // — this map lets the floor-placement loop scale each one to exactly fill its cell instead.
+        // Anything not listed is assumed to already be 4×4 (no scaling applied).
+        const FLOOR_FOOTPRINT = {
+            floor_dirt_small_weeds: [2, 2], floor_tile_small: [2, 2], floor_tile_small_broken_A: [2, 2],
+            floor_tile_small_broken_B: [2, 2], floor_tile_small_decorated: [2, 2], floor_tile_small_weeds_A: [2, 2],
+            floor_wood_small: [2, 2], floor_wood_small_dark: [2, 2],
+            floor_tile_grate: [4, 2],
+            floor_tile_extralarge_grates: [8, 8]
+        };
         const PLAYER_COLLISION_RADIUS = 0.45;
         const WALL_COLLISION_BUFFER = 0.2;
         const WALL_COLLIDER_THICKNESS = 0.45;
@@ -2487,20 +2501,22 @@
                 // Track placed wall world positions to avoid duplicates
                 const placedWallKeys = new Set();
 
+                // Doorways open naturally here: carveLine always starts from a room's own center
+                // tile and steps one grid cell at a time along a single axis, so a room and the
+                // corridor leading out of it are always immediately adjacent — the "neighbour is
+                // walkable" check below already leaves that connection open with no wall. There
+                // used to be a second check here that also skipped the wall whenever the tile
+                // *two* steps out (in a cardinal direction) was any corridor tile, meant to open a
+                // gap toward it — but no legitimate connection ever needs that (per the above, it's
+                // always 1 step, never 2), so the only thing it actually did was fire on
+                // *unrelated* corridors elsewhere in the maze that happened to land exactly 2 tiles
+                // away in a straight line, opening a wall onto a gap that was never carved as floor
+                // — a hole in the map the player could walk through into the void beyond it.
                 tileMap.forEach((tile) => {
                     const wallTheme = tile.theme || corridorTheme;
                     directions.forEach((direction) => {
                         // No wall where the neighbour is walkable
                         if (tileMap.has(tileKey(tile.gx + direction.dx, tile.gz + direction.dz))) return;
-
-                        // Leave a gap (open doorway) where a corridor directly connects
-                        // through this wall face — i.e. the tile two steps out is a corridor.
-                        const throughKey = tileKey(
-                            tile.gx + 2 * direction.dx,
-                            tile.gz + 2 * direction.dz
-                        );
-                        const throughTile = tileMap.get(throughKey);
-                        if (throughTile && throughTile.kind === 'corridor') return;
 
                         const wx = tile.x + direction.ox * DUNGEON_TILE_SIZE;
                         const wz = tile.z + direction.oz * DUNGEON_TILE_SIZE;
@@ -2508,11 +2524,19 @@
                         if (placedWallKeys.has(segKey)) return;
                         placedWallKeys.add(segKey);
 
+                        // Every wall tile in a room shares one theme, so using the theme's
+                        // decorative variant (cracked/broken/window/etc.) on every segment rings
+                        // the whole room in identical panels — window variants especially read as
+                        // a repeating row of holes. Use it as an occasional accent instead.
+                        const wallAsset = (wallTheme.wall !== 'wall' && Math.random() > 0.25)
+                            ? 'wall' : wallTheme.wall;
+
                         wallSegments.push({
                             x: wx,
                             z: wz,
                             rotation: direction.rotation,
-                            theme: wallTheme
+                            theme: wallTheme,
+                            wallAsset
                         });
                     });
                 });
@@ -2575,13 +2599,18 @@
             currentDungeonLayout.walkableTiles.forEach((tile) => {
                 loadDungeonTile('floor', tile.theme.floor, (floorModel) => {
                     floorModel.position.set(tile.x, 0, tile.z);
+                    const footprint = FLOOR_FOOTPRINT[tile.theme.floor];
+                    if (footprint) {
+                        floorModel.scale.x *= DUNGEON_TILE_SIZE / footprint[0];
+                        floorModel.scale.z *= DUNGEON_TILE_SIZE / footprint[1];
+                    }
                     floorModel.userData.isDungeonTile = true;
                     scene.add(floorModel);
                 });
             });
 
             currentDungeonLayout.wallSegments.forEach((wallSegment) => {
-                loadDungeonTile('wall', wallSegment.theme.wall, (wallModel) => {
+                loadDungeonTile('wall', wallSegment.wallAsset, (wallModel) => {
                     wallModel.position.set(wallSegment.x, 0, wallSegment.z);
                     wallModel.rotation.y = wallSegment.rotation;
                     wallModel.userData.isDungeonTile = true;
@@ -2790,16 +2819,21 @@
             }, 0);
         }
 
-        function buildSpawnCandidates(weightKey, allowedKinds, requireClearance) {
+        // clearance: 'strict' (room needs all 4 cardinal neighbors walkable, corridor needs ≥2 —
+        // i.e. fully interior, never a doorway or pinch-point), 'relaxed' (room only needs ≥3 of 4
+        // — one open side is tolerated, still never the single-tile approach to a room), or 'none'
+        // (no filtering at all — can land anywhere, including a doorway tile).
+        function buildSpawnCandidates(weightKey, allowedKinds, clearance) {
             const walkableTileKeys = currentDungeonLayout.walkableTileKeys
                 || new Set(currentDungeonLayout.walkableTiles.map((tile) => `${tile.gx},${tile.gz}`));
 
             return currentDungeonLayout.walkableTiles
                 .filter((tile) => allowedKinds.includes(tile.kind))
                 .filter((tile) => {
-                    if (!requireClearance) return true;
+                    if (clearance === 'none') return true;
                     const neighborCount = getCardinalWalkableNeighborCount(tile, walkableTileKeys);
-                    return tile.kind === 'corridor' ? neighborCount >= 2 : neighborCount === 4;
+                    if (tile.kind === 'corridor') return neighborCount >= 2;
+                    return clearance === 'relaxed' ? neighborCount >= 3 : neighborCount === 4;
                 })
                 .map((tile) => {
                     const roomWeight = DUNGEON_ROOM_TYPES[tile.roomType]?.[weightKey] || 0;
@@ -2815,9 +2849,12 @@
         function getDungeonSpawnTiles(count, weightKey, minDistance = 8, allowedKinds = ['room']) {
             if (!currentDungeonLayout) return [];
 
-            const candidates = buildSpawnCandidates(weightKey, allowedKinds, true);
+            const candidates = buildSpawnCandidates(weightKey, allowedKinds, 'strict');
             if (candidates.length === 0) {
-                candidates.push(...buildSpawnCandidates(weightKey, allowedKinds, false));
+                candidates.push(...buildSpawnCandidates(weightKey, allowedKinds, 'relaxed'));
+            }
+            if (candidates.length === 0) {
+                candidates.push(...buildSpawnCandidates(weightKey, allowedKinds, 'none'));
             }
 
             const selected = [];
@@ -2987,13 +3024,19 @@
         // Monster configs — model paths follow KayKit Monsters pack naming.
         // Place GLB files in /public/models/monsters/<name>/<Name>.glb
         // Use Rig_Large_* animation packs for Ogre/Werewolf, Rig_Medium_* for others.
+        // attackAnim: a weapon-appropriate clip per monster, same idea as ATTACK_TYPES.playerAnims
+        // for the player — Rig_Medium and Rig_Large use entirely different clip names (verified by
+        // dumping each pack's actual animation list), so this is set per-monster rather than
+        // guessed from a single shared fallback chain. Ranged monsters (Skeleton Mage, Necromancer)
+        // get a Ranged_Magic_* casting clip instead of a melee swing, matching that they fire a
+        // projectile, not a weapon hit.
         const MONSTER_CONFIGS = [
-            { name: 'Skeleton Minion',  glb: '/models/monsters/skeleton_minion/Skeleton_Minion.glb',   weapon: '/models/monsters/weapons/Skeleton_Blade.gltf',    color: 0xd8c8a0, accent: 0xaaaaff, scale: 0.85, hp: 20,  xp: 25,  animRig: 'Medium', spawnAnim: 'Skeletons_Spawn_Ground' },
-            { name: 'Skeleton Rogue',   glb: '/models/monsters/skeleton_rogue/Skeleton_Rogue.glb',     weapon: '/models/monsters/weapons/Skeleton_Dagger.gltf',   color: 0xc8b890, accent: 0x88ffcc, scale: 0.95, hp: 30,  xp: 40,  animRig: 'Medium', spawnAnim: 'Skeletons_Awaken_Floor' },
-            { name: 'Skeleton Warrior', glb: '/models/monsters/skeleton_warrior/Skeleton_Warrior.glb', weapon: '/models/monsters/weapons/Skeleton_Axe.gltf',      color: 0xe0d0b0, accent: 0xffcc44, scale: 1.05, hp: 45,  xp: 55,  animRig: 'Medium', spawnAnim: 'Skeletons_Awaken_Floor_Long' },
-            { name: 'Skeleton Mage',    glb: '/models/monsters/skeleton_mage/Skeleton_Mage.glb',       weapon: '/models/monsters/weapons/Skeleton_Staff.gltf',    color: 0xb8a8d8, accent: 0xcc88ff, scale: 1.0,  hp: 35,  xp: 60,  animRig: 'Medium', ranged: true, projectileColor: 0x9955ff, spawnAnim: 'Skeletons_Spawn_Ground' },
-            { name: 'Skeleton Golem',   glb: '/models/monsters/skeleton_golem/Skeleton_Golem.glb',     weapon: '/models/monsters/weapons/Skeleton_Golem_Axe.gltf',color: 0x889988, accent: 0x99ddff, scale: 1.4,  hp: 80,  xp: 90,  animRig: 'Large'  },
-            { name: 'Necromancer',      glb: '/models/monsters/necromancer/Necromancer.glb',           weapon: '/models/monsters/weapons/Skeleton_Scythe.gltf',   color: 0x442266, accent: 0xff44ff, scale: 1.1,  hp: 120, xp: 150, animRig: 'Medium', ranged: true, projectileColor: 0x44ff88, spawnAnim: 'Skeletons_Awaken_Standing' }
+            { name: 'Skeleton Minion',  glb: '/models/monsters/skeleton_minion/Skeleton_Minion.glb',   weapon: '/models/monsters/weapons/Skeleton_Blade.gltf',    color: 0xd8c8a0, accent: 0xaaaaff, scale: 0.85, hp: 20,  xp: 25,  animRig: 'Medium', spawnAnim: 'Skeletons_Spawn_Ground',   attackAnim: 'Melee_1H_Attack_Slice_Diagonal' },
+            { name: 'Skeleton Rogue',   glb: '/models/monsters/skeleton_rogue/Skeleton_Rogue.glb',     weapon: '/models/monsters/weapons/Skeleton_Dagger.gltf',   color: 0xc8b890, accent: 0x88ffcc, scale: 0.95, hp: 30,  xp: 40,  animRig: 'Medium', spawnAnim: 'Skeletons_Awaken_Floor',    attackAnim: 'Melee_1H_Attack_Stab' },
+            { name: 'Skeleton Warrior', glb: '/models/monsters/skeleton_warrior/Skeleton_Warrior.glb', weapon: '/models/monsters/weapons/Skeleton_Axe.gltf',      color: 0xe0d0b0, accent: 0xffcc44, scale: 1.05, hp: 45,  xp: 55,  animRig: 'Medium', spawnAnim: 'Skeletons_Awaken_Floor_Long', attackAnim: 'Melee_1H_Attack_Chop' },
+            { name: 'Skeleton Mage',    glb: '/models/monsters/skeleton_mage/Skeleton_Mage.glb',       weapon: '/models/monsters/weapons/Skeleton_Staff.gltf',    color: 0xb8a8d8, accent: 0xcc88ff, scale: 1.0,  hp: 35,  xp: 60,  animRig: 'Medium', ranged: true, projectileColor: 0x9955ff, spawnAnim: 'Skeletons_Spawn_Ground', attackAnim: 'Ranged_Magic_Shoot' },
+            { name: 'Skeleton Golem',   glb: '/models/monsters/skeleton_golem/Skeleton_Golem.glb',     weapon: '/models/monsters/weapons/Skeleton_Golem_Axe.gltf',color: 0x889988, accent: 0x99ddff, scale: 1.4,  hp: 80,  xp: 90,  animRig: 'Large', attackAnim: 'Melee_2H_Slam', idleAnim: 'Melee_2H_Idle' },
+            { name: 'Necromancer',      glb: '/models/monsters/necromancer/Necromancer.glb',           weapon: '/models/monsters/weapons/Skeleton_Scythe.gltf',   color: 0x442266, accent: 0xff44ff, scale: 1.1,  hp: 120, xp: 150, animRig: 'Medium', ranged: true, projectileColor: 0x44ff88, spawnAnim: 'Skeletons_Awaken_Standing', attackAnim: 'Ranged_Magic_Spellcasting_Long' }
         ];
 
         // Per-archetype combat modifiers so monster "classes" hit differently too, mirroring the
@@ -3153,7 +3196,7 @@
                 clone.scale.setScalar(s);
                 clone.position.y = -box.min.y * clone.scale.y;
                 group.add(clone);
-                _attachMonsterAnimations(group, clone, cfg.animRig, cfg.spawnAnim);
+                _attachMonsterAnimations(group, clone, cfg.animRig, cfg.spawnAnim, cfg.attackAnim, cfg.idleAnim);
                 _attachWeaponToMonster(clone, cfg.weapon, s);
             } else {
                 // Start async load; use fallback immediately so enemy is visible now
@@ -3175,7 +3218,7 @@
                         model.position.y = -box.min.y * model.scale.y;
                         model.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
                         group.add(model);
-                        _attachMonsterAnimations(group, model, cfg.animRig, cfg.spawnAnim);
+                        _attachMonsterAnimations(group, model, cfg.animRig, cfg.spawnAnim, cfg.attackAnim, cfg.idleAnim);
                         _attachWeaponToMonster(model, cfg.weapon, s);
                     },
                     undefined,
@@ -3220,7 +3263,7 @@
             return promise;
         }
 
-        function _attachMonsterAnimations(group, model, rigSize, preferredSpawnAnim) {
+        function _attachMonsterAnimations(group, model, rigSize, preferredSpawnAnim, preferredAttackAnim, preferredIdleAnim) {
             const mixer = new THREE.AnimationMixer(model);
             group.userData._mixer = mixer;
 
@@ -3229,7 +3272,10 @@
                 `/models/animations/Rig_${rigSize}_MovementBasic.glb`,
                 `/models/animations/Rig_${rigSize}_CombatMelee.glb`,
             ];
-            if (rigSize === 'Medium') packs.push('/models/animations/Rig_Medium_Special.glb');
+            // CombatRanged only exists as a Medium pack — it's what supplies the Ranged_Magic_*
+            // casting clips the ranged monsters (Skeleton Mage, Necromancer) need instead of a
+            // melee swing; the only Large monster (Golem) is melee-only, so it never needs this.
+            if (rigSize === 'Medium') packs.push('/models/animations/Rig_Medium_Special.glb', '/models/animations/Rig_Medium_CombatRanged.glb');
 
             Promise.all(packs.map(_loadAnimPack)).then(results => {
                 if (!group.userData.active) return;
@@ -3238,11 +3284,16 @@
                 const pick = (...names) => { for (const n of names) if (clips[n]) return clips[n]; return null; };
 
                 const walkClip   = pick('Skeletons_Walking', 'Walking_A');
-                const attackClip = pick('Melee_1H_Attack_Slice_Diagonal', 'Melee_1H_Attack_Chop', 'Melee_1H_Slash', 'Melee_2H_Attack_Chop');
+                // Per-monster preferred clip (set in MONSTER_CONFIGS to match its weapon and rig)
+                // first, falling back to a generic chain covering both Medium and Large naming.
+                const attackClip = pick(preferredAttackAnim, 'Melee_1H_Attack_Slice_Diagonal', 'Melee_1H_Slash', 'Melee_1H_Attack_Chop', 'Melee_2H_Attack_Chop', 'Melee_2H_Attack');
                 const hitClip    = pick('Hit_A');
                 const tauntClip  = pick('Skeletons_Taunt', 'Interact');
                 const deathClip  = pick('Skeletons_Death', 'Death_A');
-                const idleClip   = pick('Skeletons_Idle', 'Idle_A');
+                // Golem prefers Melee_2H_Idle (hefting its axe) over the generic stand-around
+                // idle — Rig_Large has no Skeletons_Idle for that to fall back to anyway, so this
+                // only ever overrides the true fallback (Idle_A) for the monster it's set on.
+                const idleClip   = pick(preferredIdleAnim, 'Skeletons_Idle', 'Idle_A');
                 // Per-monster preferred rise animation (bone-pile assembly vs. floor rise vs.
                 // already-standing) for spawn variety, falling back to the old defaults.
                 const spawnClip  = pick(preferredSpawnAnim, 'Skeletons_Awaken_Standing', 'Skeletons_Spawn_Ground', 'Spawn_Ground');
@@ -3444,10 +3495,17 @@
             const bannerAssets = BANNER_STYLE_SUFFIXES.map(suffix => ['prop', `banner/banner${suffix}_${bannerColor}`, 0]);
             const propAssets = [...NON_BANNER_PROPS, ...bannerAssets];
 
-            // Use ~15% of eligible interior tiles, capped to keep performance reasonable
-            const candidates = shuffleArray(currentDungeonLayout.propSpawnTiles);
+            // Use ~15% of eligible interior tiles, capped to keep performance reasonable. Skip
+            // anything already reserved by placeCrystals/placeEnemies/placeChests (or the player's
+            // own start tile, which seeds reservedSpawnKeys) — this used to be picked completely
+            // independently of that shared reservation set, so a barrel or banner could land right
+            // on top of a chest, a crystal, an enemy, or the player's own spawn point.
+            const reserved = currentDungeonLayout.reservedSpawnKeys;
+            const candidates = shuffleArray(currentDungeonLayout.propSpawnTiles)
+                .filter((tile) => !reserved.has(tileKey(tile.gx, tile.gz)));
             const propCount = Math.min(Math.floor(candidates.length * 0.15), 20);
             const selectedTiles = candidates.slice(0, propCount);
+            selectedTiles.forEach((tile) => reserved.add(tileKey(tile.gx, tile.gz)));
 
             selectedTiles.forEach((tile) => {
                 // 50% chance to pull from the room's themed furniture set (if it has one) instead
