@@ -2587,6 +2587,17 @@
                 };
             }
 
+            _clearDungeonScene();
+
+            const layout = createDungeonLayout();
+            console.log(`📍 Generated ${layout.rooms.length} rooms and ${layout.corridors.length} corridors`);
+            _renderDungeonLayout(layout);
+        }
+
+        // Removes every scene object the previous dungeon (procedural or hand-authored) added,
+        // and resets the placement arrays — shared teardown so buildWorld() and
+        // loadHandDesignedLevel() don't each need their own copy.
+        function _clearDungeonScene() {
             const toRemove = [];
             scene.children.forEach((child) => {
                 if (child === playerContainer || child.isLight) return;
@@ -2608,11 +2619,15 @@
             crystals = [];
             obstacles = [];
             torches = [];
+        }
 
-            currentDungeonLayout = createDungeonLayout();
+        // Places floor/wall geometry and spawns for a layout object (whatever produced it —
+        // the BSP generator or a parsed Tiled map) and starts the player at its startPosition.
+        // `markers`, when given, are explicit {x,z,gx,gz} tile lists for a hand-authored level;
+        // omit to fall back to the normal random weighted spawn selection.
+        function _renderDungeonLayout(layout, markers) {
+            currentDungeonLayout = layout;
             window.currentDungeonLayout = currentDungeonLayout;
-
-            console.log(`📍 Generated ${currentDungeonLayout.rooms.length} rooms and ${currentDungeonLayout.corridors.length} corridors`);
 
             currentDungeonLayout.walkableTiles.forEach((tile) => {
                 loadDungeonTile('floor', tile.theme.floor, (floorModel) => {
@@ -2644,21 +2659,164 @@
                 });
             });
 
-
             if (playerContainer) {
                 playerContainer.position.set(currentDungeonLayout.startPosition.x, 0, currentDungeonLayout.startPosition.z);
                 GameState.player.x = currentDungeonLayout.startPosition.x;
                 GameState.player.z = currentDungeonLayout.startPosition.z;
             }
 
-            placeCrystals();
-            placeEnemies();
-            placeChests();
+            placeCrystals(markers?.crystals);
+            placeEnemies(markers?.enemies);
+            placeChests(markers?.chests);
             placeProps();
             placeTorches();
             console.log('✓ Dungeon maze complete!');
         }
-        
+
+        // ─── HAND-AUTHORED (TILED) LEVELS ──────────────────────────────────────────
+        // Parses a Tiled .tmx export (XML — read directly, no JSON re-export needed) into the
+        // same layout shape createDungeonLayout() produces, so it can go through the exact same
+        // _renderDungeonLayout() pipeline as a procedural dungeon. Every tile is tagged
+        // kind:'room' uniformly (hand-drawn maps don't have the BSP's room/corridor distinction),
+        // and uses the current world's first theme flatly rather than per-room variety.
+        function parseTiledLevel(tmxText) {
+            const doc = new DOMParser().parseFromString(tmxText, 'text/xml');
+            const mapEl = doc.querySelector('map');
+            const tileWidth = parseInt(mapEl.getAttribute('tilewidth'), 10);
+            const tileHeight = parseInt(mapEl.getAttribute('tileheight'), 10);
+            const mapWidth = parseInt(mapEl.getAttribute('width'), 10);
+            const mapHeight = parseInt(mapEl.getAttribute('height'), 10);
+
+            const grid = doc.querySelector('layer > data').textContent
+                .trim().split(',').map((v) => parseInt(v.trim(), 10) || 0);
+
+            const worldCfg = DUNGEON_WORLDS.find(w => w.id === GameState.currentWorld) || DUNGEON_WORLDS[0];
+            const theme = worldCfg.roomThemes[0];
+            const corridorTheme = { floor: worldCfg.corridorFloor, wall: 'wall', name: 'Corridor' };
+            const directions = [
+                { dx: 0, dz: -1, ox: 0, oz: -0.5, rotation: 0 },
+                { dx: 0, dz: 1, ox: 0, oz: 0.5, rotation: Math.PI },
+                { dx: -1, dz: 0, ox: -0.5, oz: 0, rotation: -Math.PI / 2 },
+                { dx: 1, dz: 0, ox: 0.5, oz: 0, rotation: Math.PI / 2 }
+            ];
+
+            const tileMap = new Map();
+            for (let row = 0; row < mapHeight; row++) {
+                for (let col = 0; col < mapWidth; col++) {
+                    if (!grid[row * mapWidth + col]) continue;
+                    const gx = col, gz = row;
+                    tileMap.set(tileKey(gx, gz), {
+                        gx, gz, x: gx * DUNGEON_TILE_SIZE, z: gz * DUNGEON_TILE_SIZE,
+                        kind: 'room', theme, roomType: 'normal'
+                    });
+                }
+            }
+
+            const wallSegments = [];
+            const placedWallKeys = new Set();
+            tileMap.forEach((tile) => {
+                directions.forEach((direction) => {
+                    if (tileMap.has(tileKey(tile.gx + direction.dx, tile.gz + direction.dz))) return;
+                    const wx = tile.x + direction.ox * DUNGEON_TILE_SIZE;
+                    const wz = tile.z + direction.oz * DUNGEON_TILE_SIZE;
+                    const segKey = `${wx.toFixed(3)},${wz.toFixed(3)}`;
+                    if (placedWallKeys.has(segKey)) return;
+                    placedWallKeys.add(segKey);
+                    wallSegments.push({ x: wx, z: wz, rotation: direction.rotation, theme, wallAsset: theme.wall });
+                });
+            });
+
+            const walkableKeys = new Set(tileMap.keys());
+            const propSpawnTiles = [];
+            tileMap.forEach((tile) => {
+                const allNeighborsWalkable = directions.every((d) =>
+                    walkableKeys.has(tileKey(tile.gx + d.dx, tile.gz + d.dz))
+                );
+                if (allNeighborsWalkable) propSpawnTiles.push(tile);
+            });
+
+            const markerLists = { start: null, chests: [], crystals: [], enemies: [], stairsDown: [], stairsUp: [], props: [] };
+            doc.querySelectorAll('objectgroup object').forEach((objEl) => {
+                const name = objEl.getAttribute('name') || objEl.getAttribute('type') || objEl.getAttribute('class');
+                const px = parseFloat(objEl.getAttribute('x'));
+                const py = parseFloat(objEl.getAttribute('y'));
+                const gx = Math.floor(px / tileWidth);
+                const gz = Math.floor(py / tileHeight);
+                const marker = { gx, gz, x: gx * DUNGEON_TILE_SIZE, z: gz * DUNGEON_TILE_SIZE };
+                if (name === 'start') markerLists.start = marker;
+                else if (name === 'chest') markerLists.chests.push(marker);
+                else if (name === 'crystal') markerLists.crystals.push(marker);
+                else if (name === 'enemy') markerLists.enemies.push(marker);
+                else if (name === 'stairs_down') markerLists.stairsDown.push(marker);
+                else if (name === 'stairs_up') markerLists.stairsUp.push(marker);
+                else {
+                    // Anything else is a literal KayKit asset placement request — the object's
+                    // Name IS the loadDungeonTile asset path (e.g. "barrel/barrel_large"), so any
+                    // prop/pillar/column/rubble in the pack can be hand-placed without new code.
+                    // Optionally prefix with "type:" for a non-prop folder, e.g. "pillar:pillar_decorated".
+                    const colonIdx = name.indexOf(':');
+                    const maybeType = colonIdx > -1 ? name.slice(0, colonIdx) : null;
+                    const isTyped = maybeType && Object.prototype.hasOwnProperty.call(DUNGEON_FOLDER_OVERRIDES, maybeType);
+                    markerLists.props.push({
+                        ...marker,
+                        assetType: isTyped ? maybeType : 'prop',
+                        assetName: isTyped ? name.slice(colonIdx + 1) : name
+                    });
+                }
+            });
+
+            const startTile = markerLists.start || tileMap.values().next().value || { gx: 0, gz: 0 };
+            const startPosition = { x: startTile.gx * DUNGEON_TILE_SIZE, z: startTile.gz * DUNGEON_TILE_SIZE };
+
+            const layout = {
+                rooms: [],
+                corridors: [],
+                walkableTiles: Array.from(tileMap.values()),
+                walkableTileKeys: walkableKeys,
+                wallSegments,
+                propSpawnTiles,
+                entranceTileKeys: new Set(),
+                startPosition,
+                reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
+            };
+
+            return {
+                layout,
+                markers: {
+                    chests: markerLists.chests,
+                    crystals: markerLists.crystals,
+                    enemies: markerLists.enemies,
+                    props: markerLists.props
+                }
+            };
+        }
+
+        // Places props that were requested by exact asset name on a hand-authored map's object
+        // layer (see the else-branch in parseTiledLevel) — a straight passthrough to
+        // loadDungeonTile at each marker's world position, no random selection involved.
+        function placeExplicitProps(propMarkers) {
+            (propMarkers || []).forEach((p) => {
+                loadDungeonTile(p.assetType, p.assetName, (model) => {
+                    model.position.set(p.x, 0, p.z);
+                    model.userData.isDungeonTile = true;
+                    model.userData.tileType = 'prop';
+                    scene.add(model);
+                });
+            });
+        }
+
+        async function loadHandDesignedLevel(path) {
+            const res = await fetch(path);
+            const tmxText = await res.text();
+            const { layout, markers } = parseTiledLevel(tmxText);
+
+            _clearDungeonScene();
+            console.log(`📍 Loaded hand-designed level from ${path}: ${layout.walkableTiles.length} tiles`);
+            _renderDungeonLayout(layout, markers);
+            placeExplicitProps(markers.props);
+        }
+        window.loadHandDesignedLevel = loadHandDesignedLevel;
+
         // Helper to load dungeon tiles with caching.
         // The first request for a given path loads the GLTF and stores the template.
         // Subsequent requests – including those already in-flight – receive clones of
@@ -2813,8 +2971,9 @@
             return group;
         }
 
-        function placeCrystals() {
-            const crystalsToPlace = getDungeonSpawnTiles(6, 'crystalWeight', 10, ['room', 'corridor']);
+        function placeCrystals(explicitTiles) {
+            const crystalsToPlace = explicitTiles || getDungeonSpawnTiles(6, 'crystalWeight', 10, ['room', 'corridor']);
+            if (explicitTiles) explicitTiles.forEach((tile) => currentDungeonLayout.reservedSpawnKeys.add(tileKey(tile.gx, tile.gz)));
             crystalsToPlace.forEach((tile, i) => {
                 const crystal = createCrystalMesh(0x00ffff);
                 crystal.position.set(tile.x, 1.5, tile.z);
@@ -3392,7 +3551,7 @@
             enemy.userData._hpTex.needsUpdate = true;
         }
 
-        function placeEnemies() {
+        function placeEnemies(explicitTiles) {
             // Weight: common enemies appear more often; Necromancer is rare boss
             const weightedPool = [
                 ...Array(4).fill(MONSTER_CONFIGS[0]),  // Skeleton Minion — common
@@ -3402,15 +3561,17 @@
                 ...Array(2).fill(MONSTER_CONFIGS[4]),  // Skeleton Golem
                 ...Array(1).fill(MONSTER_CONFIGS[5])   // Necromancer — rare
             ];
-            const spawnTiles = getDungeonSpawnTiles(6, 'enemyWeight', 12);
+            const spawnTiles = explicitTiles || getDungeonSpawnTiles(6, 'enemyWeight', 12);
+            if (explicitTiles) explicitTiles.forEach((tile) => currentDungeonLayout.reservedSpawnKeys.add(tileKey(tile.gx, tile.gz)));
             spawnTiles.forEach((tile) => {
                 const cfg = weightedPool[Math.floor(Math.random() * weightedPool.length)];
                 spawnEnemy(cfg, tile);
             });
         }
 
-        function placeChests() {
-            const chestTiles = getDungeonSpawnTiles(4, 'chestWeight', 10);
+        function placeChests(explicitTiles) {
+            const chestTiles = explicitTiles || getDungeonSpawnTiles(4, 'chestWeight', 10);
+            if (explicitTiles) explicitTiles.forEach((tile) => currentDungeonLayout.reservedSpawnKeys.add(tileKey(tile.gx, tile.gz)));
 
             chestTiles.forEach((tile) => {
                 const group = new THREE.Group();
