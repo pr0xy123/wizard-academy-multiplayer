@@ -2541,12 +2541,29 @@
                     });
                 });
 
+                // A tile with a neighbour of a *different* kind (room next to corridor) sits
+                // right on the threshold into a room — the room-side lip of a doorway, or the
+                // corridor's last step before it. A tile there can still have all 4 cardinal
+                // neighbours walkable (the doorway itself, plus open room floor), so the plain
+                // neighbour-count checks below don't catch it — an item placed there sits
+                // directly in, or right at, the only way in or out. Excluded from every
+                // placement pool (props here, and spawn candidates in buildSpawnCandidates).
+                const walkableKeys = new Set(tileMap.keys());
+                const entranceTileKeys = new Set();
+                tileMap.forEach((tile) => {
+                    const isEntrance = directions.some((d) => {
+                        const neighbor = tileMap.get(tileKey(tile.gx + d.dx, tile.gz + d.dz));
+                        return neighbor && neighbor.kind !== tile.kind;
+                    });
+                    if (isEntrance) entranceTileKeys.add(tileKey(tile.gx, tile.gz));
+                });
+
                 // Prop spawn candidates: interior room tiles with 4 walkable neighbours
                 // (tiles fully surrounded by other walkable tiles make safe prop spots).
-                const walkableKeys = new Set(tileMap.keys());
                 const propSpawnTiles = [];
                 tileMap.forEach((tile) => {
                     if (tile.kind !== 'room') return;
+                    if (entranceTileKeys.has(tileKey(tile.gx, tile.gz))) return;
                     const allNeighborsWalkable = directions.every((d) =>
                         walkableKeys.has(tileKey(tile.gx + d.dx, tile.gz + d.dz))
                     );
@@ -2564,6 +2581,7 @@
                     walkableTileKeys: new Set(tileMap.keys()),
                     wallSegments,
                     propSpawnTiles,
+                    entranceTileKeys,
                     startPosition,
                     reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
                 };
@@ -2823,14 +2841,19 @@
         // i.e. fully interior, never a doorway or pinch-point), 'relaxed' (room only needs ≥3 of 4
         // — one open side is tolerated, still never the single-tile approach to a room), or 'none'
         // (no filtering at all — can land anywhere, including a doorway tile).
+        // 'strict'/'relaxed' also always exclude entranceTileKeys (room/corridor threshold
+        // tiles) — a neighbor-count check alone can't see those, since a doorway tile can have
+        // all 4 neighbors walkable and still be the only way into a room.
         function buildSpawnCandidates(weightKey, allowedKinds, clearance) {
             const walkableTileKeys = currentDungeonLayout.walkableTileKeys
                 || new Set(currentDungeonLayout.walkableTiles.map((tile) => `${tile.gx},${tile.gz}`));
+            const entranceTileKeys = currentDungeonLayout.entranceTileKeys || new Set();
 
             return currentDungeonLayout.walkableTiles
                 .filter((tile) => allowedKinds.includes(tile.kind))
                 .filter((tile) => {
                     if (clearance === 'none') return true;
+                    if (entranceTileKeys.has(tileKey(tile.gx, tile.gz))) return false;
                     const neighborCount = getCardinalWalkableNeighborCount(tile, walkableTileKeys);
                     if (tile.kind === 'corridor') return neighborCount >= 2;
                     return clearance === 'relaxed' ? neighborCount >= 3 : neighborCount === 4;
