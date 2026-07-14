@@ -2691,8 +2691,12 @@
                 .trim().split(',').map((v) => parseInt(v.trim(), 10) || 0);
 
             const worldCfg = DUNGEON_WORLDS.find(w => w.id === GameState.currentWorld) || DUNGEON_WORLDS[0];
-            const theme = worldCfg.roomThemes[0];
             const corridorTheme = { floor: worldCfg.corridorFloor, wall: 'wall', name: 'Corridor' };
+            // Tile id N in dungeon-tileset.png/dungeon.tsx is worldCfg.roomThemes[N], in the same
+            // order they're declared — the tileset has one tile per theme plus a trailing
+            // Corridor tile, so the painted tile choice carries the same floor+wall pairing (and
+            // room-vs-corridor kind) the procedural generator would have picked for a room.
+            const TILE_ID_THEMES = [...worldCfg.roomThemes, corridorTheme];
             const directions = [
                 { dx: 0, dz: -1, ox: 0, oz: -0.5, rotation: 0 },
                 { dx: 0, dz: 1, ox: 0, oz: 0.5, rotation: Math.PI },
@@ -2703,11 +2707,14 @@
             const tileMap = new Map();
             for (let row = 0; row < mapHeight; row++) {
                 for (let col = 0; col < mapWidth; col++) {
-                    if (!grid[row * mapWidth + col]) continue;
+                    const gid = grid[row * mapWidth + col];
+                    if (!gid) continue;
+                    const localId = gid - 1; // firstgid is always 1 in dungeon.tsx
+                    const theme = TILE_ID_THEMES[localId] || TILE_ID_THEMES[0];
                     const gx = col, gz = row;
                     tileMap.set(tileKey(gx, gz), {
                         gx, gz, x: gx * DUNGEON_TILE_SIZE, z: gz * DUNGEON_TILE_SIZE,
-                        kind: 'room', theme, roomType: 'normal'
+                        kind: theme === corridorTheme ? 'corridor' : 'room', theme, roomType: 'normal'
                     });
                 }
             }
@@ -2722,13 +2729,26 @@
                     const segKey = `${wx.toFixed(3)},${wz.toFixed(3)}`;
                     if (placedWallKeys.has(segKey)) return;
                     placedWallKeys.add(segKey);
-                    wallSegments.push({ x: wx, z: wz, rotation: direction.rotation, theme, wallAsset: theme.wall });
+                    wallSegments.push({ x: wx, z: wz, rotation: direction.rotation, theme: tile.theme, wallAsset: tile.theme.wall });
                 });
             });
 
+            // Same room/corridor threshold detection as createDungeonLayout() (see the fix in
+            // buildSpawnCandidates) — now meaningful here too, since a painted Corridor tile next
+            // to a themed room tile is a genuine kind boundary, not just a uniform blob.
             const walkableKeys = new Set(tileMap.keys());
+            const entranceTileKeys = new Set();
+            tileMap.forEach((tile) => {
+                const isEntrance = directions.some((d) => {
+                    const neighbor = tileMap.get(tileKey(tile.gx + d.dx, tile.gz + d.dz));
+                    return neighbor && neighbor.kind !== tile.kind;
+                });
+                if (isEntrance) entranceTileKeys.add(tileKey(tile.gx, tile.gz));
+            });
+
             const propSpawnTiles = [];
             tileMap.forEach((tile) => {
+                if (entranceTileKeys.has(tileKey(tile.gx, tile.gz))) return;
                 const allNeighborsWalkable = directions.every((d) =>
                     walkableKeys.has(tileKey(tile.gx + d.dx, tile.gz + d.dz))
                 );
@@ -2775,7 +2795,7 @@
                 walkableTileKeys: walkableKeys,
                 wallSegments,
                 propSpawnTiles,
-                entranceTileKeys: new Set(),
+                entranceTileKeys,
                 startPosition,
                 reservedSpawnKeys: new Set([tileKey(startTile.gx, startTile.gz)])
             };
